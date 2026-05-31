@@ -182,3 +182,57 @@ Net after this pass: the only remaining gated branch with intact-but-divergent
 compute is swsalinity=1 (cropfixed + grass) — the cml-feedback issue above.
 Everything else still gated has genuinely deleted/dormant compute (Tier C/D):
 swdrought=2, swinter=3, swoxygen=2 inputs/repro, swsalinity=2.
+
+---
+
+## 2026-05-31 — Tier C/D (deleted/dormant compute) restoration scoping
+
+Investigation of the four remaining gated branches whose compute was deleted or
+made dormant (vs. the Tier-A/B switches, which only needed re-wiring). All
+recovery paths verified. **Common blocker: no TOML regression case exercises any
+of these, so each restoration needs a bespoke byte-identical case** (and
+swoxygen=2 needs numerical heat, swcalt=2).
+
+### Cluster 1 — swoxygen=2 (Bartholomeus) — LEAST work, kernel proven
+- `OxygenStress` kernel (src/crop/oxygenstress.f90) is intact AND compiled AND
+  already regression-tested: the `4.oxygenstress` case runs **grass swoxygen=2 /
+  swoxygentype=1 byte-identical** (cropgrass only gates swoxygentype==2).
+- Kernel branches on croptype (oxygenstress.f90:198,241): croptype 2/3 compute
+  `max_resp_factor` internally via GET_MAX_RESP_FACTOR (no input tables); croptype 1
+  needs `w_root_ss` from a `wrtb` table.
+- → **wofost swoxygen=2/type1 = guard removal** (validator cropwofost_config:781,
+  init cropwofost_init:125). **cropfixed swoxygen=2/type1 = add wrtb/mrftb static
+  tables** (hard-coded 0 at cropfixed_runtime:135,139,216,220) + guard removal.
+- `swoxygentype=2` (reproduction fns): dormant `src/crop/dormant/oxygenrepro.f90`
+  (not in build), dispatch stub at rootextraction.f90:158. Needs build inclusion +
+  OxygenSlope/OxygenIntercept state + oxygen_dat wiring. No reference case exists.
+
+### Cluster 2 — swinter=3 (adapted-Rutter storage interception)
+- `msw1eic` + `ruttervw` deleted in **f653aed** ("drop dead msw1eic Gash kernel");
+  recover via `git show f653aed^:src/atmosphere/interception.f90`.
+- State (`sicact`/`siccapact`/`fimin`) still on atmosphere_state. Runtime stubs
+  hard-code `siccapact=0` (cropfixed_runtime:130,211 + wofost/grass analogues);
+  DivIntercep guarded with `swinter.ne.3` (meteo_orchestrator:326); wet-fraction
+  branches reference an `eintc` that's never set. CAVEAT: legacy msw1eic used
+  real(4) (MetaSWAP interop) — must port to real64 carefully for byte-identity.
+- Shared in meteo_orchestrator (crop-unaware, runs for active crop); the per-crop
+  runtimes only set siccapact = siccaplai*lai.
+
+### Cluster 3 — swdrought=2 (De Jong van Lier) + swsalinity=2 — MOST work
+- `jongvanlier.f90` (JongvanLier + JongvanLierLoop, nested Newton-Raphson on
+  hleaf/Hxylem) deleted in **5c82f0a**; recover via
+  `git show 5c82f0a^:src/crop/dormant/jongvanlier.f90` (already modernized to
+  state%, but imports ~9 bare globals: kroot/rxylem/kstem/rootradius/rootcoefa/
+  rooteff/wiltpoint/stephr/criterhr — must finish migrating to state).
+- `MatricFlux`/`matric_flux`/`matricflux_build_table` are STILL LIVE in
+  rootextraction.f90 (called from cropgrowth.f90 when swdrought=2); the swsalinity=2
+  osmotic-head correction (`hosm = salthead*cml`) lives inside matric_flux and is
+  complete. So **swsalinity=2 comes for free with swdrought=2** (only reachable
+  there). State fields (mflux/mroot/hroot/mfluxtable/Tactual/alpJvLier/twilt) exist.
+- Config params declared as stubs (cropfixed_config:111-127) but not TOML-read.
+- Highest byte-identical risk: Newton-Raphson iteration count is tolerance-sensitive
+  (CriterHr/StepHr).
+
+**Recommended order: 1 → 2 → 3** (ascending effort/risk). Each needs its own
+heat/feature-enabled regression case authored or converted from a legacy ASCII
+crop (legacy/swap-4.2.0:xdata/crops/* use SWDROUGHT=2/SWINTER=3).
