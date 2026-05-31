@@ -34,6 +34,18 @@ is what every change should push toward. See
   dispatch (ADR 0043).
 - **I/O at the edges** — readers/writers live in `src/io/`; numerically hot
   kernels are free of file I/O.
+- **Source layout (ADR 0048)** — *feature-first for behavior, layer-first for
+  the shared data model.* `src/core/` holds only foundation leaves (`constants`,
+  `arrays`, `dtutil`, `swap_log`, `arrayutils`, `numericalsolvers`);
+  orchestration lives in `src/driver/` (`swap_mod`, `swap_main`,
+  `swap_ensemble_mod`) and the C-ABI facades in `src/bindings/` (`swap_capi/bmi/
+  xmi`, `bmi_constants`). Compute subsystems are feature folders:
+  `atmosphere/`, `soilwater/` (incl. boundary conditions), `heat/`, `solute/`,
+  `drainage/`, `timecontrol/`, and `crop/` with `fixed/` `grass/` `wofost/`
+  sub-packages (all WOFOST nutrient dynamics under `crop/wofost/`). The shared
+  data + edge layers — `config/`, `state/`, `io/`, plus `error/`, `validation/`
+  — stay as their own folders (they are depended on by every feature). There is
+  no `utils/` or `boundary/` folder.
 
 ## Non-negotiables
 

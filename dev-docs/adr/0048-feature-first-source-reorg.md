@@ -1,7 +1,7 @@
 # ADR 0048 — Feature-first source-tree reorganization
 
-**Status:** Proposed (2026-05-31) — flips to Accepted when the migration plan
-completes byte-identical (`dev-docs/superpowers/plans/2026-05-31-feature-first-reorg.md`).
+**Status:** Accepted (2026-05-31)
+**Plan:** `dev-docs/superpowers/plans/2026-05-31-feature-first-reorg.md` (executed inline, 6 commits).
 
 ## Context
 
@@ -131,6 +131,23 @@ explicit `../../src/...` paths). Each commit moves one cohesive group and ends
 
 ## Verification
 
-To be filled on execution (target: `check-fast` 4/4 + `check-full` 5/5
-byte-identical, pFUnit count unchanged, all four library/exe targets +
-`libswap_bmi.so` / `libswap_xmi.so` link). See the migration plan.
+Executed inline in 6 commits, each byte-identical at the commit boundary:
+
+1. `core/` → `core/` + `driver/` + `bindings/`
+2. `soil/` → `soilwater/` (+ `boundary/` folded in)
+3. `utils/` dissolved (→ `core/`, `soilwater/`, `drainage/`)
+4. `timecontrol/` extracted from `core/`
+5. `crop/` → `fixed/` `grass/` `wofost/` (WOFOST nutrients under `wofost/`)
+6. docs + full-suite gate
+
+Final state:
+- `check-fast` 4/4 byte-identical (held at every commit).
+- `check-full` 5/5 non-xfail byte-identical; the two pre-existing xfails
+  (`winter`, `soilhysteresis`) unchanged.
+- pFUnit **810 tests** OK — unchanged from baseline at every commit (no test
+  ran "dark").
+- `swap` executable + `libswap_bmi.so` + `libswap_xmi.so` all link.
+
+No `.f90` content changed — pure `git mv` + build-path edits (root `meson.build`
+source lists + `src_inc`; `tests/unit/meson.build` paths). Module names are
+path-independent, so zero `use`-statement edits were needed.
