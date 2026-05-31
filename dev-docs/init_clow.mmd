@@ -1,0 +1,53 @@
+flowchart TB
+    %% Entry points
+    CLI([swap_main.f90:19]):::entry
+    CAPI([swap_capi_mod\nswap_initialize_from_toml_string]):::entry
+    BMI([swap_bmi_mod\nbmi_initialize]):::entry
+
+    CLI -->|"swap.toml path"| LOAD_FILE
+    BMI -->|"delegates to swap_init"| LOAD_FILE
+    CAPI -->|"TOML in-memory buffer"| LOAD_STR
+
+    LOAD_FILE["load_swap_config\ntoml_load + directory_of()"]
+    LOAD_STR["load_swap_config_from_string\nbase_dir = './' (hardcoded)"]:::warn
+
+    LOAD_FILE --> DISPATCH
+    LOAD_STR --> DISPATCH
+    DISPATCH["apply_section_readers\n13 read_*_toml subs\n(read_crop_toml chains to\n.crp.toml subfiles)"] --> CONFIG[("swap_config_t\n~4 300 L of typed config")]
+
+    CONFIG --> VALIDATE[config%validate\nerror_collection_t]
+    VALIDATE --> FINALIZE[config%finalize\nfills defaults]
+
+    FINALIZE --> ITER[itertime_init]
+    ITER --> ADAPTER["seed_state_from_config\n~10 cross-subsystem exceptions\n(swdra→timecontrol, mesh.numlay,\nswinco=3 atmin7/cml_init/zc_init)"]:::warn
+
+    ADAPTER --> CROP_INIT
+    CROP_INIT["state%crop%init\n(must precede timecontrol —\ntimecontrol reads croptype)"]:::dep --> TC_INIT
+    TC_INIT["timecontrol_init\nderives flDrain/flSnow/flSolute"] --> MESH_INIT
+    MESH_INIT["state%mesh%init\nnumnod, numlay, z, dz, inpola/b"]:::good --> SW_INIT
+
+    SW_INIT["state%soilwater%init\n+ seed_bottom_boundary CSV\n+ swinco=3 h_file CSV\n(MUTATES config%soil%initial%z_init)"]:::warn --> NUTR_INIT
+
+    NUTR_INIT["state%nutrients%init\n+ events_file CSV\n(dual-writes legacy WSN globals)"]:::warn --> IRRIG_INIT
+    IRRIG_INIT["state%crop%irrigation%init\n+ fixed_events CSV\n+ SSDI CSV (mode0/mode1)"] --> ATM_INIT
+    ATM_INIT["state%atmosphere%init\n+ meteo / detail / rain CSV cache"]:::good --> MANUAL
+
+    MANUAL["MANUAL post-init seeding in swap_mod\nsoilwater layer flats\n(ksatexm, ksatfit, cofani, orgmat,\npsand, psilt, pclay)\n+ drainage L, zbotdr"]:::warn
+
+    MANUAL --> WARM["swinco=3 warm-restart\nh_file CSV (2nd read!)\nssnow / ldwet / slw cross-writes"]:::warn
+
+    WARM --> TILL_INIT
+    TILL_INIT["state%tillage%init + tillage_seed"] --> HEAT_INIT
+    HEAT_INIT["state%heat%init\n(must precede soilwater_seed)"]:::dep --> SW_SEED
+    SW_SEED["soilwater_seed (free)\nreads state%heat%tsoil"] --> DRAIN_INIT
+    DRAIN_INIT["state%drainage%init\n+ owltab CSV"] --> SOL_INIT
+    SOL_INIT["state%solute%init"] --> SURF_INIT
+    SURF_INIT["state%surfacewater%init"] --> TEMP_SEED
+    TEMP_SEED["temperature_seed (free)"] --> SOL_SEED
+    SOL_SEED["solute_seed (free)"] --> CSV_OUT
+    CSV_OUT["csv_output_init\nopen + write headers"] --> READY((First time step\nready)):::good
+
+    classDef entry fill:#e7e9ff,stroke:#669
+    classDef good fill:#e6f5e6,stroke:#3a3
+    classDef warn fill:#fce6e6,stroke:#c44
+    classDef dep fill:#fff5d6,stroke:#c90

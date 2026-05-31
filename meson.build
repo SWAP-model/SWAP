@@ -7,7 +7,8 @@ fc = meson.get_compiler('fortran')
 fs = import('fs')
 
 src_inc = include_directories(
-    'src', 'src/core', 'src/io', 'src/io/csv', 'src/io/toml', 'src/soil', 'src/atmosphere',
+    'src', 'src/core', 'src/driver', 'src/bindings', 'src/io', 'src/io/csv', 'src/io/toml',
+    'src/soil', 'src/atmosphere',
     'src/crop', 'src/drainage', 'src/boundary',
     'src/solute', 'src/heat', 'src/utils', 'src/config', 'src/state'
 )
@@ -62,17 +63,17 @@ add_project_arguments(gfortran_flags, language: 'fortran')
 # OVERLAPPING bind(C) names (initialize/update/finalize/get_current_time/...)
 # and therefore must NOT be linked into the same shared library together.
 modern_core_sources = [
-    'src/core/swap_mod.f90',
-    'src/core/swap_ensemble_mod.f90',
-    'src/core/bmi_constants_mod.f90',
+    'src/driver/swap_mod.f90',
+    'src/driver/swap_ensemble_mod.f90',
+    'src/bindings/bmi_constants_mod.f90',
     'src/core/timecontrol_mod.f90',
 ]
 
 # Standalone-BMI facade: singleton (capi_state) backed. Drives libswap_bmi.so
 # and the executable. swap_bmi_mod and swap_capi_mod share the C names.
 modern_sources = modern_core_sources + [
-    'src/core/swap_capi_mod.f90',
-    'src/core/swap_bmi_mod.f90',
+    'src/bindings/swap_capi_mod.f90',
+    'src/bindings/swap_bmi_mod.f90',
 ]
 
 # XMI coupling facade: ensemble backed. Sole definer of the coupling C-ABI
@@ -80,7 +81,7 @@ modern_sources = modern_core_sources + [
 # CANNOT coexist with swap_capi_mod/swap_bmi_mod in one library. Drives
 # libswap_xmi.so — the library imod_coupler / xmipy loads.
 modern_xmi_sources = modern_core_sources + [
-    'src/core/swap_xmi_mod.f90',
+    'src/bindings/swap_xmi_mod.f90',
 ]
 
 # Legacy files: project-wide -std=legacy (set by add_project_arguments).
@@ -289,7 +290,7 @@ swap_modern = static_library('swap_modern',
 link_args = ['-static']
 
 executable('swap',
-    sources: 'src/core/swap_main.f90',
+    sources: 'src/driver/swap_main.f90',
     link_with: [swap_modern, swap_legacy],
     dependencies: [tomlf_dep],
     fortran_args: ['-std=f2018'],
