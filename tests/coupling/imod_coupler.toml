@@ -1,0 +1,23 @@
+# imod_coupler config for the vendored SwapMod driver (SWAP <-> MODFLOW 6).
+#
+# Schema matches tests/coupling/imod_coupler_fork/config.py:SwapModConfig, which
+# is constructed as SwapModConfig(config_dir, **toml_data). So the TOML
+# top-level keys are exactly the SwapModConfig fields: `kernels` and `coupling`.
+#
+# The `dll` paths below are placeholders; run_coupled.py rewrites them to the
+# discovered absolute libswap_xmi.so / libmf6.so paths at runtime. The SWAP
+# kernel DLL MUST be libswap_xmi.so (XMI: get_value_ptr/solve), not
+# libswap_bmi.so. work_dir paths are relative to this config's directory
+# (SwapModConfig chdirs to config_dir before pydantic validation).
+
+[kernels.modflow6]
+dll = "<ABS_PATH_TO>/libmf6.so"
+work_dir = "./mf"
+
+[kernels.swap]
+dll = "<ABS_PATH_TO>/libswap_xmi.so"
+work_dir = "./swap"
+
+[[coupling]]
+mf6_model = "swapmf"
+mf6_swap_recharge_pkg = "RCHA"
