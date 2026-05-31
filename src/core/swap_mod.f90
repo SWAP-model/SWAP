@@ -24,7 +24,7 @@ contains
       use load_swap_config_mod, only: load_swap_config
       character(len=*),            intent(in)  :: config_file
       type(swap_state_t),          intent(out) :: state
-      type(swap_config_t), target, intent(out) :: config  ! target: crop_config_global => config%crop (set inside body)
+      type(swap_config_t), target, intent(out) :: config  ! target retained for callers that take a pointer into config (crop_config_global retired)
 
       ! Load + validate + finalize TOML
       block
@@ -81,7 +81,7 @@ contains
       use csv_output,                 only: csv_output_init
 
       type(swap_state_t),          intent(out)   :: state
-      type(swap_config_t), target, intent(inout) :: config  ! target: crop_config_global => config%crop
+      type(swap_config_t), target, intent(inout) :: config  ! target retained for callers that take a pointer into config (crop_config_global retired)
 
       ! Iteration / timing statistics.
       call itertime_init(state)

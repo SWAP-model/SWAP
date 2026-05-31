@@ -1,0 +1,38 @@
+! Tests for swap_ensemble_mod: N independent SWAP column states sharing one
+! read-only config, stepped sequentially, with the flat exchange arrays
+! (gwl in, qbot_volume / storage_coef out). Backing store for the XMI kernel.
+!
+! pFUnit runs from meson.project_source_root() (see tests/unit/meson.build
+! workdir), so the config path is relative to the project root.
+
+@test
+subroutine test_ensemble_init_and_step()
+   use swap_ensemble_mod
+   use funit
+   use iso_fortran_env, only: real64
+   implicit none
+   integer :: rc
+   real(real64) :: q
+   character(len=*), parameter :: cfg = &
+      'tests/coupling/hupselbrook_coupled/swap.toml'
+
+   rc = ensemble_init(cfg, ncol_in=3)
+   @assertEqual(0, rc)
+   @assertEqual(3, ensemble_ncol())
+   @assertTrue(ensemble_all_swbotb1())
+
+   ! metres
+   call ensemble_set_gwl(1, -0.80d0)
+   rc = ensemble_step_day()
+   @assertEqual(0, rc)
+
+   ! qbot_volume must be finite (a NaN is not equal to itself)
+   q = ensemble_qbot_volume(1)
+   @assertTrue(q == q)
+   ! ... and a physically plausible daily recharge depth: a single Hupselbrook
+   ! day percolates at most mm-to-cm scale, so |qbot_volume| < 1 m/day.
+   @assertTrue(abs(q) < 1.0d0)
+
+   rc = ensemble_finalize()
+   @assertEqual(0, rc)
+end subroutine

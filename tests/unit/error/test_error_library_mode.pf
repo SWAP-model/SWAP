@@ -1,0 +1,29 @@
+! Tests for error_mod library-embedding abort policy.
+!
+! A library loaded into a Python/MODFLOW host must never `error stop`
+! (it would kill the host). set_library_mode(.true.) makes a fatal set a
+! sticky poll-able flag instead of aborting; the default (.false.) preserves
+! CLI behaviour.
+
+@test
+subroutine test_library_mode_sets_status_not_abort()
+   use error_mod
+   use funit
+   implicit none
+   call global_errors%clear()
+   call set_library_mode(.true.)
+   call fatalerr_collected('TESTROUT', 'simulated fatal')
+   @assertTrue(library_fatal_raised())
+   call set_library_mode(.false.)   ! restore for other tests
+   call clear_library_fatal()       ! tests share module state (no per-test isolation)
+   call global_errors%clear()
+end subroutine
+
+@test
+subroutine test_default_mode_flag_clear()
+   use error_mod
+   use funit
+   implicit none
+   call set_library_mode(.false.)
+   @assertFalse(library_fatal_raised())
+end subroutine

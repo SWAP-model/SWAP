@@ -318,9 +318,6 @@ contains
                  crop => state%crop,         &
                  time => state%timecontrol)
 
-      if (time%flZeroIntr) then
-      endif
-
       ! potential transpiration of this timestep
       ptrats = atmo%ptra * time%dt
 

@@ -204,6 +204,7 @@ if get_option('enable_pfunit')
         # [GR-IO 2026-05-25 Phase 5] sharedsimulation.f90 dormant — no callers.
         '../../src/utils/numericalsolvers.f90',
         '../../src/core/swap_mod.f90',
+        '../../src/core/swap_ensemble_mod.f90',
         '../../src/crop/irrigation.f90',
         '../../src/io/file_io.f90',
         '../../src/core/timecontrol_mod.f90',
@@ -218,6 +219,7 @@ if get_option('enable_pfunit')
         'atmosphere/test_precipitation.pf',
         'atmosphere/test_et.pf',
         'error/test_error.pf',
+        'error/test_error_library_mode.pf',
         'validation/test_validation.pf',
         'config/test_general_config.pf',
         'config/test_simulation_config.pf',
@@ -306,6 +308,8 @@ if get_option('enable_pfunit')
         'solute/test_solute_cml.pf',
         'solute/test_solute_seed.pf',
         'solute/test_solute_dispersion.pf',
+        'boundary/test_coupled_gwl_inject.pf',
+        'core/test_swap_ensemble.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

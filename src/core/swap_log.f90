@@ -132,7 +132,7 @@ contains
     function log_unit_handle() result(unit)
         !> Return the raw file unit number swap_log uses for the log file.
         !! Use only when interop with legacy code that calls write(unit, ...)
-        !! directly is unavoidable (e.g. msw1eic's quarantined error path).
+        !! directly is unavoidable.
         !! Prefer log_debug/info/warn/error for new code.
         integer :: unit
         unit = log_unit

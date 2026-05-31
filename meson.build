@@ -57,11 +57,30 @@ add_project_arguments(gfortran_flags, language: 'fortran')
 # legacy-mode compilation are consumed without issue by f2018-mode
 # compilation. The -std= flag only affects parsing of the file being
 # compiled, not what it can `use`.
-modern_sources = [
+# Core modern modules shared by every facade. Excludes the C-ABI facade
+# modules (swap_capi_mod / swap_bmi_mod / swap_xmi_mod), which export
+# OVERLAPPING bind(C) names (initialize/update/finalize/get_current_time/...)
+# and therefore must NOT be linked into the same shared library together.
+modern_core_sources = [
     'src/core/swap_mod.f90',
+    'src/core/swap_ensemble_mod.f90',
+    'src/core/bmi_constants_mod.f90',
     'src/core/timecontrol_mod.f90',
+]
+
+# Standalone-BMI facade: singleton (capi_state) backed. Drives libswap_bmi.so
+# and the executable. swap_bmi_mod and swap_capi_mod share the C names.
+modern_sources = modern_core_sources + [
     'src/core/swap_capi_mod.f90',
     'src/core/swap_bmi_mod.f90',
+]
+
+# XMI coupling facade: ensemble backed. Sole definer of the coupling C-ABI
+# (re-implements the BMI lifecycle/time/info C names over the ensemble) so it
+# CANNOT coexist with swap_capi_mod/swap_bmi_mod in one library. Drives
+# libswap_xmi.so — the library imod_coupler / xmipy loads.
+modern_xmi_sources = modern_core_sources + [
+    'src/core/swap_xmi_mod.f90',
 ]
 
 # Legacy files: project-wide -std=legacy (set by add_project_arguments).
@@ -291,6 +310,28 @@ swap_bmi_lib = shared_library('swap_bmi',
     include_directories: src_inc,
     install: false,
 )
+
+# ============================================================================
+# XMI shared library (imod_coupler / xmipy coupling entry point)
+# ============================================================================
+# Ensemble-backed coupling C-ABI. Built from modern_xmi_sources, which swaps
+# the singleton BMI/CAPI facades for swap_xmi_mod. swap_xmi is the SOLE definer
+# of the overlapping bind(C) names in THIS library, so the link is clean. This
+# is the library the coupler loads (libswap_xmi.so), kept separate from
+# libswap_bmi.so (standalone singleton BMI + its tests).
+swap_modern_xmi = static_library('swap_modern_xmi',
+    sources: modern_xmi_sources,
+    dependencies: [tomlf_dep, swap_legacy_dep],
+    include_directories: src_inc,
+    fortran_args: ['-std=f2018', '-Wall', '-Wextra'],
+)
+
+swap_xmi_lib = shared_library('swap_xmi',
+    link_whole: [swap_modern_xmi, swap_legacy],
+    dependencies: [tomlf_dep],
+    include_directories: src_inc,
+    install: false,
+)
 # ============================================================================
 # Tests
 # ============================================================================
@@ -300,3 +341,4 @@ endif
 
 subdir('tests/bmi')
 subdir('tests/cffi-demo')
+subdir('tests/coupling')

@@ -1,0 +1,25 @@
+! Tests for the coupled-GWL injection hook on soilwater state.
+!
+! For MODFLOW coupling the ensemble sets state%soilwater%gwl_injected (cm)
+! per column each step and raises state%soilwater%flcoupled_gwl. When the
+! flag is set, BoundBottom's swbotb=1 branch must bypass the afgen table and
+! use the injected value: apply_coupled_gwl(state) copies gwl_injected into
+! gwlinp.
+
+@test
+subroutine test_injected_gwl_overrides_table()
+   use swap_state_mod, only: swap_state_t
+   use boundbottom_mod, only: apply_coupled_gwl
+   use funit
+   use iso_fortran_env, only: real64
+   implicit none
+   type(swap_state_t) :: state
+
+   state%soilwater%swbotb_runtime = 1
+   state%soilwater%flcoupled_gwl  = .true.
+   state%soilwater%gwl_injected   = -120.0_real64   ! cm
+
+   call apply_coupled_gwl(state)
+
+   @assertEqual(-120.0_real64, state%soilwater%gwlinp, tolerance=1.0e-9_real64)
+end subroutine

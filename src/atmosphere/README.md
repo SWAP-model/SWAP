@@ -10,9 +10,8 @@ crop subsystems consume:
 - daily and sub-daily meteo ingestion and bookkeeping,
 - rain / snow partitioning,
 - snow accumulation, sublimation and melt,
-- canopy interception via four interchangeable schemes
-  (Von Hoyningen-Hune & Braden, Gash 1995, adapted Rutter / Sparse Gash,
-  MSW1 sparse canopy),
+- canopy interception via two interchangeable schemes
+  (Von Hoyningen-Hune & Braden, Gash 1995),
 - reference and actual evapotranspiration with Penman–Monteith and two
   soil-evaporation reduction models (Black, Boesten–Stroosnijder),
 - SCS Curve-Number surface runoff.
@@ -45,7 +44,7 @@ model through `state` aliases — no module-level globals are exported.
 | `runoff.f90` | `runoff_mod` | SCS Curve-Number runoff (`cn_init`, `cn_step`) |
 | `snow.f90` | `snow_mod` | Snow accumulation, sublimation, melt (`snow_init`, `snow_step`) |
 | `precipitation.f90` | `precipitation_mod` | Rain / snow partitioning (`PartitionPrecipitation`) |
-| `interception.f90` | `interception_mod` | Four interception schemes + interception splitter |
+| `interception.f90` | `interception_mod` | Two interception schemes + interception splitter |
 
 ### Dependencies
 
@@ -133,7 +132,8 @@ and numerical constants used across the subsystem. Consumers: `snow.f90`,
 
 ### Private helpers (extracted in Phase E)
 - **`apply_interception_step(state, config, aintc)`** — selects between
-  `VonHHBraden` / `Gash` / `ruttervw` per `swinter` and calls `DivIntercep`.
+  `VonHHBraden` (`swinter=1`) and `Gash` (`swinter=2`) and calls
+  `DivIntercep`.
 - **`compute_reference_et(state, config, irecord, etr, hum_in, win_in, rcs, pmo)`**
   — wraps `PenMon` / supplied reference ET into the three potentials
   `es0 / et0 / ew0`, with `swcf` / `swcfbs` crop-factor switches.
@@ -348,22 +348,14 @@ Intrinsics swept to generics in Phase F.
 - **`Gash(aintc, grai_in, state)`** — analytical forest model (Gash
   1995).
 
-- **`ruttervw(gctp, aintc, eintc, state)`** — wrapper that adapts the
-  SWAP arguments (double precision) to the MetaSWAP **`msw1eic`**
-  routine (single-precision arrays). Sole consumer of
-  `state%atmosphere%sicact`.
-
-- **`msw1eic(nuk, ibd, dc, dtsw, csk, vxick, fecmnk, ETw0, Pgdtsw, Sic, Sicolddtsw, Picdtsw, Eicdtsw, tcap, beta, zeta, fricdtsw, ib)`**
-  — MetaSWAP "Sparse Gash" linear-ODE solver imported from Alterra's
-  MSW1EIC.FOR (verbatim, OpenMP-parallel over SVATs). See open theme #1
-  below.
-
 - **`DivIntercep(aintc, state)`** — partitions today's interception
   between rain and sprinkler irrigation and writes the net depths
   `nraida` (to `state%atmosphere`) and `nird` (still legacy global).
 
 ### Modernisation notes
-- See cross-cutting theme #1 (msw1eic / ruttervw quarantine).
+- The MetaSWAP-derived `swinter=3` schemes (`ruttervw` / `msw1eic`)
+  were removed with the MetaSWAP drop; only `VonHHBraden` and `Gash`
+  remain.
 - `DivIntercep` still writes the legacy `nird` global (irrigation-arc
   DEFERRED).
 - `Gash` interpolates five separate AFGEN tables every call; consider
@@ -401,30 +393,26 @@ previous open list shipped and have been retired:
   consumed in `snow`/`runoff`/`et`; F77 intrinsics
   (`dexp`/`dlog`/`dmin1`/`dble`) swept to F90 generics across `et.f90`,
   `interception.f90`, `meteo_io.f90`, `meteodt.f90`.
+- ~~#1 Quarantine / replace `msw1eic` + `ruttervw`~~ — **DONE (MetaSWAP
+  drop)**. The MetaSWAP-derived `swinter=3` adapted-Rutter / Sparse-Gash
+  path (`ruttervw` wrapper + the single-precision `msw1eic` kernel) was
+  deleted; `swinter=3` is rejected by the TOML config validators, so the
+  only remaining interception schemes are `VonHHBraden` (`swinter=1`) and
+  `Gash` (`swinter=2`).
 
 **Still open:**
 
-1. **Quarantine / replace `msw1eic` + `ruttervw`.** `msw1eic` is
-   dead-on-arrival modern Fortran: single-precision fixed-size `(1)`
-   arrays, `9199 format` numeric labels, `write(*,…) stop`, copyright
-   header forbidding modification. Either replace the call with the
-   SWAP-native double-precision linear-ODE solution (the algebra is in
-   the doc comment), and delete the routine; or extract the kernel into
-   a pure scalar function and keep the OpenMP loop only when there is a
-   real SVAT array. `ruttervw` exists *only* to bridge SWAP↔MetaSWAP
-   precision and dies the moment the replacement lands. Separate spec
-   needed.
-2. **Drop `real(8)`** in favour of `real(real64)` from `iso_fortran_env`
+1. **Drop `real(8)`** in favour of `real(real64)` from `iso_fortran_env`
    (project-wide; not just atmosphere).
-3. **Eliminate the `variables` import chain** — every routine still has
+2. **Eliminate the `variables` import chain** — every routine still has
    DEFERRED globals (config switches `swredu/cofred/nird/rsigni`,
    irrigation `nird`, logging globals). Tracked in the wider
    globals-retirement arcs (GR-ATM Phase C3, irrigation arc, Arc 9
    logging).
-4. **Pure procedures by default.** `PenMon_calc`,
+3. **Pure procedures by default.** `PenMon_calc`,
    `PartitionPrecipitation`, and the two reduction kernels are already
    pure. Aim to make the interception schemes pure once `state` reads
    are replaced with explicit arguments or a small inputs derived type.
-5. **Move legacy-API shims into a separate translation unit** (e.g. the
+4. **Move legacy-API shims into a separate translation unit** (e.g. the
    `PenMon` wrapper) so the modern core can be audited and tested
    independently.

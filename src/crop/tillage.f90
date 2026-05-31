@@ -27,10 +27,7 @@ module tillage_mod
    type(swap_state_t), intent(inout)            :: state
    ! local (not to be saved)
    integer                                   :: i
-   character(len=20)                         :: STRNG
    logical                                   :: fine
-   logical, parameter                        :: TEST = .false.
-   logical, parameter                        :: TEST2 = .false.
 
    ! Sub-record aliases (canonical associate pattern).
    ! [state%cfg-retirement cluster 6] soil_cfg/solute_cfg aliases dropped;
@@ -86,19 +83,14 @@ module tillage_mod
    subroutine tillage_step (state)
    type(swap_state_t), intent(inout)            :: state
    ! local (not to be saved)
-   integer                                   :: i
    character(len=20)                         :: STRNG
-   logical                                   :: fine
    logical, parameter                        :: TEST = .false.
-   logical, parameter                        :: TEST2 = .false.
 
    ! Sub-record aliases (canonical associate pattern).
    ! [state%cfg-retirement cluster 6] soil_cfg/solute_cfg aliases dropped; swtill on state%soilwater.
    associate( &
-      mesh       => state%mesh,             &
       soil       => state%soilwater,        &
       time       => state%timecontrol,      &
-      atmo       => state%atmosphere,       &
       tl         => state%tillage           )
 
    if (soil%swtill == 0) return      ! no tillage to be considered: return immediately
@@ -106,109 +98,35 @@ module tillage_mod
       ! RATE/STATE EVENT
       tl%Rho_last(1:tl%MaxNumSoilHo) = soil%bdens(1:tl%MaxNumSoilHo)
 
-      if (TEST) then
-         ! for technical test
+      ! normal usage
+      if (tl%iTill <= tl%Ntill .and. nint(time%t1900) == nint(tl%Date_tillage(tl%iTill))) then
          call DTDPST ("YEAR-MONTHST-DAY", time%t1900, STRNG)
-         if (trim(STRNG) == "2016-Apr-05") then
-            soil%bdens(1) = 1000.0d0
-            call Change_MvGpars(state)
-            Call Adapt_WC_H (TEST, state)
-         else if (trim(STRNG) == "2016-Apr-11") then
-            soil%bdens(1) = 1250.0d0
-            call Change_MvGpars(state)
-            Call Adapt_WC_H (TEST, state)
-         else if (trim(STRNG) == "2016-Apr-18") then
-            soil%bdens(1) = 1325.0d0        ! no ponding occurs
-            !!!soil%bdens(1) = 1406.322d0   ! in this specific test this change causes ponding
-            call Change_MvGpars(state)
-            Call Adapt_WC_H (TEST, state)
-         end if
-
+         call Change_Tillage_Info (tl%iTill, state)
+         call Change_Bdens(state)
+         tl%iTill = tl%iTill + 1
       else
-         if (Test2) then
-            ! for technical test
-            call DTDPST ("YEAR-MONTHST-DAY", time%t1900, STRNG)
-            if (trim(STRNG) == "2005-Jun-05") then
-               tl%Rho_cons(1) = 1350.0d0
-               tl%K_R_cons(1) =  10.0d0
-               call Change_MvGpars(state)
-               Call Adapt_WC_H (TEST, state)
-            end if
-            if (trim(STRNG) == "2005-Oct-30") then
-               tl%Rho_cons(1) = 1900.0d0
-               tl%K_R_cons(1) =    0.1d0
-               call Change_MvGpars(state)
-               Call Adapt_WC_H (TEST, state)
-            end if
-         end if
-         ! normal usage
-         if (tl%iTill <= tl%Ntill .and. nint(time%t1900) == nint(tl%Date_tillage(tl%iTill))) then
-            call DTDPST ("YEAR-MONTHST-DAY", time%t1900, STRNG)
-            call Change_Tillage_Info (tl%iTill, state)
-            call Change_Bdens(state)
-            tl%iTill = tl%iTill + 1
-         else
-            call Consolidate_Bdens(state)
-         end if
-
-         call Change_MvGpars(state)
-
-         call DTDPST ("YEAR-MONTHST-DAY", time%t1900, STRNG)
-         if (trim(STRNG) == "2005-Apr-05") then
-            ! Historical scratch block for manual lpar overrides (legacy
-            ! ParamVG(5,1) = N) — now write soil%vg_params_layer(1)%lpar = N.
-         end if
-
-         Call Adapt_WC_H (TEST, state)
-
+         call Consolidate_Bdens(state)
       end if
+
+      call Change_MvGpars(state)
+
+      Call Adapt_WC_H (TEST, state)
 
    end associate
    end subroutine tillage_step
 
    subroutine tillage_output (state)
    type(swap_state_t), intent(inout)            :: state
-   ! local (not to be saved)
-   integer                                   :: i
-   character(len=20)                         :: STRNG
-   logical                                   :: fine
-   logical, parameter                        :: TEST = .false.
-   logical, parameter                        :: TEST2 = .false.
 
    ! Sub-record aliases (canonical associate pattern).
    ! [state%cfg-retirement cluster 6] soil_cfg/solute_cfg aliases dropped; swtill on state%soilwater.
    associate( &
-      mesh       => state%mesh,             &
-      soil       => state%soilwater,        &
-      time       => state%timecontrol,      &
-      atmo       => state%atmosphere,       &
-      tl         => state%tillage           )
+      soil       => state%soilwater           )
 
    if (soil%swtill == 0) return      ! no tillage to be considered: return immediately
 
       ! OUTPUT
-
-      ! [SS-BMI2] headless guard: debug writes to units 222/224/226 gated
-      if (.not. time%headless) then
-         if (TEST) then
-            call DTDPST ("YEAR-MONTHST-DAY", time%t1900, STRNG)
-            write (222,'(A,F15.5,10(I3,F15.5))') trim(time%date), atmo%nraida, (i, soil%bdens(i), i = 1, tl%MaxNumSoilHo)
-            write (224,'(A,10F15.5)') trim(time%date), soil%theta(5), soil%theta(10), soil%theta(20), soil%theta(27), soil%theta(35), atmo%nraida, tl%sumDWC, tl%sumAvail1, tl%sumAvail2
-            write (226,'(A,10F15.5)') trim(time%date), &
-     &         soil%vg_params(1)%thetar, soil%vg_params(1)%thetas, &
-     &         soil%vg_params(1)%ksat,   soil%vg_params(1)%alpha,  &
-     &         soil%vg_params(1)%lpar,   soil%vg_params(1)%npar,   &
-     &         soil%vg_params(1)%mpar,   soil%vg_params(1)%alphaw_sentinel, &
-     &         soil%vg_params(1)%h_enpr, soil%vg_params(1)%ksatexm
-         end if
-         write (222,'(A,F15.5,10(I3,F15.5))') trim(time%date), atmo%nraida, (i, soil%bdens(i), i = 1, tl%MaxNumSoilHo)
-         write (226,'(A,10F15.5)') trim(time%date), &
-     &      soil%vg_params(1)%thetar, soil%vg_params(1)%thetas, &
-     &      soil%vg_params(1)%ksat,   soil%vg_params(1)%alpha,  &
-     &      soil%vg_params(1)%lpar,   soil%vg_params(1)%npar,   &
-     &      soil%vg_params(1)%mpar,   soil%vg_params(1)%alphaw_sentinel, &
-     &      soil%vg_params(1)%h_enpr, soil%vg_params(1)%ksatexm
-      end if
+      ! (debug writes to units 222/224/226 removed — dead scaffolding)
 
    end associate
    end subroutine tillage_output
@@ -291,26 +209,19 @@ module tillage_mod
 
 ! **************************************************** Adapt_WC_H *********************************************************
    subroutine Adapt_WC_H (TEST, state)
-   use soilhydraulics_utils, only: watcon, hconduc, prhead
+   use soilhydraulics_utils, only: watcon, prhead
    implicit none
 
    type(swap_state_t), intent(inout) :: state
    integer                          :: i
    real(8)                          :: sumWCtmin1, sumWCt, dwc, wcr, wcs, summ, dif
-   real(8), dimension(state%tillage%MaxNumSoilCP) :: wc, hold, wcold
+   real(8), dimension(state%tillage%MaxNumSoilCP) :: wc
    logical                          :: TEST
 
    associate( &
       mesh => state%mesh,         &
       soil => state%soilwater,    &
-      heat => state%heat,         &
-      time => state%timecontrol,  &
       tl   => state%tillage)
-
-   if (TEST) then
-      hold(1:tl%MaxNumSoilCP)  = soil%h(1:tl%MaxNumSoilCP)
-      wcold(1:tl%MaxNumSoilCP) = soil%theta(1:tl%MaxNumSoilCP)
-   end if
 
    select case (tl%iRedist)
    case (0)
@@ -379,7 +290,6 @@ module tillage_mod
                if (wc(i) > wcs) then
                   soil%pond = soil%pond + (wc(i) - wcs) * mesh%dz(i)
                   wc(i) = wcs
-                  write(333,'(A,I5,F12.4)') time%date, i, soil%pond
                end if
             end if
             soil%h(i)     = prhead(mesh%disnod(i), wc(i), soil%h, &
@@ -406,25 +316,6 @@ module tillage_mod
 
    end select
 
-   if (TEST) then
-      do i = 1, tl%MaxNumSoilCP
-         wcs = soil%vg_params_layer(mesh%layer(i))%thetas
-         write (444,'(I5,8(A1,F12.6))') i, ',', hold(i), ',', wcold(i), ',', soil%h(i), ',', soil%theta(i), &
-                                        ',', tl%sumDWC, ',', tl%sumAvail1, ',', tl%sumAvail2, &
-                                        ',', soil%theta(i)/wcs
-      end do
-   end if
-write(124,'(A,1P,12E12.5)') time%date, soil%bdens(1), soil%vg_params_layer(mesh%layer(1))%thetas, soil%theta(1), soil%h(1), &
-   hconduc(soil%h(1),soil%theta(1),1.0d0,heat%tsoil(1), &
-           soil%vg_params(1), &
-           soil%iHWCKmodel(soil%layer(1)), &
-           soil%fluseksatexm(1), 1, soil), soil%vg_params_layer(mesh%layer(1))%ksat,    &
-   soil%bdens(2), soil%vg_params_layer(mesh%layer(2))%thetas, soil%theta(2), soil%h(2), &
-   hconduc(soil%h(2),soil%theta(2),1.0d0,heat%tsoil(2), &
-           soil%vg_params(2), &
-           soil%iHWCKmodel(soil%layer(2)), &
-           soil%fluseksatexm(2), 2, soil), soil%vg_params_layer(mesh%layer(2))%ksat
-
    end associate
    end subroutine Adapt_WC_H
 
@@ -438,12 +329,10 @@ write(124,'(A,1P,12E12.5)') time%date, soil%bdens(1), soil%vg_params_layer(mesh%
    associate( &
       soil => state%soilwater,    &
       atmo => state%atmosphere,   &
-      time => state%timecontrol,  &
       tl   => state%tillage)
    if (tl%iTill == 1) return        ! in the beginning before first tillage event: do nothing
 
    forall (i=1:tl%MaxNumSoilHo) soil%bdens(i) = tl%Rho_cons(i) - (tl%Rho_cons(i) - tl%Rho_last(i)) * dexp(-tl%K_R_cons(i)*atmo%nraida*10.0d0)    ! 10: to transform nraida from cm to mm
-   write(123,'(A,1P,10E12.5)') time%date, atmo%nraida, soil%bdens(1:tl%MaxNumSoilHo)
    end associate
    end subroutine Consolidate_Bdens
 

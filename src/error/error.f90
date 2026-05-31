@@ -56,8 +56,15 @@ module error_mod
    !! impractical. Top-level test setup may call `clear()` between runs.
    type(error_collection_t), public, save :: global_errors
 
+   !> Library-embedding mode: when .true., a fatal does NOT `error stop`
+   !! (which would kill a Python/MODFLOW host) but sets a sticky status
+   !! flag the XMI layer can poll. Default .false. preserves CLI behaviour.
+   logical, save, private :: library_mode    = .false.
+   logical, save, private :: fatal_was_raised = .false.
+
    public :: fatalerr_collected
    public :: warn_deprecated_key
+   public :: set_library_mode, library_fatal_raised, clear_library_fatal
 
 contains
 
@@ -188,8 +195,31 @@ contains
       class(error_collection_t), intent(in) :: self
       if (.not. self%has_fatals()) return
       write(error_unit, '(A)') self%summary()
+      if (library_mode) then
+         fatal_was_raised = .true.
+         return                     ! caller (XMI) polls library_fatal_raised()
+      end if
       error stop "fatal error(s) in swap input pipeline"
    end subroutine error_collection_abort_if_fatal
+
+   !> Enable/disable library-embedding mode. When enabled, a fatal sets a
+   !! sticky poll-able flag instead of `error stop`. Enabling also clears
+   !! the sticky flag so a fresh embedded run starts clean.
+   subroutine set_library_mode(on)
+      logical, intent(in) :: on
+      library_mode = on
+      if (on) fatal_was_raised = .false.
+   end subroutine set_library_mode
+
+   !> .true. if a fatal was raised while in library mode (XMI poll point).
+   logical function library_fatal_raised()
+      library_fatal_raised = fatal_was_raised
+   end function library_fatal_raised
+
+   !> Reset the sticky library-fatal flag.
+   subroutine clear_library_fatal()
+      fatal_was_raised = .false.
+   end subroutine clear_library_fatal
 
    !> Reset the collection. Use between tests or logical phases.
    subroutine error_collection_clear(self)
