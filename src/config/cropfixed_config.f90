@@ -181,10 +181,13 @@ contains
             'not yet supported in the TOML pipeline; use the legacy ' // &
             'executable.', 'cropfixed')
       end if
-      if (self%swrd == 2 .or. self%swrd == 3) then
+      ! swrd=1 (DVS table) and swrd=2 (max daily increase) are both supported.
+      ! swrd=3 (root extension from available root biomass) is not possible
+      ! with the simple crop module — legacy readcropfixed fatal-errors it.
+      if (self%swrd == 3) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropfixed.swrd != 1 (alternate root extension methods) not ' // &
-            'yet supported in the TOML pipeline; use the legacy executable.', &
+            'cropfixed.swrd=3 (root extension based on available root ' // &
+            'biomass) is not possible with the simple crop module.', &
             'cropfixed')
       end if
       if (self%swsalinity == 1 .or. self%swsalinity == 2) then

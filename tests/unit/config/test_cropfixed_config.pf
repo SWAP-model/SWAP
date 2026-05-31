@@ -191,7 +191,10 @@ subroutine test_cropfixed_swinter_two_rejected()
 end subroutine
 
 @test
-subroutine test_cropfixed_swrd_two_rejected()
+subroutine test_cropfixed_swrd_two_accepted()
+   ! swrd=2 (root extension by max daily increase) is now supported on the
+   ! TOML path — the compute kernel was always intact. It must NOT raise a
+   ! cross-field stub error.
    use funit
    use cropfixed_config_mod, only: cropfixed_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -206,7 +209,7 @@ subroutine test_cropfixed_swrd_two_rejected()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
           index(errors%items(i)%message, 'swrd') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test

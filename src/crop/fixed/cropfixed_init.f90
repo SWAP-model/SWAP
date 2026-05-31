@@ -42,7 +42,7 @@ contains
       if (cfg%swdrought == 2 .or. cfg%swoxygen == 2 .or. cfg%swcf == 3 .or. &
           cfg%swharv == 1   .or. cfg%swcompensate /= 0 .or.                 &
           cfg%swinter == 2  .or. cfg%swinter == 3 .or.                      &
-          cfg%swrd /= 1     .or. cfg%swsalinity /= 0 .or. cfg%schedule_switch == 1) then
+          cfg%swrd == 3     .or. cfg%swsalinity /= 0 .or. cfg%schedule_switch == 1) then
          call fatalerr_collected('cropfixed_init_from_config', &
             'Unsupported runtime branch reached on the TOML path. The validator ' // &
             'should have caught this earlier.')
