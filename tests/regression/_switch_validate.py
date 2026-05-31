@@ -146,6 +146,33 @@ SCENARIOS = {
           r"\1" + "\ngashtb = [\n  [0.0, 0.9, 0.05, 0.4, 6.0, 1.5],\n"
           "  [365.0, 0.9, 0.05, 0.4, 6.0, 1.5],\n]")],
     ),
+    # wofost swcf=3: LAI-indexed cf/cfeic/ch (replacing the swcf=2 DVS/CF/CH table).
+    "wof_swcf3": (
+        [(r"^  SWCF = 2\b", "  SWCF = 3"),
+         (r" DVS   CF    CH\n 0\.0  1\.0   1\.0\n 1\.0  1\.1  40\.0\n"
+          r" 2\.0  1\.1  50\.0\n\* End of table",
+          " LAI   CF   CFEIC    CH\n 0.0  1.0    0.9    1.0\n"
+          " 10.0 1.0    0.9   50.0\n* End of table")],
+        [(r"^swcf   = 2\b", "swcf   = 3"),
+         (r"cftb = \[\n  \[0\.0, 1\.0\],\n  \[1\.0, 1\.1\],\n  \[2\.0, 1\.1\],\n\]\n"
+          r"chtb = \[\n  \[0\.0,  1\.0\],\n  \[1\.0, 40\.0\],\n  \[2\.0, 50\.0\],\n\]",
+          "cftb = [\n  [0.0, 1.0],\n  [10.0, 1.0],\n]\n"
+          "cfeictb = [\n  [0.0, 0.9],\n  [10.0, 0.9],\n]\n"
+          "chtb = [\n  [0.0, 1.0],\n  [10.0, 50.0],\n]")],
+    ),
+    # grass swcf=3: LAI-indexed cf/cfeic/ch (replacing the swcf=2 DNR/CH table).
+    "grs_swcf3": (
+        [(r"^  SWCF = 2\b", "  SWCF = 3"),
+         (r"    DNR       CH     CF\n    0\.0     12\.0    1\.0\n"
+          r"  180\.0     12\.0    1\.0\n  366\.0     12\.0    1\.0\n\* End of table",
+          "    LAI    CF   CFEIC     CH\n    0.0   1.0    0.9    12.0\n"
+          "   10.0   1.0    0.9    12.0\n* End of table")],
+        [(r"^swcf   = 2\b", "swcf   = 3"),
+         (r"^chtb = \[0\.0, 12\.0, 180\.0, 12\.0, 366\.0, 12\.0\]",
+          "cftb = [0.0, 1.0, 10.0, 1.0]\n"
+          "cfeictb = [0.0, 0.9, 10.0, 0.9]\n"
+          "chtb = [0.0, 12.0, 10.0, 12.0]")],
+    ),
     # diagnostic: swsalinity=1 but saltslope=0 -> branch runs, alpsol always 1.
     "swsal1_noslope": (
         [(r"^  SWSALINITY = 0\b", "  SWSALINITY = 1"),
@@ -199,7 +226,8 @@ SCENARIOS = {
 SCENARIO_CROP = {
     "wof_swharv1": "potatod", "wof_swcomp1": "potatod", "wof_swcomp2": "potatod",
     "wof_swinter2": "potatod",
-    "grs_swcomp2": "grassd", "grs_swinter2": "grassd",
+    "grs_swcomp2": "grassd", "grs_swinter2": "grassd", "grs_swcf3": "grassd",
+    "wof_swcf3": "potatod",
 }
 
 

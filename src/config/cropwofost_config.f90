@@ -103,6 +103,7 @@ module cropwofost_config_mod
       real(real64) :: rsw    = 0.0_real64
       real(real64), allocatable :: cftb(:,:)
       real(real64), allocatable :: chtb(:,:)
+      real(real64), allocatable :: cfeictb(:,:)  !! LAI-indexed wet crop factor (swcf=3)
    contains
       procedure :: validate => wofost_cropfactor_validate
       procedure :: finalize => wofost_cropfactor_finalize
@@ -536,7 +537,9 @@ contains
    subroutine wofost_cropfactor_validate(self, errors)
       class(wofost_cropfactor_t), intent(in)    :: self
       type(error_collection_t),   intent(inout) :: errors
-      call check_int_enum(self%swcf, [1, 2], 'wofost.crop_factor.swcf', errors)
+      ! swcf=3 (LAI-dependent dual crop coefficient, with wet factor cfeic) is
+      ! supported; legacy readwofost reads swcf=1..3.
+      call check_int_enum(self%swcf, [1, 2, 3], 'wofost.crop_factor.swcf', errors)
       if (self%swcf == 2) then
          call check_real_range(self%albedo, 0.0_real64,        1.0_real64, 'wofost.crop_factor.albedo', errors)
          call check_real_range(self%rsc,    0.0_real64,    1.0e6_real64, 'wofost.crop_factor.rsc',    errors)
@@ -544,8 +547,11 @@ contains
       end if
       if (self%swcf == 1) then
          call check_table(self%cftb, 2, .true., 'wofost.crop_factor.cftb', errors)
-      else
+      else if (self%swcf == 2) then
          call check_table(self%chtb, 2, .true., 'wofost.crop_factor.chtb', errors)
+      else if (self%swcf == 3) then
+         call check_table(self%cftb,    2, .true., 'wofost.crop_factor.cftb',    errors)
+         call check_table(self%cfeictb, 2, .true., 'wofost.crop_factor.cfeictb', errors)
       end if
    end subroutine wofost_cropfactor_validate
 

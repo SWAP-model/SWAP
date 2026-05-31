@@ -78,6 +78,7 @@ contains
          call get_optional_real_with_default(cf, 'rsw',    config%crop_factor%rsw,    0.0_real64, 'crop_factor.rsw',    errors)
          call read_table_2d(cf, 'cftb', config%crop_factor%cftb, 2, 'crop_factor.cftb', errors)
          call read_table_2d(cf, 'chtb', config%crop_factor%chtb, 2, 'crop_factor.chtb', errors)
+         call read_table_2d(cf, 'cfeictb', config%crop_factor%cfeictb, 2, 'crop_factor.cfeictb', errors)
       end if
 
       call get_table(doc_root, 'phenology', ph, 'phenology', errors)

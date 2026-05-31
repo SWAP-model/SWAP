@@ -169,6 +169,37 @@ contains
                state%crop%fixed%cftb = -99.99d0
             end block
          end if
+      else if (state%crop%swcf == 3) then
+         ! LAI-dependent dual crop coefficient: cf, cfeic (wet) and ch are all
+         ! LAI-indexed; reflection coeffs take the ETref defaults (legacy:
+         ! swcf=1 or 3). The runtime looks up cfeic = afgen(cfeictb, lai).
+         state%crop%common%albedo = 0.23_real64
+         state%crop%common%rsc    = 70.0_real64
+         state%crop%common%rsw    = 0.0_real64
+         block
+            integer :: nr, j
+            if (allocated(cfg%crop_factor%cftb)) then
+               nr = size(cfg%crop_factor%cftb, 1)
+               do j = 1, nr
+                  state%crop%fixed%cftb(j*2-1) = cfg%crop_factor%cftb(j,1)
+                  state%crop%fixed%cftb(j*2)   = cfg%crop_factor%cftb(j,2)
+               end do
+            end if
+            if (allocated(cfg%crop_factor%cfeictb)) then
+               nr = size(cfg%crop_factor%cfeictb, 1)
+               do j = 1, nr
+                  state%crop%fixed%cfeictb(j*2-1) = cfg%crop_factor%cfeictb(j,1)
+                  state%crop%fixed%cfeictb(j*2)   = cfg%crop_factor%cfeictb(j,2)
+               end do
+            end if
+            if (allocated(cfg%crop_factor%chtb)) then
+               nr = size(cfg%crop_factor%chtb, 1)
+               do j = 1, nr
+                  state%crop%fixed%chtb(j*2-1) = cfg%crop_factor%chtb(j,1)
+                  state%crop%fixed%chtb(j*2)   = cfg%crop_factor%chtb(j,2)
+               end do
+            end if
+         end block
       end if
 
       ! Part 14: interception (readwofost line 2640-2642)
