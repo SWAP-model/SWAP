@@ -778,12 +778,6 @@ contains
             'supported in the TOML pipeline; use the legacy executable.', &
             'cropwofost.oxygen_stress')
       end if
-      if (self%interception%swinter == 2) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropwofost.interception.swinter=2 (Gash forest interception) not ' // &
-            'yet supported in the TOML pipeline; use the legacy executable.', &
-            'cropwofost.interception')
-      end if
       if (self%co2%swco2 == 1) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropwofost.co2.swco2=1 (CO2 assimilation correction) not yet ' // &

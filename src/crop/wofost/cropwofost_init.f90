@@ -125,9 +125,6 @@ contains
       if (cfg%oxygen_stress%swoxygen == 2) &
          call fatalerr_collected('cropwofost_init', &
             'swoxygen=2 not supported on TOML path; validator should have rejected.')
-      if (cfg%interception%swinter == 2) &
-         call fatalerr_collected('cropwofost_init', &
-            'swinter=2 not supported on TOML path; validator should have rejected.')
       if (cfg%salinity%swsalinity == 2) &
          call fatalerr_collected('cropwofost_init', &
             'swsalinity=2 not supported on TOML path; validator should have rejected.')
@@ -178,6 +175,27 @@ contains
       state%crop%common%swinter = cfg%interception%swinter
       if (state%crop%common%swinter == 1) then
          state%crop%cofab = cfg%interception%cofab
+      else if (state%crop%common%swinter == 2 .and. allocated(cfg%interception%gashtb)) then
+         ! Gash: split the 6-column (t, pfree, pstem, scanopy, avprec, avevap)
+         ! table into the five (t, value) atmosphere arrays that legacy
+         ! readwofost populated as globals.
+         block
+            integer :: r, nr
+            nr = size(cfg%interception%gashtb, 1)
+            do r = 1, nr
+               if (2*r > size(state%atmosphere%pfreetb)) exit
+               state%atmosphere%pfreetb(2*r-1)   = cfg%interception%gashtb(r, 1)
+               state%atmosphere%pfreetb(2*r)     = cfg%interception%gashtb(r, 2)
+               state%atmosphere%pstemtb(2*r-1)   = cfg%interception%gashtb(r, 1)
+               state%atmosphere%pstemtb(2*r)     = cfg%interception%gashtb(r, 3)
+               state%atmosphere%scanopytb(2*r-1) = cfg%interception%gashtb(r, 1)
+               state%atmosphere%scanopytb(2*r)   = cfg%interception%gashtb(r, 4)
+               state%atmosphere%avprectb(2*r-1)  = cfg%interception%gashtb(r, 1)
+               state%atmosphere%avprectb(2*r)    = cfg%interception%gashtb(r, 5)
+               state%atmosphere%avevaptb(2*r-1)  = cfg%interception%gashtb(r, 1)
+               state%atmosphere%avevaptb(2*r)    = cfg%interception%gashtb(r, 6)
+            end do
+         end block
       end if
 
       ! Part 2: phenology (soybean=0 path; readwofost lines 2712-2721)
