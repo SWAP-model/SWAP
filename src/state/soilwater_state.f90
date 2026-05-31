@@ -80,6 +80,8 @@ module soilwater_state_mod
       real(real64) :: qbot_nonfrozen = 0.0_real64  !! bottom flux pre-frost snapshot
       real(real64) :: hbot           = 0.0_real64  !! prescribed head at bottom (cm)
       real(real64) :: gwlinp         = 0.0_real64  !! prescribed gwl, swbotb=1 (cm)
+      logical      :: flcoupled_gwl = .false.  !! when .true., gwlinp is injected externally (MODFLOW coupling)
+      real(real64) :: gwl_injected  = 0.0_real64 !! externally injected groundwater level, swbotb=1 coupled (cm)
       real(real64) :: deepgw         = 0.0_real64  !! deep-aquifer head, swbotb=3 (cm)
 
       ! ===========================================================================

@@ -13,6 +13,7 @@ module boundbottom_mod
 
    private
    public :: BoundBottom
+   public :: apply_coupled_gwl
 
 contains
 
@@ -53,9 +54,13 @@ contains
          twopi = 8.0d0 * datan(1.0d0)
          freq  = twopi / 365.0d0
 
-         ! ---- swbotb=1: interpolated daily groundwater level ----------------
+         ! ---- swbotb=1: groundwater level (table or injected) ---------------
          if (soil%swbotb_runtime .eq. 1) then
-            soil%gwlinp = afgen(soil%gwltab, mabbc*2, time%t1900 + time%dt)
+            if (soil%flcoupled_gwl) then
+               call apply_coupled_gwl(state)
+            else
+               soil%gwlinp = afgen(soil%gwltab, mabbc*2, time%t1900 + time%dt)
+            end if
          end if
 
          ! ---- |swbotb|=2: regional bottom flux ------------------------------
@@ -183,5 +188,17 @@ contains
 
       return
    end subroutine BoundBottom
+
+   !> Inject an externally prescribed groundwater level (MODFLOW coupling).
+   !!
+   !! Used by the swbotb=1 branch when state%soilwater%flcoupled_gwl is set:
+   !! the prescribed gwl comes from the coupler (gwl_injected, cm) instead of
+   !! the afgen gwltab.
+   subroutine apply_coupled_gwl(state)
+      type(swap_state_t), intent(inout) :: state
+      associate (soil => state%soilwater)
+         soil%gwlinp = soil%gwl_injected
+      end associate
+   end subroutine apply_coupled_gwl
 
 end module boundbottom_mod

@@ -307,6 +307,7 @@ if get_option('enable_pfunit')
         'solute/test_solute_cml.pf',
         'solute/test_solute_seed.pf',
         'solute/test_solute_dispersion.pf',
+        'boundary/test_coupled_gwl_inject.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
