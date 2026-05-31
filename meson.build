@@ -7,9 +7,10 @@ fc = meson.get_compiler('fortran')
 fs = import('fs')
 
 src_inc = include_directories(
-    'src', 'src/core', 'src/io', 'src/io/csv', 'src/io/toml', 'src/soil', 'src/atmosphere',
-    'src/crop', 'src/drainage', 'src/boundary',
-    'src/solute', 'src/heat', 'src/utils', 'src/config', 'src/state'
+    'src', 'src/core', 'src/timecontrol', 'src/driver', 'src/bindings', 'src/io', 'src/io/csv', 'src/io/toml',
+    'src/soilwater', 'src/atmosphere',
+    'src/crop', 'src/crop/fixed', 'src/crop/grass', 'src/crop/wofost', 'src/drainage',
+    'src/solute', 'src/heat', 'src/config', 'src/state'
 )
 
 # Platform detection. The rescue spec locks the supported compiler
@@ -62,17 +63,17 @@ add_project_arguments(gfortran_flags, language: 'fortran')
 # OVERLAPPING bind(C) names (initialize/update/finalize/get_current_time/...)
 # and therefore must NOT be linked into the same shared library together.
 modern_core_sources = [
-    'src/core/swap_mod.f90',
-    'src/core/swap_ensemble_mod.f90',
-    'src/core/bmi_constants_mod.f90',
-    'src/core/timecontrol_mod.f90',
+    'src/driver/swap_mod.f90',
+    'src/driver/swap_ensemble_mod.f90',
+    'src/bindings/bmi_constants_mod.f90',
+    'src/timecontrol/timecontrol_mod.f90',
 ]
 
 # Standalone-BMI facade: singleton (capi_state) backed. Drives libswap_bmi.so
 # and the executable. swap_bmi_mod and swap_capi_mod share the C names.
 modern_sources = modern_core_sources + [
-    'src/core/swap_capi_mod.f90',
-    'src/core/swap_bmi_mod.f90',
+    'src/bindings/swap_capi_mod.f90',
+    'src/bindings/swap_bmi_mod.f90',
 ]
 
 # XMI coupling facade: ensemble backed. Sole definer of the coupling C-ABI
@@ -80,7 +81,7 @@ modern_sources = modern_core_sources + [
 # CANNOT coexist with swap_capi_mod/swap_bmi_mod in one library. Drives
 # libswap_xmi.so — the library imod_coupler / xmipy loads.
 modern_xmi_sources = modern_core_sources + [
-    'src/core/swap_xmi_mod.f90',
+    'src/bindings/swap_xmi_mod.f90',
 ]
 
 # Legacy files: project-wide -std=legacy (set by add_project_arguments).
@@ -113,9 +114,9 @@ sources = [
     'src/config/cropwofost_config.f90',
     'src/config/crop_config.f90',
     'src/config/output_csv_config.f90',
-    'src/crop/cropfixed_init.f90',
-    'src/crop/cropwofost_init.f90',
-    'src/crop/cropgrass_init.f90',
+    'src/crop/fixed/cropfixed_init.f90',
+    'src/crop/wofost/cropwofost_init.f90',
+    'src/crop/grass/cropgrass_init.f90',
     'src/config/swap_config.f90',
     # [GR-IO 2026-05-25 Phase 6 Steps 5-6] variables.f90, arrays.fi, and
     #   initialize.f90 all deleted — bare-globals module + its zero-init
@@ -123,11 +124,11 @@ sources = [
     #   defaults on state%X / config%X. Size parameters live in
     #   src/core/arrays.f90 (swap_array_dimensions).
     # Soil
-    'src/soil/waterbalance.f90',
-    'src/soil/soilhydraulics.f90',
+    'src/soilwater/waterbalance.f90',
+    'src/soilwater/soilhydraulics.f90',
     # [GR-SOIL 2026-05-24] sptabulated moved to src/soil/dormant/sptabulated.f90 (TSPACK + EvalTabulatedFunction)
     # [GR-SOIL 2026-05-27] do_ln_trans.f90 deleted; module doln folded back into dormant sptabulated.f90
-    'src/soil/WC_K_models_04_11.f90',
+    'src/soilwater/WC_K_models_04_11.f90',
 
     # I/O
     'src/io/csv/csv_common.f90',
@@ -186,8 +187,8 @@ sources = [
     'src/heat/frozencond.f90',
 
     # Boundaries & Drainage
-    'src/boundary/boundtop.f90',
-    'src/boundary/boundbottom.f90',
+    'src/soilwater/boundtop.f90',
+    'src/soilwater/boundbottom.f90',
     'src/drainage/drainage.f90',
     'src/drainage/divdra.f90',
     'src/drainage/surfacewater.f90',
@@ -197,25 +198,25 @@ sources = [
     # [GR-SOLUTE 2026-05-24] agetracer dropped — body moved to src/solute/dormant/agetracer.f90 (not compiled)
 
     # Crop
-    'src/crop/wofost_soil_declarations.f90',
-    'src/crop/wofost_soil_interface.f90',
-    'src/crop/wofost_soil_parameters.f90',
-    'src/crop/wofost_soil_rateconstants.f90',
-    'src/crop/wofost_soil_orgmatn.f90',
-    'src/crop/wofost_soil_watern.f90',
-    'src/crop/wofost_soil_amendments.f90',
-    'src/crop/wofost_soil_cropresidues.f90',
-    'src/crop/wofost_soil_balancecheck.f90',
-    'src/crop/wofostnut.f90',
+    'src/crop/wofost/wofost_soil_declarations.f90',
+    'src/crop/wofost/wofost_soil_interface.f90',
+    'src/crop/wofost/wofost_soil_parameters.f90',
+    'src/crop/wofost/wofost_soil_rateconstants.f90',
+    'src/crop/wofost/wofost_soil_orgmatn.f90',
+    'src/crop/wofost/wofost_soil_watern.f90',
+    'src/crop/wofost/wofost_soil_amendments.f90',
+    'src/crop/wofost/wofost_soil_cropresidues.f90',
+    'src/crop/wofost/wofost_soil_balancecheck.f90',
+    'src/crop/wofost/wofostnut.f90',
     'src/crop/oxygenstress.f90',
     'src/crop/rootextraction.f90',
     'src/crop/irrigation.f90',
     'src/crop/tillage.f90',
-    'src/crop/management_soil.f90',
+    'src/crop/wofost/management_soil.f90',
     'src/crop/cropgrowth_helpers.f90',
-    'src/crop/cropwofost_runtime.f90',
-    'src/crop/cropgrass_runtime.f90',
-    'src/crop/cropfixed_runtime.f90',
+    'src/crop/wofost/cropwofost_runtime.f90',
+    'src/crop/grass/cropgrass_runtime.f90',
+    'src/crop/fixed/cropfixed_runtime.f90',
     'src/crop/cropgrowth.f90',
 
     # State
@@ -243,10 +244,10 @@ sources = [
     # [GR-IO 2026-05-25 Phase 5] sharedsimulation.f90 moved to src/utils/dormant/
     #   — feature was hardcoded-disabled via flSwapShared (.false.) with no
     #   TOML wiring; call sites in swap_mod.f90 deleted with this commit.
-    'src/utils/arrayutils.f90',
-    'src/utils/surfacewaterutils.f90',
-    'src/utils/soilhydraulicsutils.f90',
-    'src/utils/numericalsolvers.f90',
+    'src/core/arrayutils.f90',
+    'src/drainage/surfacewaterutils.f90',
+    'src/soilwater/soilhydraulicsutils.f90',
+    'src/core/numericalsolvers.f90',
 ]
 
 # ============================================================================
@@ -289,7 +290,7 @@ swap_modern = static_library('swap_modern',
 link_args = ['-static']
 
 executable('swap',
-    sources: 'src/core/swap_main.f90',
+    sources: 'src/driver/swap_main.f90',
     link_with: [swap_modern, swap_legacy],
     dependencies: [tomlf_dep],
     fortran_args: ['-std=f2018'],

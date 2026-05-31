@@ -7,26 +7,46 @@ State pattern: [../docs/state-management.md](../docs/state-management.md).
 Code style: [../docs/code-style.md](../docs/code-style.md).
 Contributing: [../docs/contributing.md](../docs/contributing.md).
 
-## Subdirectories
+## Layout (ADR 0048)
+
+Feature-first for behavior, layer-first for the shared data model.
+
+**Foundation & framing**
+
+| Directory | What it owns |
+|---|---|
+| [core/](core/README.md) | Foundation leaves only: constants, array dims, date utils, logging, array helpers, numerical solvers. |
+| [driver/](driver/README.md) | Lifecycle orchestration (`swap_mod`) and the `swap` executable (`swap_main`, `swap_ensemble_mod`). |
+| [bindings/](bindings/README.md) | C-ABI facades: `swap_capi`, `swap_bmi`, `swap_xmi`, `bmi_constants`. |
+| [error/](error/README.md) | Error collection + `fatalerr`. |
+| [validation/](validation/README.md) | Config validation helpers. |
+
+**Shared data model & edges**
+
+| Directory | What it owns |
+|---|---|
+| [config/](config/README.md) | Read-only typed config records (`*_config_t`), the parsed TOML result. |
+| [state/](state/README.md) | Mutable typed state records (`*_state_t`), aggregated under `swap_state_t`. |
+| [io/](io/README.md) | TOML readers and CSV readers/writers — all file I/O. |
+
+**Compute feature folders**
 
 | Directory | What it owns |
 |---|---|
 | [atmosphere/](atmosphere/README.md) | Precipitation, interception, ET, snow, meteo. |
-| [boundary/](boundary/README.md) | Top / bottom boundary conditions. |
-| [core/](core/README.md) | Entry points, aggregated state, time control, legacy bridge. |
-| [crop/](crop/README.md) | Crop growth (fixed / grass / WOFOST), irrigation, tillage, rootextraction. |
-| [drainage/](drainage/README.md) | Drainage flux, surface water state. |
-| [error/](error/README.md) | (Empty — Phase 4 placeholder.) |
-| [heat/](heat/README.md) | Soil temperature, frozen soil conductivity. |
-| [io/](io/README.md) | TOML and legacy readers, CSV output writers. |
-| [macropore/](macropore/README.md) | Macropore flow, rates, output. |
-| [soil/](soil/README.md) | Soil hydraulics, grid, water balance. |
+| [soilwater/](soilwater/README.md) | Soil hydraulics, grid, water balance, top/bottom boundary conditions. |
+| [heat/](heat/README.md) | Soil temperature, frozen-soil conductivity. |
 | [solute/](solute/README.md) | Solute transport. |
-| [utils/](utils/README.md) | Arrays, solvers, shared helpers. |
+| [drainage/](drainage/README.md) | Drainage flux, surface-water dynamics. |
+| [timecontrol/](timecontrol/README.md) | Time loop, calendar, schedule, dt control. |
+| [crop/](crop/README.md) | Crop growth dispatch + cross-mode (rootextraction, oxygenstress) + irrigation + tillage, with `fixed/`, `grass/`, `wofost/` sub-packages. All WOFOST nutrient dynamics live in `crop/wofost/`. |
 
 ## Dependency direction
 
-Physics subdirs depend on `core/` (state aggregator, time control) and `utils/` (low-level helpers). They do not depend on each other directly; inter-domain communication is through `swap_state_t`.
+Compute feature folders depend on the foundation (`core/`) and the shared data
+model (`state/`, `config/`); they do not depend on each other directly —
+inter-domain communication is through `swap_state_t`. `driver/` sits at the apex
+(depends on everything); `bindings/` wraps `driver/` with the C-ABI.
 
 ## Conventions
 

@@ -1,11 +1,14 @@
-# src/soil
+# src/soilwater
 
 ## Responsibility
 
 Soil water dynamics: the Richards-equation solver, the soil hydraulic
-property functions, and water-balance integration.
+property functions, and water-balance integration. Also the top/bottom
+boundary conditions of the soil column (`boundtop.f90`, `boundbottom.f90` —
+folded in from the former `src/boundary/` per ADR 0048) and the state-operating
+hydraulics helpers (`soilhydraulicsutils.f90`, formerly `src/utils/`).
 
-Three compiled modules:
+Core compiled modules:
 
 - **`soilhydraulics.f90`** (`soilhydraulics_mod`) — the Richards solver
   and the soil-water lifecycle. `headcalc` solves the mixed-form Richards
