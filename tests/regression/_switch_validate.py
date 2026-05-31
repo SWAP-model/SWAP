@@ -104,6 +104,12 @@ SCENARIOS = {
                   "avprectb  = [0.0, 6.0, 365.0, 6.0]\n"
                   "avevaptb  = [0.0, 1.5, 365.0, 1.5]\n")],
     ),
+    # wofost swoxygen=2 (Bartholomeus physical): potatod already carries the full
+    # param block, so just flip the switch.
+    "wof_swoxygen2": (
+        [(r"^  SWOXYGEN = 1\b", "  SWOXYGEN = 2")],
+        [(r"(^swoxygen\s+= )1\b", r"\g<1>2")],
+    ),
     # ===== WOFOST (potatod) restorations =====
     "wof_swharv1": (
         [(r"^  SWHARV = 0\b", "  SWHARV = 1")],
@@ -227,7 +233,7 @@ SCENARIO_CROP = {
     "wof_swharv1": "potatod", "wof_swcomp1": "potatod", "wof_swcomp2": "potatod",
     "wof_swinter2": "potatod",
     "grs_swcomp2": "grassd", "grs_swinter2": "grassd", "grs_swcf3": "grassd",
-    "wof_swcf3": "potatod",
+    "wof_swcf3": "potatod", "wof_swoxygen2": "potatod",
 }
 
 

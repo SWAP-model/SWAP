@@ -236,3 +236,27 @@ swoxygen=2 needs numerical heat, swcalt=2).
 **Recommended order: 1 → 2 → 3** (ascending effort/risk). Each needs its own
 heat/feature-enabled regression case authored or converted from a legacy ASCII
 crop (legacy/swap-4.2.0:xdata/crops/* use SWDROUGHT=2/SWINTER=3).
+
+### 2026-06-01 — wofost swoxygen=2 (Bartholomeus type-1): gated, 0.01 cm TACT divergence
+
+Cluster-1 attempt. The plumbing was completed and VERIFIED (swoxygentype field +
+reader + the swoxygen==2 init block mirroring the proven cropgrass path; every
+kernel input wired: q10, rmr→c_mroot, rfsetb→f_senes, q10_microbial,
+specific_resp_humus, srl, swrootradius, root_radiusO2). Yet potatod flipped to
+swoxygen=2 diverges from swap420gf by **0.01 cm on annual TACT** (two years),
+marginally over the 1e-2 harness tolerance; GWL and all other vars match.
+
+Decisive diagnostics:
+- A full all-columns diff of the UNMODIFIED hupselbrook run (legacy vs modern) is
+  byte-identical — so potatod biomass is NOT pre-diverged; the 0.01 appears ONLY
+  when swoxygen=2 is enabled.
+- The grass (type-3) oxygen path IS byte-identical (4.oxygenstress passes). So the
+  kernel is exact for type 3 but the **type-2 (wofost) path was never validated**.
+
+→ This is the same class as swsalinity=1: a feedback-coupled stress (oxygen →
+reduced uptake → biomass → max_resp_factor → oxygen) amplifying a sub-threshold
+FP difference in the type-2 kernel branch. REVERTED; wofost swoxygen=2 stays
+gated pending root-cause. Note the non-feedback restorations (swcompensate,
+swinter=2, swcf=3) were all byte-identical — the divergences cluster on the
+feedback-coupled stresses (salinity, oxygen, and — high risk — the JvL drought
+Newton-Raphson still to come).
