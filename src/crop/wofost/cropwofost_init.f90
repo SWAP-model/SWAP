@@ -131,9 +131,6 @@ contains
       if (cfg%compensate%swcompensate /= 0) &
          call fatalerr_collected('cropwofost_init', &
             'swcompensate/=0 not supported on TOML path; validator should have rejected.')
-      if (cfg%harvest%swharv == 1) &
-         call fatalerr_collected('cropwofost_init', &
-            'swharv=1 not supported on TOML path; validator should have rejected.')
       if (cfg%salinity%swsalinity == 2) &
          call fatalerr_collected('cropwofost_init', &
             'swsalinity=2 not supported on TOML path; validator should have rejected.')

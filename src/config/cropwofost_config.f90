@@ -790,12 +790,6 @@ contains
             'supported in the TOML pipeline; use the legacy executable.', &
             'cropwofost.compensate')
       end if
-      if (self%harvest%swharv == 1) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropwofost.harvest.swharv=1 (DVS-based harvest timing) not yet ' // &
-            'supported in the TOML pipeline; use the legacy executable.', &
-            'cropwofost.harvest')
-      end if
       if (self%co2%swco2 == 1) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropwofost.co2.swco2=1 (CO2 assimilation correction) not yet ' // &

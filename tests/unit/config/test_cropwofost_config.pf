@@ -758,7 +758,10 @@ subroutine test_cropwofost_swcompensate_one_rejected()
 end subroutine
 
 @test
-subroutine test_cropwofost_swharv_one_rejected()
+subroutine test_cropwofost_swharv_one_accepted()
+   ! swharv=1 (DVS-based harvest timing) is now supported on the TOML path —
+   ! the harvest branch is shared with cropfixed (cropgrowth.f90) and dvsend/
+   ! swharv are already copied to state. No stub error.
    use funit
    use cropwofost_config_mod, only: cropwofost_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -771,9 +774,9 @@ subroutine test_cropwofost_swharv_one_rejected()
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'swharv=1') > 0) found = .true.
+          index(errors%items(i)%message, 'swharv') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test
