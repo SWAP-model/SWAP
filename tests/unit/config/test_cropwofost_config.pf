@@ -739,8 +739,12 @@ subroutine test_cropwofost_swinter_two_rejected()
 end subroutine
 
 @test
-subroutine test_cropwofost_swcompensate_one_rejected()
+subroutine test_cropwofost_swcompensate_one_accepted()
+   ! swcompensate=1/2 (Jarvis/Walsum) is now supported on the TOML path — the
+   ! compensation kernel is shared with cropfixed (rootextraction.f90) and init
+   ! now copies alphacrit/dcritrtz. With a valid alphacrit there is no stub error.
    use funit
+   use iso_fortran_env, only: real64
    use cropwofost_config_mod, only: cropwofost_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
    type(cropwofost_config_t) :: c
@@ -748,13 +752,15 @@ subroutine test_cropwofost_swcompensate_one_rejected()
    integer :: i
    logical :: found
    c%compensate%swcompensate = 1
+   c%compensate%swstressor   = 2
+   c%compensate%alphacrit    = 0.7_real64
    call c%validate(errors)
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
           index(errors%items(i)%message, 'swcompensate') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test

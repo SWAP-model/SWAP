@@ -128,9 +128,6 @@ contains
       if (cfg%interception%swinter == 2) &
          call fatalerr_collected('cropwofost_init', &
             'swinter=2 not supported on TOML path; validator should have rejected.')
-      if (cfg%compensate%swcompensate /= 0) &
-         call fatalerr_collected('cropwofost_init', &
-            'swcompensate/=0 not supported on TOML path; validator should have rejected.')
       if (cfg%salinity%swsalinity == 2) &
          call fatalerr_collected('cropwofost_init', &
             'swsalinity=2 not supported on TOML path; validator should have rejected.')
@@ -380,6 +377,10 @@ contains
       ! swstressor is only meaningful when swcompensate > 0; default=1 from variables
       ! module init. Only set when enabled to avoid clobbering with 0 default.
       if (state%crop%common%swcompensate > 0) state%crop%common%swstressor = cfg%compensate%swstressor
+      ! Legacy readwofost reads alphacrit for Jarvis (swcompensate=1) and dcritrtz
+      ! for Walsum (swcompensate=2; alphacrit is then derived in RootExtraction).
+      if (cfg%compensate%swcompensate == 1) state%crop%common%alphacrit = cfg%compensate%alphacrit
+      if (cfg%compensate%swcompensate == 2) state%crop%common%dcritrtz  = cfg%compensate%dcritrtz
 
       ! Part 10: root depth and density (readwofost lines 2993-3031)
       state%crop%common%swrdc = cfg%root%swrdc

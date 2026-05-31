@@ -784,12 +784,6 @@ contains
             'yet supported in the TOML pipeline; use the legacy executable.', &
             'cropwofost.interception')
       end if
-      if (self%compensate%swcompensate /= 0) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropwofost.compensate.swcompensate /= 0 (Jarvis/Walsum) not yet ' // &
-            'supported in the TOML pipeline; use the legacy executable.', &
-            'cropwofost.compensate')
-      end if
       if (self%co2%swco2 == 1) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropwofost.co2.swco2=1 (CO2 assimilation correction) not yet ' // &
