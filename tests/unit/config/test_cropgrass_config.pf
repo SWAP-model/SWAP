@@ -201,7 +201,9 @@ subroutine test_cropgrass_swdrought2_rejected()
 end subroutine
 
 @test
-subroutine test_cropgrass_swcompensate2_rejected()
+subroutine test_cropgrass_swcompensate2_accepted()
+   ! swcompensate=2 (Walsum) is now supported on the TOML path — the kernel is
+   ! shared with cropfixed (rootextraction.f90) and init now copies dcritrtz.
    use funit
    use cropgrass_config_mod, only: cropgrass_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -214,9 +216,9 @@ subroutine test_cropgrass_swcompensate2_rejected()
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'swcompensate=2') > 0) found = .true.
+          index(errors%items(i)%message, 'swcompensate') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test

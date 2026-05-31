@@ -58,9 +58,6 @@ contains
       if (cfg%swsalinity /= 0) &
          call fatalerr_collected('cropgrass_init', &
             'swsalinity/=0 not supported on TOML path; validator should have rejected.')
-      if (cfg%swcompensate == 2) &
-         call fatalerr_collected('cropgrass_init', &
-            'swcompensate=2 not supported on TOML path; validator should have rejected.')
       if (cfg%swco2 == 1) &
          call fatalerr_collected('cropgrass_init', &
             'swco2=1 not supported on TOML path; validator should have rejected.')
@@ -229,8 +226,10 @@ contains
       end if
       if (cfg%swcompensate == 1) then
          state%crop%common%alphacrit = cfg%alphacrit
+      else if (cfg%swcompensate == 2) then
+         ! Walsum: dcritrtz drives the derived alphacrit in RootExtraction.
+         state%crop%common%dcritrtz = cfg%dcritrtz
       end if
-      ! swcompensate=2 (Walsum dcritrtz) is stub-guarded above.
 
       ! Part 15: rooting (readgrass lines 3835-3873)
       state%crop%common%swrdc = cfg%swrdc

@@ -231,11 +231,8 @@ contains
             'cropgrass.swdrought=2 (De Jong van Lier) not yet supported in ' // &
             'the TOML pipeline; use the legacy executable.', 'cropgrass')
       end if
-      if (self%swcompensate == 2) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropgrass.swcompensate=2 (Walsum) not yet supported in ' // &
-            'the TOML pipeline; use the legacy executable.', 'cropgrass')
-      end if
+      ! swcompensate=1 (Jarvis) and =2 (Walsum) are both supported; the kernel
+      ! is shared with cropfixed (rootextraction.f90).
       if (self%swsalinity /= 0) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropgrass.swsalinity /= 0 not yet supported in the TOML ' // &
