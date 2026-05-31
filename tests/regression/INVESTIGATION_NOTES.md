@@ -155,3 +155,22 @@ blocker.
 Validation tool: `tests/regression/_switch_validate.py` runs a maizes (type-1)
 variant through both `swap420gf` (legacy ASCII) and the modern build (TOML) per
 switch and compares the harness's aggregated flux/state vars.
+
+### 2026-05-31 addendum — grass/wofost restoration pass
+
+The same gated branches exist in cropgrass and cropwofost; restored the ones with
+intact shared compute, all byte-identical vs swap420gf on potatod/grassd:
+- **cropwofost**: swharv=1, swcompensate=1/2 (init was missing the alphacrit/
+  dcritrtz copies), swinter=2 (split the schema gashtb into the atmosphere arrays).
+- **cropgrass**: swcompensate=2 (Walsum; Jarvis=1 already worked), swinter=2
+  (added a gashtb schema field + reader + atmosphere split).
+
+Still gated, consistent with the cropfixed findings:
+- **swsalinity** (grass): left gated — same salinity→cml feedback divergence as
+  cropfixed (wofost swsalinity=1 already works, so it is simple/grass-path
+  specific; not isolated). swsalinity=2 stays gated everywhere (needs swdrought=2).
+- **swcf=3** (grass stub-errored; wofost enum-excluded to [1,2] though legacy
+  reads swcf=1..3): NOT restored in this pass. It is the same wet-crop-factor
+  (cfeic) branch as cropfixed swcf=3 and so inherits the pre-existing crop-factor
+  + Penman-Monteith 0.01 cm GWL artifact; it also needs per-module cfeictb
+  plumbing. Deferred pending a decision on shipping that artifact across modules.

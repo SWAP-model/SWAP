@@ -41,14 +41,14 @@ def _patch(path: Path, subs):
     path.write_text(txt)
 
 
-def run_legacy(crp_subs):
+def run_legacy(crp_subs, crp="maizes"):
     with tempfile.TemporaryDirectory() as d:
         w = Path(d)
         for pat in ("*.swp.template", "*.crp", "*.dra", "*.met", "*.csv", "*.ini"):
             for f in CLASSIC.glob(pat):
                 shutil.copy(f, w / f.name)
         shutil.copy(w / "swap_linux.swp.template", w / "swap.swp")
-        _patch(w / "maizes.crp", crp_subs)
+        _patch(w / f"{crp}.crp", crp_subs)
         p = subprocess.run([str(REF_BIN)], cwd=w, capture_output=True, text=True)
         out = w / "result_output.csv"
         if not out.exists():
@@ -56,13 +56,13 @@ def run_legacy(crp_subs):
         return aggregate(out, FLUX, STATE)
 
 
-def run_modern(toml_subs):
+def run_modern(toml_subs, crp="maizes"):
     with tempfile.TemporaryDirectory() as d:
         w = Path(d) / "case"
         shutil.copytree(TOMLDIR, w, ignore=shutil.ignore_patterns('result_*.csv'))
         if not (w / "swap.swp").exists():
             shutil.copy(w / "swap_linux.swp.template", w / "swap.swp")
-        _patch(w / "maizes.crp.toml", toml_subs)
+        _patch(w / f"{crp}.crp.toml", toml_subs)
         p = subprocess.run([str(MODERN_BIN)], cwd=w, capture_output=True, text=True)
         out = w / "result_output.csv"
         if p.returncode != 100 or not out.exists():
@@ -103,6 +103,48 @@ SCENARIOS = {
                   "scanopytb = [0.0, 0.4, 365.0, 0.4]\n"
                   "avprectb  = [0.0, 6.0, 365.0, 6.0]\n"
                   "avevaptb  = [0.0, 1.5, 365.0, 1.5]\n")],
+    ),
+    # ===== WOFOST (potatod) restorations =====
+    "wof_swharv1": (
+        [(r"^  SWHARV = 0\b", "  SWHARV = 1")],
+        [(r"^swharv = 0\b", "swharv = 1")],
+    ),
+    "wof_swcomp1": (
+        [(r"^  SWCOMPENSATE = 0\b", "  SWCOMPENSATE = 1"),
+         (r"^  SWSTRESSOR = 3\b", "  SWSTRESSOR = 2"),
+         (r"^  ALPHACRIT = 1\.0\b", "  ALPHACRIT = 0.7")],
+        [(r"^swcompensate = 0\b", "swcompensate = 1"),
+         (r"^swstressor   = 3\b", "swstressor   = 2"),
+         (r"^alphacrit    = 1\.0\b", "alphacrit    = 0.7")],
+    ),
+    "wof_swcomp2": (
+        [(r"^  SWCOMPENSATE = 0\b", "  SWCOMPENSATE = 2"),
+         (r"^  SWSTRESSOR = 3\b", "  SWSTRESSOR = 2")],
+        [(r"^swcompensate = 0\b", "swcompensate = 2"),
+         (r"^swstressor   = 3\b", "swstressor   = 2")],
+    ),
+    "wof_swinter2": (
+        [(r"^  SWINTER = 1\b", "  SWINTER = 2")],
+        [(r"^swinter = 1\b", "swinter = 2")],
+    ),
+    # ===== GRASS (grassd) restorations =====
+    # grassd uses deprecated SWJARVIS=4; swap for explicit SWCOMPENSATE=2 Walsum.
+    "grs_swcomp2": (
+        [(r"^  SWJARVIS = 4\b",
+          "  SWCOMPENSATE = 2\n  SWSTRESSOR = 2\n  DCRITRTZ = 16.0")],
+        [(r"^swcompensate = 1\b", "swcompensate = 2"),
+         (r"^swstressor   = 1\b", "swstressor   = 2")],
+    ),
+    "grs_swinter2": (
+        [(r"^  SWINTER =  1\b", "  SWINTER =  2"),
+         (r"(^  COFAB =  0\.25.*$)",
+          r"\1" + "\n\n     T  PFREE  PSTEM  SCANOPY  AVPREC  AVEVAP\n"
+          "   0.0    0.9   0.05      0.4     6.0     1.5\n"
+          " 365.0    0.9   0.05      0.4     6.0     1.5\n* End of table")],
+        [(r"^swinter = 1\b", "swinter = 2"),
+         (r"(^cofab = 0\.25.*$)",
+          r"\1" + "\ngashtb = [\n  [0.0, 0.9, 0.05, 0.4, 6.0, 1.5],\n"
+          "  [365.0, 0.9, 0.05, 0.4, 6.0, 1.5],\n]")],
     ),
     # diagnostic: swsalinity=1 but saltslope=0 -> branch runs, alpsol always 1.
     "swsal1_noslope": (
@@ -153,12 +195,21 @@ SCENARIOS = {
 }
 
 
+# scenario -> crop basename to patch (default maizes / type-1).
+SCENARIO_CROP = {
+    "wof_swharv1": "potatod", "wof_swcomp1": "potatod", "wof_swcomp2": "potatod",
+    "wof_swinter2": "potatod",
+    "grs_swcomp2": "grassd", "grs_swinter2": "grassd",
+}
+
+
 def main():
     if len(sys.argv) != 2 or sys.argv[1] not in SCENARIOS:
         raise SystemExit(f"usage: {sys.argv[0]} <{'|'.join(SCENARIOS)}>")
+    crp = SCENARIO_CROP.get(sys.argv[1], "maizes")
     crp_subs, toml_subs = SCENARIOS[sys.argv[1]]
-    leg_a, leg_t, leg_m = run_legacy(crp_subs)
-    mod_a, mod_t, mod_m = run_modern(toml_subs)
+    leg_a, leg_t, leg_m = run_legacy(crp_subs, crp)
+    mod_a, mod_t, mod_m = run_modern(toml_subs, crp)
 
     print(f"\n=== {sys.argv[1]}: legacy(swap420gf) vs modern ===")
     worst = 0.0
