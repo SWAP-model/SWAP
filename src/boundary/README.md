@@ -6,9 +6,8 @@ Top and bottom boundary conditions for the Richards-equation soil column.
 `boundtop.f90` supplies the top boundary flux (ponding, runoff, and
 `PONDRUNOFF`), while `boundbottom.f90` computes the bottom boundary
 (free drainage, pressure head, flux, or Cauchy conditions depending on
-the user's `swbotb` choice). Constants live in `boundary_constants.f90`;
-`boundary_state.f90` declares `boundary_state_t` and its lifecycle
-routines.
+the user's `swbotb` choice). `boundary_state.f90` declares
+`boundary_state_t` and its lifecycle routines.
 
 ## Public interface
 
