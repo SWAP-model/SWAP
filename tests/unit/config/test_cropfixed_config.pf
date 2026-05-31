@@ -115,7 +115,9 @@ subroutine test_cropfixed_swoxygen_two_rejected()
 end subroutine
 
 @test
-subroutine test_cropfixed_swcompensate_one_rejected()
+subroutine test_cropfixed_swcompensate_one_accepted()
+   ! swcompensate=1 (Jarvis) is now supported on the TOML path — the
+   ! compensation kernel is intact in rootextraction.f90:248-285. No stub error.
    use funit
    use cropfixed_config_mod, only: cropfixed_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -130,7 +132,7 @@ subroutine test_cropfixed_swcompensate_one_rejected()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
           index(errors%items(i)%message, 'swcompensate') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test
@@ -216,6 +218,9 @@ end subroutine
 
 @test
 subroutine test_cropfixed_swsalinity_one_rejected()
+   ! swsalinity=1 (Maas-Hoffman) kernel is intact, but enabling it for a simple
+   ! crop diverges from swap420gf (the salinity->uptake->cml feedback loop), so
+   ! it stays gated pending investigation. See dev-docs investigation note.
    use funit
    use cropfixed_config_mod, only: cropfixed_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -324,7 +329,9 @@ subroutine test_cropfixed_swinter_three_rejected()
 end subroutine
 
 @test
-subroutine test_cropfixed_swcompensate_two_rejected()
+subroutine test_cropfixed_swcompensate_two_accepted()
+   ! swcompensate=2 (Walsum) is now supported on the TOML path — the dynamic
+   ! alphacrit kernel is intact in rootextraction.f90:251-252. No stub error.
    use funit
    use cropfixed_config_mod, only: cropfixed_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -339,7 +346,7 @@ subroutine test_cropfixed_swcompensate_two_rejected()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
           index(errors%items(i)%message, 'swcompensate') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test

@@ -159,12 +159,6 @@ contains
             'cropfixed.swoxygen=2 (Bartholomeus) not yet supported in ' // &
             'the TOML pipeline; use the legacy executable.', 'cropfixed')
       end if
-      if (self%swcompensate /= 0) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropfixed.swcompensate /= 0 (Jarvis/Walsum compensation) not ' // &
-            'yet supported in the TOML pipeline; use the legacy executable.', &
-            'cropfixed')
-      end if
       if (self%swcf == 3) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropfixed.swcf=3 (wet-crop factor) not yet supported in the ' // &
@@ -185,6 +179,11 @@ contains
             'biomass) is not possible with the simple crop module.', &
             'cropfixed')
       end if
+      ! swsalinity=1 (Maas-Hoffman) and swsalinity=2 (osmotic head) both stay
+      ! rejected: the Maas-Hoffman kernel is intact, but enabling it for a
+      ! simple crop fails byte-identical regression against swap420gf — the
+      ! salinity→uptake→solute-concentration feedback loop diverges (the only
+      ! stress whose magnitude reads sol%cml). See dev-docs investigation note.
       if (self%swsalinity == 1 .or. self%swsalinity == 2) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropfixed.swsalinity != 0 (Maas-Hoffman / osmotic head) not ' // &
