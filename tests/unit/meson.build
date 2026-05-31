@@ -218,6 +218,7 @@ if get_option('enable_pfunit')
         'atmosphere/test_precipitation.pf',
         'atmosphere/test_et.pf',
         'error/test_error.pf',
+        'error/test_error_library_mode.pf',
         'validation/test_validation.pf',
         'config/test_general_config.pf',
         'config/test_simulation_config.pf',
