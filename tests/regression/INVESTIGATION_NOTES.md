@@ -173,4 +173,12 @@ Still gated, consistent with the cropfixed findings:
   reads swcf=1..3): NOT restored in this pass. It is the same wet-crop-factor
   (cfeic) branch as cropfixed swcf=3 and so inherits the pre-existing crop-factor
   + Penman-Monteith 0.01 cm GWL artifact; it also needs per-module cfeictb
-  plumbing. Deferred pending a decision on shipping that artifact across modules.
+  plumbing. RESTORED for both (per-module cfeictb plumbing; the LAI-indexed
+  runtime cfeic lookup was already intact). Both validated byte-identical incl.
+  GWL on grassd/potatod — so the cropfixed maize 0.01 cm GWL artifact is
+  case-specific, NOT inherent to swcf=3.
+
+Net after this pass: the only remaining gated branch with intact-but-divergent
+compute is swsalinity=1 (cropfixed + grass) — the cml-feedback issue above.
+Everything else still gated has genuinely deleted/dormant compute (Tier C/D):
+swdrought=2, swinter=3, swoxygen=2 inputs/repro, swsalinity=2.
