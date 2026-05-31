@@ -260,3 +260,17 @@ gated pending root-cause. Note the non-feedback restorations (swcompensate,
 swinter=2, swcf=3) were all byte-identical — the divergences cluster on the
 feedback-coupled stresses (salinity, oxygen, and — high risk — the JvL drought
 Newton-Raphson still to come).
+
+### 2026-06-01 — permanent crop-switch regression cases + swsalinity=2 SIGSEGV
+
+Added standalone regression cases (hupselbrook + one setting, legacy+TOML, under
+tests/regression/cases/) with swap420gf fixtures, registered via the new local=
+/pending_restore= CaseConfig fields. PASS: swrd2, swharv1, swcompensate1/2,
+swinter2, swcf3 (wofost+grass). xfail: swcf3_maize (known 0.01cm GWL), and
+restoration targets swsalinity1, swoxygen2, swinter3, swdrought2 (pending_restore).
+
+**swsalinity=2 (osmotic head): no case — swap420gf itself SIGSEGVs.** Authoring a
+maizes swdrought=2 + swsalinity=2 case, the LEGACY reference crashes in
+`matricflux_`/`jongvanlier_` (SIGSEGV) on the hupselbrook config. So 4.2.0 itself
+cannot run osmotic-head salinity here and no oracle fixture can be produced —
+swsalinity=2 is omitted from the suite. (swdrought=2 alone runs fine.)

@@ -129,10 +129,31 @@ CASES = {
     ],
 }
 
+# JvL drought-stress block (swdrought=2), values from legacy grass.crp.
+_JVL = ("\n  WILTPOINT = -20000.0\n  KSTEM = 1.03d-4\n  RXYLEM = 0.02\n"
+        "  ROOTRADIUS = 0.05\n  KROOT = 3.5d-5\n  ROOTCOEFA = 0.53\n"
+        "  SWHYDRLIFT = 0\n  ROOTEFF = 1.0\n  STEPHR = 1.0\n"
+        "  CRITERHR = 0.001\n  TACCUR = 0.001")
+
+CASES.update({
+    # ---- not-yet-restored compute (deleted/dormant) -> pending restoration ----
+    "swinter3": [dict(crp="maizes",
+                      legacy=[(r"^  SWINTER = 1\b", "  SWINTER = 3"),
+                              (r"(^  COFAB = 0\.25\b.*$)",
+                               r"\1" + "\n  FIMIN = 0.04\n  SICCAPLAI = 0.0042")],
+                      toml=[(r"^swinter = 1\b", "swinter = 3")])],
+    "swdrought2": [dict(crp="maizes",
+                        legacy=[(r"^  SWDROUGHT = 1\b", "  SWDROUGHT = 2"),
+                                (r"(^  ADCRL = 0\.1\b.*$)", r"\1" + _JVL)],
+                        toml=[(r"^swdrought = 1\b", "swdrought = 2")])],
+    # swsalinity=2 (osmotic head) is intentionally omitted: swap420gf itself
+    # SIGSEGVs on it (matricflux) in this config, so no oracle fixture exists.
+})
+
 # Cases whose modern run currently fatal-errors (option gated / compute not yet
 # restored). Registered with pending_restore so the suite treats the modern error
 # as xfail; the swap420gf fixture is still generated as a restoration target.
-PENDING = {"swsalinity1", "swoxygen2"}
+PENDING = {"swsalinity1", "swoxygen2", "swinter3", "swdrought2"}
 
 
 def gen_one(name, specs):

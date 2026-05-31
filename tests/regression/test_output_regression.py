@@ -172,6 +172,16 @@ CASES.update({
     "swoxygen2":     _switch_case("swoxygen2",
                                   pending_restore="wofost swoxygen=2 gated (type-2 "
                                   "oxygen-stress 0.01cm TACT divergence); see INVESTIGATION_NOTES.md"),
+    # deleted/dormant compute, restoration targets (modern fatal-errors -> xfail)
+    "swinter3":      _switch_case("swinter3",
+                                  pending_restore="swinter=3 (adapted-Rutter storage interception) "
+                                  "compute deleted; recover msw1eic from f653aed^"),
+    "swdrought2":    _switch_case("swdrought2",
+                                  pending_restore="swdrought=2 (De Jong van Lier) compute deleted; "
+                                  "recover jongvanlier.f90 from 5c82f0a^"),
+    # NOTE: swsalinity=2 (osmotic head) is intentionally NOT a case — swap420gf
+    # itself SIGSEGVs on it (matricflux) in the hupselbrook config, so no oracle
+    # fixture can be produced. See INVESTIGATION_NOTES.md.
 })
 
 
