@@ -33,7 +33,8 @@ LEGACY_INPUTS = ("*.swp.template", "*.crp", "*.dra", "*.met", "*.csv", "*.ini",
 
 def _run_reference_and_aggregate(case):
     """Run swap420gf on a temp copy of the case's legacy ASCII dir, aggregate."""
-    legacy_dir = TESTS_DIR / "swap-cases" / case.case_dir
+    from test_output_regression import case_legacy_dir
+    legacy_dir = case_legacy_dir(case)
     if not legacy_dir.exists():
         raise RuntimeError(f"legacy dir not found: {legacy_dir}")
 

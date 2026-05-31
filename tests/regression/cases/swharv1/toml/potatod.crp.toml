@@ -1,0 +1,268 @@
+# Hupselbrook potato (potatod.crp) - WOFOST type-2 crop config.
+
+[preparation]
+swprep       = 0
+zprep        = -15.0
+hprep        = -80.0
+maxprepdelay = 30
+
+[sowing]
+swsow       = 0
+zsow        = -15.0
+hsow        = -80.0
+ztempsow    = -6.0
+tempsow     = 9.0
+maxsowdelay = 30
+
+[germination]
+swgerm     = 2
+tsumemeopt = 170.0
+tbasem     = 3.0
+teffmx     = 18.0
+hdrygerm   = -500.0
+hwetgerm   = -100.0
+zgerm      = -10.0
+agerm      = 203.0
+
+[harvest]
+dvsend = 2.0
+swharv = 1
+
+[crop_factor]
+swcf   = 2
+albedo = 0.19
+rsc    = 207.0
+rsw    = 0.0
+cftb = [
+  [0.0, 1.0],
+  [1.0, 1.1],
+  [2.0, 1.1],
+]
+chtb = [
+  [0.0,  1.0],
+  [1.0, 40.0],
+  [2.0, 50.0],
+]
+
+[phenology]
+idsl     = 0
+tsumea   = 150.0
+tsumam   = 1550.0
+dlo      = 14.0
+dlc      = 8.0
+vernsat  = 70.0
+vernbase = 14.0
+verndvs  = 0.3
+dtsmtb = [
+  [ 0.0,  0.0],
+  [ 2.0,  0.0],
+  [13.0, 11.0],
+  [30.0, 28.0],
+]
+verntb = [
+  [-10.0, 0.0],
+  [ -4.0, 0.0],
+  [  3.0, 1.0],
+  [ 10.0, 1.0],
+  [ 17.0, 0.0],
+  [ 30.0, 0.0],
+]
+
+[initial]
+tdwi   = 75.0
+laiem  = 0.0589
+rgrlai = 0.012
+
+[green_area]
+spa   = 0.0
+ssa   = 0.0
+span  = 37.0
+tbase = 2.0
+slatb = [
+  [0.0, 0.0030],
+  [1.1, 0.0030],
+  [2.0, 0.0015],
+]
+
+[assimilation]
+kdif = 1.0
+kdir = 0.75
+eff  = 0.45
+amaxtb = [
+  [0.00, 30.0],
+  [1.57, 30.0],
+  [2.00,  0.0],
+]
+tmpftb = [
+  [ 0.0, 0.01],
+  [ 3.0, 0.01],
+  [10.0, 0.75],
+  [15.0, 1.00],
+  [20.0, 1.00],
+  [26.0, 0.75],
+  [33.0, 0.01],
+]
+tmnftb = [
+  [0.0, 0.0],
+  [3.0, 1.0],
+]
+
+[conversion]
+cvl = 0.72
+cvo = 0.85
+cvr = 0.72
+cvs = 0.69
+
+[respiration]
+q10 = 2.0
+rml = 0.03
+rmo = 0.0045
+rmr = 0.01
+rms = 0.015
+rfsetb = [
+  [0.0, 1.0],
+  [2.0, 1.0],
+]
+
+[partitioning]
+frtb = [
+  [0.00, 0.2],
+  [1.00, 0.2],
+  [1.36, 0.0],
+  [2.00, 0.0],
+]
+fltb = [
+  [0.00, 0.8],
+  [1.00, 0.8],
+  [1.27, 0.0],
+  [1.36, 0.0],
+  [2.00, 0.0],
+]
+fstb = [
+  [0.00, 0.20],
+  [1.00, 0.20],
+  [1.27, 0.25],
+  [1.36, 0.00],
+  [2.00, 0.00],
+]
+fotb = [
+  [0.00, 0.00],
+  [1.00, 0.00],
+  [1.27, 0.75],
+  [1.36, 1.00],
+  [2.00, 1.00],
+]
+
+[death]
+perdl = 0.03
+rdrrtb = [
+  [0.0000, 0.00],
+  [1.5000, 0.00],
+  [1.5001, 0.02],
+  [2.0000, 0.02],
+]
+rdrstb = [
+  [0.0000, 0.00],
+  [1.5000, 0.00],
+  [1.5001, 0.02],
+  [2.0000, 0.02],
+]
+
+[root]
+swrd     = 2
+rdi      = 10.0
+rri      = 1.2
+rdc      = 50.0
+swdmi2rd = 1
+wrtmax   = 3000.0
+rdtb = [
+  [0.0, 10.0],
+  [1.0, 50.0],
+  [2.0, 50.0],
+]
+rlwtb = [
+  [  12.5, 10.0],
+  [1200.0, 50.0],
+]
+rdctb = [
+  [0.0, 1.0],
+  [1.0, 0.0],
+]
+
+[oxygen_stress]
+swoxygen                = 1
+swwrtnonox              = 1
+aeratecrit              = 0.5
+hlim1                   = -10.0
+hlim2u                  = -25.0
+hlim2l                  = -25.0
+q10_microbial           = 2.8
+specific_resp_humus     = 0.0016
+srl                     = 151375.0
+swrootradius            = 2
+dry_mat_cont_roots      = 0.075
+air_filled_root_por     = 0.05
+spec_weight_root_tissue = 1000.0
+var_a                   = 0.000000000418
+root_radiusO2           = 0.00015
+
+[drought_stress]
+swdrought = 1
+hlim3h    = -300.0
+hlim3l    = -500.0
+hlim4     = -10000.0
+adcrh     = 0.5
+adcrl     = 0.1
+
+[salinity]
+swsalinity = 0
+saltmax    = 3.0
+saltslope  = 0.1
+salthead   = 624.0
+
+[compensate]
+swcompensate = 0
+swstressor   = 3
+alphacrit    = 1.0
+dcritrtz     = 5.0
+
+[interception]
+swinter = 1
+cofab   = 0.25
+gashtb = [
+  [  0.0, 0.9, 0.05, 0.4, 6.0, 1.5],
+  [365.0, 0.9, 0.05, 0.4, 6.0, 1.5],
+]
+
+[co2]
+swco2   = 0
+atmofil = "atmospheric"
+co2amaxtb = [
+  [  40.0, 0.0],
+  [ 360.0, 1.0],
+  [ 720.0, 1.6],
+  [1000.0, 1.9],
+  [2000.0, 1.9],
+]
+co2efftb = [
+  [  40.0, 0.00],
+  [ 360.0, 1.00],
+  [ 720.0, 1.11],
+  [1000.0, 1.11],
+  [2000.0, 1.11],
+]
+co2tratb = [
+  [  40.0, 0.0],
+  [ 360.0, 1.0],
+  [ 720.0, 0.9],
+  [1000.0, 0.9],
+  [2000.0, 0.9],
+]
+
+[management]
+fraharlosorm_lv     = 0.2
+fraharlosorm_st     = 0.1
+fraharlosorm_so     = 0.01
+fradeceasedlvtosoil = 0.3
+swpotrelmf          = 2
+relmf               = 0.9

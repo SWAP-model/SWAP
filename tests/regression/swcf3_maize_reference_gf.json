@@ -1,0 +1,73 @@
+{
+  "mean": {
+    "DRAINAGE": 28.72,
+    "DSTOR": 0.48,
+    "EACT": 17.37,
+    "EPOT": 33.17,
+    "GWL": -85.77,
+    "INTERC": 3.55,
+    "IRRIG": 0.17,
+    "QBOTTOM": 0.0,
+    "RAIN": 78.9,
+    "RUNOFF": 0.0,
+    "TACT": 28.95,
+    "TPOT": 29.92
+  },
+  "total": {
+    "DRAINAGE": 86.16,
+    "DSTOR": 1.45,
+    "EACT": 52.11,
+    "EPOT": 99.51,
+    "INTERC": 10.65,
+    "IRRIG": 0.5,
+    "QBOTTOM": 0.0,
+    "RAIN": 236.71,
+    "RUNOFF": 0.0,
+    "TACT": 86.84,
+    "TPOT": 89.77
+  },
+  "years": {
+    "2002": {
+      "DRAINAGE": 34.34,
+      "DSTOR": 4.39,
+      "EACT": 16.87,
+      "EPOT": 33.37,
+      "GWL": -75.05,
+      "INTERC": 3.74,
+      "IRRIG": 0.5,
+      "QBOTTOM": 0.0,
+      "RAIN": 84.18,
+      "RUNOFF": 0.0,
+      "TACT": 25.34,
+      "TPOT": 28.08
+    },
+    "2003": {
+      "DRAINAGE": 26.96,
+      "DSTOR": -3.25,
+      "EACT": 17.35,
+      "EPOT": 36.25,
+      "GWL": -95.87,
+      "INTERC": 1.99,
+      "IRRIG": 0.0,
+      "QBOTTOM": 0.0,
+      "RAIN": 71.98,
+      "RUNOFF": 0.0,
+      "TACT": 28.93,
+      "TPOT": 29.12
+    },
+    "2004": {
+      "DRAINAGE": 24.86,
+      "DSTOR": 0.31,
+      "EACT": 17.89,
+      "EPOT": 29.89,
+      "GWL": -86.4,
+      "INTERC": 4.92,
+      "IRRIG": 0.0,
+      "QBOTTOM": 0.0,
+      "RAIN": 80.55,
+      "RUNOFF": 0.0,
+      "TACT": 32.57,
+      "TPOT": 32.57
+    }
+  }
+}

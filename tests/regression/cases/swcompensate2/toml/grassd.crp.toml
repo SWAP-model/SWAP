@@ -1,0 +1,205 @@
+# hupselbrook grass crop (type 3, WOFOST grass) — Phase 4f full port
+# 1:1 reproduction of tests/swap-cases/1.hupselbrook/grassd.crp (492 lines)
+# Active switches: swcf=2, tdwi=1000.0, swtsum=1, swrd=3 (biomass-based root
+#   extension via rlwtb/wrtmax, matching legacy),
+#   swrdc=0, swoxygen=1 (Feddes), swdrought=1, swcompensate=1 (translated from
+#   legacy SWJARVIS=4 per 2026-05-02 user direction), swsalinity=0, swco2=0,
+#   swharvest=1 + swdmmow=2, swgraz=0, schedule=0.
+
+[crop_state]
+tdwi   = 1000.0   # Initial total crop dry weight [kg/ha]
+laiem  = 0.63     # Leaf area index at emergence
+rgrlai = 0.007    # Maximum relative increase in LAI [m2/m2/d]
+
+[phenology]
+swtsum = 1        # 0=no delay, 1=air-temp sum >200°C, 2=soil temp at depth
+
+# Part 2b stub values (only used when swtsum=2, which is stub-errored)
+tsumtemp  = 8.0
+tsumdepth = 10.0
+tsumtime  = 3
+
+[crop_factor]
+swcf   = 2        # 1=crop factor, 2=crop height
+albedo = 0.23     # Crop reflection coefficient
+rsw    = 0.0      # Canopy resistance of intercepted water [s/m]
+swinter = 1       # Interception switch: 1=Von Hoyningen-Hune and Braden
+
+# chtb: DNR, CH pairs (crop height table, used when swcf=2)
+chtb = [0.0, 12.0, 180.0, 12.0, 366.0, 12.0]
+
+# rdctb: relative rooting depth, relative root density pairs
+rdctb = [0.0, 1.0, 1.0, 0.0]
+
+[green_area]
+ssa  = 0.0004   # Specific stem area [ha/kg]
+span = 30.0     # Life span of leaves under optimum conditions [d]
+
+# slatb: DNR, SLA pairs (specific leaf area vs day number)
+slatb = [1.0, 0.0015, 80.0, 0.0015, 300.0, 0.0020, 366.0, 0.0020]
+
+[assimilation]
+# Part 4: light interception
+kdif = 0.60    # Extinction coefficient for diffuse visible light
+kdir = 0.75    # Extinction coefficient for direct visible light
+eff  = 0.50    # Light use efficiency [kg/ha/hr/(J m2 s)]
+
+# amaxtb: DNR, AMAX pairs (max CO2 assimilation rate)
+amaxtb = [1.0, 40.0, 95.0, 40.0, 200.0, 35.0, 275.0, 25.0, 366.0, 25.0]
+
+# tmpftb: TAVD, TMPF pairs (reduction factor vs avg day temperature)
+tmpftb = [0.0, 0.0, 5.0, 0.70, 15.0, 1.0, 25.0, 1.0, 40.0, 0.0]
+
+# tmnftb: TMNR, TMNF pairs (reduction factor vs min day temperature)
+tmnftb = [0.0, 0.0, 4.0, 1.0]
+
+# Part 5: biomass conversion
+cvl = 0.685   # Efficiency of conversion into leaves
+cvr = 0.694   # Efficiency of conversion into roots
+cvs = 0.662   # Efficiency of conversion into stems
+
+# Part 6: maintenance respiration
+q10 = 2.0     # Q10 factor for respiration
+rml = 0.030   # Maintenance respiration rate of leaves [kgCH2O/kg/d]
+rmr = 0.015   # Maintenance respiration rate of roots
+rms = 0.015   # Maintenance respiration rate of stems
+
+# rfsetb: DNR, RFSE pairs (senescence reduction factor)
+rfsetb = [1.0, 1.0, 366.0, 1.0]
+
+# Part 7: partitioning
+# frtb: DNR, FR pairs (fraction to roots)
+frtb = [1.0, 0.3, 366.0, 0.3]
+
+# fltb: DNR, FL pairs (fraction to leaves)
+fltb = [1.0, 0.6, 366.0, 0.6]
+
+# fstb: DNR, FS pairs (fraction to stems)
+fstb = [1.0, 0.4, 366.0, 0.4]
+
+# Part 8: death rates
+perdl = 0.05   # Maximum relative death rate of leaves due to water stress [/d]
+
+# rdrrtb: DNR, RDRR pairs (relative death rate of roots)
+rdrrtb = [1.0, 0.0, 180.0, 0.02, 366.0, 0.02]
+
+# rdrstb: DNR, RDRS pairs (relative death rate of stems)
+rdrstb = [1.0, 0.0, 180.0, 0.02, 366.0, 0.02]
+
+[root]
+# Part 9: root growth
+# Legacy uses swrd=3 (biomass-based root extension via rlwtb/wrtmax).
+swrd     = 3      # 3=root growth depends on root biomass (rlwtb/wrtmax)
+# swrd=2-only fields (unused for swrd=3):
+# rdi      = 20.0
+# rri      = 0.25
+# rdc      = 40.0
+# swdmi2rd = 1
+swrdc    = 0      # 0=root density not modified
+
+# rdtb: DNR, RD pairs (rooting depth vs day number, used when swrd=1)
+rdtb  = [1.0, 20.0, 180.0, 40.0, 366.0, 40.0]
+
+# rlwtb: RW, RL pairs (rooting depth vs root weight, used when swrd=3)
+rlwtb = [300.0, 20.0, 2500.0, 40.0]
+
+wrtmax = 3000.0   # Maximum root weight [kg DM/ha]
+
+[oxygen_stress]
+# swoxygen=1: Feddes et al. (1978) — no [oxygen_stress.bartholomeus] sub-section
+swoxygen   = 1    # 1=Feddes et al. (1978)
+swwrtnonox = 1    # 1=check aerobic conditions for root extension
+aeratecrit = 0.5  # Threshold to stop root extension under oxygen stress
+
+[drought_stress]
+swdrought = 1     # 1=Feddes et al. (1978)
+
+[water_stress]
+hlim1  =    0.0    # No water extraction at higher pressure heads [cm]
+hlim2u =    1.0    # h below which optimum water extraction starts (top layer) [cm]
+hlim2l =   -1.0    # h below which optimum water extraction starts (sub layer) [cm]
+hlim3h = -200.0    # Pressure head below which reduction starts at high Tpot [cm]
+hlim3l = -800.0    # Pressure head below which reduction starts at low Tpot [cm]
+hlim4  = -8000.0   # No water extraction at lower pressure heads [cm]
+adcrh  =    0.5    # High atmospheric demand level [cm/d]
+adcrl  =    0.1    # Low atmospheric demand level [cm/d]
+rsc    =  100.0    # Minimum canopy resistance [s/m]
+
+[salinity]
+swsalinity = 0    # 0=no salinity stress
+
+[compensation]
+# Legacy SWJARVIS=4 translates to swcompensate=1 (Jarvis) with swstressor=1
+# per 2026-05-02 user direction (swjarvis dropped from TOML pipeline).
+swcompensate = 2   # 1=Jarvis (1989)
+swstressor   = 2   # 1=compensate all stressors
+alphacrit    = 0.7 # Critical stress index for compensation
+dcritrtz     = 16.0 # Threshold rootzone thickness for Walsum compensation (stub)
+
+[interception]
+cofab = 0.25   # Interception coefficient [cm]
+
+[co2]
+swco2 = 0   # 0=no CO2 assimilation correction
+
+[management]
+# MANAGEMENT SECTION Part 1: sequence of grazing/mowing periods
+# 20 periods, all mowing (=2)
+seqgrazmow = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+
+# Management Part 4: potential yield
+swpotrelmf = 1     # 1=theoretical potential yield
+relmf      = 0.90  # Relative management factor
+
+# Mowing settings (Part 3)
+mowrest = 700.0    # Remaining DM above ground after mowing [kg/ha]
+
+# Mowing DM-threshold flexible table (when swdmmow=2): DNR, DMMOW pairs
+dmmowtb = [120.0, 4700.0, 152.0, 3700.0, 182.0, 3200.0, 213.0, 2700.0, 366.0, 2700.0]
+
+# Mowing regrowth delay table: DMMOWDELAY, DAYDELAY pairs
+dmmowdelay = [0.0, 2.0, 2000.0, 3.0, 4000.0, 4.0]
+
+# Grazing settings (Part 2)
+# Dewooling residual
+dewrest = 850.0    # Remaining DM after dewooling [kg/ha]
+
+# Grazing DM-threshold flexible table (when swdmgrz=2): DNR, DMGRZ pairs
+dmgrztb = [152.0, 2400.0, 244.0, 1800.0, 366.0, 1800.0]
+
+# Actual livestock density per sequence period (20 periods)
+lsda = [21.25, 21.25, 21.25, 21.25, 21.25, 21.25, 21.25, 21.25, 21.25, 21.25,
+        21.25, 21.25, 21.25, 21.25, 21.25, 21.25, 21.25, 21.25, 21.25, 21.25]
+
+# Livestock density table: daysgrazing/uptgrazing/lossgrazing per LSDb row
+daysgrazing = [4.0]
+uptgrazing  = [16.0]
+lossgrazing = [4.0]
+
+# Loss switches
+swlossmow = 0   # 0=no losses during mowing
+swlossgrz = 0   # 0=no losses during grazing
+
+[mowing]
+swharv         = 1       # 1=DM-threshold mowing (legacy SWHARVEST=1)
+nmow           = 1       # Budget at least one event
+swdmmow        = 2       # 2=flexible DM threshold (DMMOWTB)
+dmharvest      = 4200.0  # DM threshold for fixed mowing [kg/ha]
+daylastharvest = 289.0   # Last calendar day for mowing
+dmlastharvest  = 2700.0  # Minimum DM for last-date mowing [kg/ha]
+maxdaymow      = 42      # Maximum growing period after harvest [d]
+
+[grazing]
+swgraz      = 0       # 0=no grazing (SEQGRAZMOW all-2, mowing only)
+nstart_graz = 152     # Earliest DMGRZTB DNR (stub, not active when swgraz=0)
+nstop_graz  = 366     # Last DMGRZTB DNR (stub, not active when swgraz=0)
+maxdaygrz   = 28      # Maximum growing period after grazing [d]
+dmgrazing   = 2400.0  # Minimum DM for cattle to enter (swdmgrz=1 branch) [kg/ha]
+swdmgrz     = 2       # 2=flexible DM threshold (DMGRZTB)
+tagprest    = 700.0   # Minimum above-ground DM after grazing [kg/ha]
+
+# lsdb: basic livestock density (one entry per LSDb row in legacy table)
+lsdb = [21.25]
+
+[irrigation_schedule]
+schedule = 0

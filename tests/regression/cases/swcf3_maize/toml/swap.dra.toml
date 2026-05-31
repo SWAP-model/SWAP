@@ -1,0 +1,33 @@
+# hupselbrook drainage configuration (Phase 4c-a TOML port,
+# DRAMET=2 Hooghoudt/Ernst Hooghoudt-formula extension Phase 4f Task B2).
+# Values from tests/swap-cases/1.hupselbrook/swap.dra.
+
+[drainage]
+swdra    = 1
+dramet   = 2
+swdivd   = 1
+swdislay = 0
+nrlevs   = 0
+altcu    = 0.0
+
+# Per-soil-physical-layer anisotropy (legacy COFANI in .dra Part 0).
+cofani = [1.0, 1.0]
+
+[drainage.basic]
+# Hooghoudt/Ernst drain characteristics
+lm     = 11.0    # drain spacing [m]
+shape  = 0.8
+wetper = 30.0
+zbotdr = -80.0
+entres = 20.0
+
+# Soil profile characteristics
+ipos   = 2       # above an impervious layer in homogeneous profile
+basegw = -200.0
+khtop  = 25.0
+
+# Phase 4f-prep Task D6: [drainage.surface_runoff] omitted on purpose.
+# Case 1's swap.dra lists GEOFAC=4.8, RSURFDEEP=30.0, RSURFSHALLOW=10.0,
+# but the legacy rddra reads them only under conditional gates that
+# are not met (SWNRSRF=0; IPOS != 5). The legacy globals therefore
+# stay at default 0.0 after readswap. Schema defaults (all 0) match.
