@@ -9,7 +9,7 @@ fs = import('fs')
 src_inc = include_directories(
     'src', 'src/core', 'src/timecontrol', 'src/driver', 'src/bindings', 'src/io', 'src/io/csv', 'src/io/toml',
     'src/soilwater', 'src/atmosphere',
-    'src/crop', 'src/drainage',
+    'src/crop', 'src/crop/fixed', 'src/crop/grass', 'src/crop/wofost', 'src/drainage',
     'src/solute', 'src/heat', 'src/config', 'src/state'
 )
 
@@ -114,9 +114,9 @@ sources = [
     'src/config/cropwofost_config.f90',
     'src/config/crop_config.f90',
     'src/config/output_csv_config.f90',
-    'src/crop/cropfixed_init.f90',
-    'src/crop/cropwofost_init.f90',
-    'src/crop/cropgrass_init.f90',
+    'src/crop/fixed/cropfixed_init.f90',
+    'src/crop/wofost/cropwofost_init.f90',
+    'src/crop/grass/cropgrass_init.f90',
     'src/config/swap_config.f90',
     # [GR-IO 2026-05-25 Phase 6 Steps 5-6] variables.f90, arrays.fi, and
     #   initialize.f90 all deleted — bare-globals module + its zero-init
@@ -198,25 +198,25 @@ sources = [
     # [GR-SOLUTE 2026-05-24] agetracer dropped — body moved to src/solute/dormant/agetracer.f90 (not compiled)
 
     # Crop
-    'src/crop/wofost_soil_declarations.f90',
-    'src/crop/wofost_soil_interface.f90',
-    'src/crop/wofost_soil_parameters.f90',
-    'src/crop/wofost_soil_rateconstants.f90',
-    'src/crop/wofost_soil_orgmatn.f90',
-    'src/crop/wofost_soil_watern.f90',
-    'src/crop/wofost_soil_amendments.f90',
-    'src/crop/wofost_soil_cropresidues.f90',
-    'src/crop/wofost_soil_balancecheck.f90',
-    'src/crop/wofostnut.f90',
+    'src/crop/wofost/wofost_soil_declarations.f90',
+    'src/crop/wofost/wofost_soil_interface.f90',
+    'src/crop/wofost/wofost_soil_parameters.f90',
+    'src/crop/wofost/wofost_soil_rateconstants.f90',
+    'src/crop/wofost/wofost_soil_orgmatn.f90',
+    'src/crop/wofost/wofost_soil_watern.f90',
+    'src/crop/wofost/wofost_soil_amendments.f90',
+    'src/crop/wofost/wofost_soil_cropresidues.f90',
+    'src/crop/wofost/wofost_soil_balancecheck.f90',
+    'src/crop/wofost/wofostnut.f90',
     'src/crop/oxygenstress.f90',
     'src/crop/rootextraction.f90',
     'src/crop/irrigation.f90',
     'src/crop/tillage.f90',
-    'src/crop/management_soil.f90',
+    'src/crop/wofost/management_soil.f90',
     'src/crop/cropgrowth_helpers.f90',
-    'src/crop/cropwofost_runtime.f90',
-    'src/crop/cropgrass_runtime.f90',
-    'src/crop/cropfixed_runtime.f90',
+    'src/crop/wofost/cropwofost_runtime.f90',
+    'src/crop/grass/cropgrass_runtime.f90',
+    'src/crop/fixed/cropfixed_runtime.f90',
     'src/crop/cropgrowth.f90',
 
     # State
