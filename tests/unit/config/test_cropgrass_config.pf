@@ -404,8 +404,12 @@ subroutine test_cropgrass_swrd1_rejected()
 end subroutine
 
 @test
-subroutine test_cropgrass_swcf3_rejected()
+subroutine test_cropgrass_swcf3_accepted()
+   ! swcf=3 (LAI-dependent dual crop coefficient) is now supported on the TOML
+   ! path — the runtime cfeic lookup is intact and init now copies cfeictb.
+   ! With the cfeictb table present there is no stub error.
    use funit
+   use iso_fortran_env, only: real64
    use cropgrass_config_mod, only: cropgrass_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
    type(cropgrass_config_t) :: c
@@ -413,13 +417,14 @@ subroutine test_cropgrass_swcf3_rejected()
    integer :: i
    logical :: found
    c%swcf = 3
+   c%cfeictb = [0.0_real64, 0.9_real64, 10.0_real64, 0.9_real64]
    call c%validate(errors)
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'swcf=3') > 0) found = .true.
+          index(errors%items(i)%message, 'swcf') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test

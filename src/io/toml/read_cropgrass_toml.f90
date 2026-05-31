@@ -114,6 +114,7 @@ contains
          call get_optional_int_with_default(cf_sec,  'swinter', config%swinter, 1, 'crop_factor.swinter', errors)
          call read_real_array_1d(cf_sec, 'cftb',  config%cftb,  'crop_factor.cftb',  errors)
          call read_real_array_1d(cf_sec, 'chtb',  config%chtb,  'crop_factor.chtb',  errors)
+         call read_real_array_1d(cf_sec, 'cfeictb', config%cfeictb, 'crop_factor.cfeictb', errors)
          call read_real_array_1d(cf_sec, 'rdctb', config%rdctb, 'crop_factor.rdctb', errors)
       end if
 

@@ -74,9 +74,6 @@ contains
          call fatalerr_collected('cropgrass_init', &
             'swrd=1 not supported on TOML path; validator should have rejected.')
       ! swrd=3 (biomass-based root extension) is now supported; see copy block below.
-      if (cfg%swcf == 3) &
-         call fatalerr_collected('cropgrass_init', &
-            'swcf=3 not supported on TOML path; validator should have rejected.')
       if (cfg%swrdc == 1) &
          call fatalerr_collected('cropgrass_init', &
             'swrdc=1 not supported on TOML path; validator should have rejected.')
@@ -123,6 +120,16 @@ contains
          state%crop%common%rsw    = cfg%rsw
          if (allocated(cfg%chtb)) call copy_table(cfg%chtb, state%crop%fixed%chtb)
          state%crop%fixed%cftb = -99.99d0
+      else if (cfg%swcf == 3) then
+         ! LAI-dependent dual crop coefficient: cf, cfeic (wet) and ch are all
+         ! LAI-indexed; reflection coeffs take the ETref defaults (legacy:
+         ! swcf=1 or 3). The runtime looks up cfeic = afgen(cfeictb, lai).
+         state%crop%common%albedo = 0.23d0
+         state%crop%common%rsc    = 70.0d0
+         state%crop%common%rsw    = 0.0d0
+         if (allocated(cfg%cftb))    call copy_table(cfg%cftb,    state%crop%fixed%cftb)
+         if (allocated(cfg%cfeictb)) call copy_table(cfg%cfeictb, state%crop%fixed%cfeictb)
+         if (allocated(cfg%chtb))    call copy_table(cfg%chtb,    state%crop%fixed%chtb)
       end if
 
       ! Part 2: interception (readgrass lines 3560-3585)

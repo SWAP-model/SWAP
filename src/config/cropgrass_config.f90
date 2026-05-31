@@ -30,6 +30,7 @@ module cropgrass_config_mod
       ! Tables (pre-existing)
       real(real64), allocatable :: cftb(:)
       real(real64), allocatable :: chtb(:)
+      real(real64), allocatable :: cfeictb(:)  !! LAI-indexed wet crop factor (swcf=3)
       real(real64), allocatable :: rdctb(:)
 
       ! Root growth
@@ -281,10 +282,12 @@ contains
       end if
       ! swrd=3 (biomass-based root extension via rlwtb/wrtmax) is now supported;
       ! cropgrass_init copies rlwtb and wrtmax to legacy globals.
-      if (self%swcf == 3) then
+      ! swcf=3 (LAI-dependent dual crop coefficient with wet factor cfeic) is
+      ! supported; the runtime lookup is shared (cropgrass_runtime).
+      if (self%swcf == 3 .and. .not. allocated(self%cfeictb)) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropgrass.swcf=3 (LAI-dependent dual-coeff) not yet supported ' // &
-            'in the TOML pipeline; use the legacy executable.', 'cropgrass')
+            'cropgrass.swcf=3 requires the cfeictb (wet crop factor) table.', &
+            'cropgrass')
       end if
       if (self%swrdc == 1) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
