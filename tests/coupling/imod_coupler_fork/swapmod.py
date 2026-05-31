@@ -59,7 +59,15 @@ class Mf6Wrapper(XmiWrapper):
     Vendored helper methods mirror the upstream
     ``imod_coupler.kernelwrappers.mf6_wrapper.Mf6Wrapper`` surface that
     :meth:`SwapMod.couple` relies on.
+
+    MODFLOW 6 stores every memory-manager variable address in UPPERCASE; the
+    coupling config supplies the model/package names in their case-as-written
+    (e.g. ``swapmf``), so we uppercase the full address before handing it to
+    the BMI ``get_value_ptr`` (validated against libmf6 7.x).
     """
+
+    def get_value_ptr(self, name: str) -> NDArray[Any]:  # type: ignore[override]
+        return super().get_value_ptr(name.upper())
 
     def get_head(self, mf6_flowmodel_key: str) -> NDArray[Any]:
         return self.get_value_ptr(f"{mf6_flowmodel_key}/X")
@@ -68,6 +76,18 @@ class Mf6Wrapper(XmiWrapper):
         self, mf6_flowmodel_key: str, mf6_pkg_key: str
     ) -> NDArray[Any]:
         return self.get_value_ptr(f"{mf6_flowmodel_key}/{mf6_pkg_key}/RECHARGE")[:]
+
+    def get_recharge_nodes(
+        self, mf6_flowmodel_key: str, mf6_pkg_key: str
+    ) -> NDArray[Any]:
+        """Zero-copy pointer to the recharge package's 1-based node list.
+
+        MODFLOW stores the boundary cell list as 1-based node numbers in
+        ``<MODEL>/<PKG>/NODELIST`` and only fills it during prepare_time_step,
+        so callers must convert to 0-based (``- 1``) at use time, after the
+        first prepare.
+        """
+        return self.get_value_ptr(f"{mf6_flowmodel_key}/{mf6_pkg_key}/NODELIST")
 
     def get_storage(self, mf6_flowmodel_key: str) -> NDArray[Any]:
         return self.get_value_ptr(f"{mf6_flowmodel_key}/STO/SS")
@@ -153,7 +173,15 @@ class SwapMod(Driver):
         logger.info(f"SWAP version: {self.swap.get_version()}")
 
     def couple(self) -> None:
-        """Couple Modflow and SWAP."""
+        """Couple Modflow and SWAP.
+
+        The MODFLOW head/storage arrays are full-grid (size = nodes); the
+        recharge package and the SWAP column ensemble cover only the interior
+        recharge cells (size = nbound = ncol-2 for the two-channel demo). We
+        derive the interior-cell index map from the recharge package's CELLID
+        / NODELIST so the SWAP<->MODFLOW head and storage exchanges address
+        exactly the recharge cells (whereas RECHARGE is already nbound-sized).
+        """
         self.mf6_head = self.mf6.get_head(self.coupling.mf6_model)
         self.mf6_recharge = self.mf6.get_recharge(
             self.coupling.mf6_model, self.coupling.mf6_swap_recharge_pkg
@@ -164,18 +192,26 @@ class SwapMod(Driver):
         self.mf6_top = self.mf6.get_top(self.coupling.mf6_model)
         self.mf6_bot = self.mf6.get_bot(self.coupling.mf6_model)
         self.max_iter = self.mf6.max_iter()
+        # Zero-copy pointer to the recharge package's 1-based node list. MF6
+        # only populates it during prepare_time_step, so we keep the pointer
+        # and dereference (0-based) lazily inside the exchange routines.
+        self.rch_nodelist = self.mf6.get_recharge_nodes(
+            self.coupling.mf6_model, self.coupling.mf6_swap_recharge_pkg
+        )
 
         self.swap_head = self.swap.get_head_ptr()
         self.swap_volume = self.swap.get_volume_ptr()
         self.swap_storage = self.swap.get_storage_ptr()
 
     def update(self) -> None:
+        # Prepare the MODFLOW time step FIRST: this populates the recharge
+        # package's NODELIST (the interior-cell index map) that the head and
+        # storage exchanges below depend on. (we cannot set the timestep yet
+        # in Modflow -> pass the dummy value 0.0.)
+        self.mf6.prepare_time_step(0.0)
+
         # heads to SWAP
         self.exchange_mod2swap()
-
-        # we cannot set the timestep (yet) in Modflow
-        # -> set to the (dummy) value 0.0 for now
-        self.mf6.prepare_time_step(0.0)
 
         self.delt = self.mf6.get_time_step()
         self.swap.prepare_time_step(self.delt)
@@ -208,16 +244,31 @@ class SwapMod(Driver):
         return self.mf6.get_end_time()
 
     def exchange_swap2mod(self) -> None:
-        """Exchange SWAP to Modflow."""
-        self.mf6_storage[:] = self.swap_storage[:]
+        """Exchange SWAP to Modflow.
 
-        # Divide recharge and extraction by delta time
+        Storage maps SWAP's per-column specific yield onto the recharge cells'
+        MODFLOW storage entries; recharge is SWAP's per-day percolation depth
+        (m) converted to a rate (m/d) for the RCHA package (already
+        nbound-sized). No area factor: MODFLOW RCHA `recharge` is a flux rate
+        (L/T) that MF6 multiplies by cell area internally.
+        """
+        self.mf6_storage[self._rch_idx()] = self.swap_storage[:]
+
+        # Divide recharge volume (m over the step) by delta time -> rate (m/d).
         tled = 1 / self.delt
         self.mf6_recharge[:] = tled * self.swap_volume[:]
 
     def exchange_mod2swap(self) -> None:
-        """Exchange Modflow to SWAP."""
-        self.swap_head[:] = self.mf6_head[:]
+        """Exchange Modflow to SWAP (head of the recharge cells, m)."""
+        self.swap_head[:] = self.mf6_head[self._rch_idx()]
+
+    def _rch_idx(self) -> NDArray[Any]:
+        """0-based grid-node indices of the recharge cells (resolved lazily).
+
+        ``rch_nodelist`` is MF6's 1-based NODELIST, only populated during
+        prepare_time_step; convert to 0-based at use time.
+        """
+        return self.rch_nodelist[:] - 1
 
     def do_iter(self, sol_id: int) -> bool:
         """Execute a single iteration."""
