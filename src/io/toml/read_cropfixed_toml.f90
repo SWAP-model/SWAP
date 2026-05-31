@@ -76,6 +76,8 @@ contains
          call get_optional_int_with_default(cf, 'swcf', config%swcf, 1, 'crop_factor.swcf', errors)
          call read_real_pair_array(cf, 'cftb', config%cftb, 'crop_factor.cftb', errors)
          call read_real_pair_array(cf, 'chtb', config%chtb, 'crop_factor.chtb', errors)
+         ! Wet-crop factor table (swcf=3 only); harmless to read when absent.
+         call read_real_pair_array(cf, 'cfeictb', config%cfeictb, 'crop_factor.cfeictb', errors)
          call get_optional_real_with_default(cf, 'albedo', config%albedo, 0.23_real64, 'crop_factor.albedo', errors)
          call get_optional_real_with_default(cf, 'rsc',    config%rsc,    0.0_real64,  'crop_factor.rsc',    errors)
          call get_optional_real_with_default(cf, 'rsw',    config%rsw,    0.0_real64,  'crop_factor.rsw',    errors)

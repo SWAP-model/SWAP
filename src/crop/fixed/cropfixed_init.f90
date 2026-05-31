@@ -39,7 +39,7 @@ contains
       real(real64) :: depth, rootdis(202), sum
 
       ! ---- Defense-in-depth: stub-error gates mirror cropfixed_config_validate.
-      if (cfg%swdrought == 2 .or. cfg%swoxygen == 2 .or. cfg%swcf == 3 .or. &
+      if (cfg%swdrought == 2 .or. cfg%swoxygen == 2 .or.                    &
           cfg%swinter == 2  .or. cfg%swinter == 3 .or.                      &
           cfg%swrd == 3     .or. cfg%swsalinity /= 0 .or. cfg%schedule_switch == 1) then
          call fatalerr_collected('cropfixed_init_from_config', &
@@ -102,11 +102,10 @@ contains
 
       ! ---- Reflection coefficients / crop resistance (legacy:2150-2160)
       ! Two branches in legacy:
-      !   swcf=1 (ETref crop factor): hardcoded ETref defaults
-      !       (albedo=0.23, rsc=70, rsw=0)
+      !   swcf=1 / swcf=3 (ETref crop factor / wet-crop factor): hardcoded
+      !       ETref defaults (albedo=0.23, rsc=70, rsw=0)
       !   swcf=2 (crop height): user-authored values from .crp
-      ! swcf=3 is stub-errored upstream so it never reaches here.
-      if (cfg%swcf == 1) then
+      if (cfg%swcf == 1 .or. cfg%swcf == 3) then
          state%crop%common%albedo = 0.23_real64
          state%crop%common%rsc    = 70.0_real64
          state%crop%common%rsw    = 0.0_real64

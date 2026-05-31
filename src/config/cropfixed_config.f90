@@ -159,11 +159,6 @@ contains
             'cropfixed.swoxygen=2 (Bartholomeus) not yet supported in ' // &
             'the TOML pipeline; use the legacy executable.', 'cropfixed')
       end if
-      if (self%swcf == 3) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropfixed.swcf=3 (wet-crop factor) not yet supported in the ' // &
-            'TOML pipeline; use the legacy executable.', 'cropfixed')
-      end if
       if (self%swinter == 2 .or. self%swinter == 3) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropfixed.swinter=2 or 3 (Gash / storage-cap interception) ' // &

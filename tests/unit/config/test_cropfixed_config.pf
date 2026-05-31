@@ -136,7 +136,10 @@ subroutine test_cropfixed_swcompensate_one_accepted()
 end subroutine
 
 @test
-subroutine test_cropfixed_swcf_three_rejected()
+subroutine test_cropfixed_swcf_three_accepted()
+   ! swcf=3 (wet-crop factor) is now supported on the TOML path — the cfeic
+   ! lookup and ew0 application are intact (cropfixed_runtime + meteo
+   ! orchestrator); the reader now parses cfeictb. No stub error.
    use funit
    use cropfixed_config_mod, only: cropfixed_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -149,9 +152,9 @@ subroutine test_cropfixed_swcf_three_rejected()
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'swcf=3') > 0) found = .true.
+          index(errors%items(i)%message, 'swcf') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test
