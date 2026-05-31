@@ -63,7 +63,8 @@ module cropgrass_config_mod
       real(real64) :: rsw    = 0.0d0          !! Canopy resistance intercepted water
 
       ! Interception switch (Part 13)
-      integer :: swinter = 1                  !! 0=none, 1=Von Hoyningen (supported), 2/3=stub
+      integer :: swinter = 1                  !! 0=none, 1=Von Hoyningen (supported), 2=Gash (supported), 3=storage-cap (stub)
+      real(real64), allocatable :: gashtb(:,:)  !! Gash table (t,pfree,pstem,scanopy,avprec,avevap) when swinter=2
 
       ! Crop state initialisation (Part 2a)
       real(real64) :: tdwi   = 1000.0d0       !! Initial total crop dry weight [kg/ha]
@@ -238,10 +239,17 @@ contains
             'cropgrass.swsalinity /= 0 not yet supported in the TOML ' // &
             'pipeline; use the legacy executable.', 'cropgrass')
       end if
-      if (self%swinter == 2 .or. self%swinter == 3) then
+      ! swinter=2 (Gash) is supported; swinter=3 (storage-cap) compute was
+      ! removed during migration, so it stays rejected.
+      if (self%swinter == 3) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropgrass.swinter=2 or 3 (Gash/storage-cap) not yet supported ' // &
+            'cropgrass.swinter=3 (storage-cap interception) not yet supported ' // &
             'in the TOML pipeline; use the legacy executable.', 'cropgrass')
+      end if
+      if (self%swinter == 2 .and. .not. allocated(self%gashtb)) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropgrass.swinter=2 (Gash) requires the gashtb interception table.', &
+            'cropgrass')
       end if
       if (self%swco2 == 1) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &

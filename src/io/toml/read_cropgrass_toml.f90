@@ -18,7 +18,7 @@ module read_cropgrass_toml_mod
    use toml_field_helpers_mod, only: get_table,                    &
                                      get_optional_int_with_default, &
                                      get_optional_real_with_default
-   use toml_array_helpers_mod, only: read_real_array_1d
+   use toml_array_helpers_mod, only: read_real_array_1d, read_table_2d
    use read_irrigation_toml_mod, only: read_irrigation_schedule_from_section
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
@@ -195,6 +195,8 @@ contains
       call get_table(doc, 'interception', inter, 'interception', errors)
       if (associated(inter)) then
          call get_optional_real_with_default(inter, 'cofab', config%cofab, 0.0_real64, 'inter.cofab', errors)
+         ! Gash table (swinter=2): t, pfree, pstem, scanopy, avprec, avevap.
+         call read_table_2d(inter, 'gashtb', config%gashtb, 6, 'interception.gashtb', errors)
       end if
 
       ! [management] — Phase 3 new section

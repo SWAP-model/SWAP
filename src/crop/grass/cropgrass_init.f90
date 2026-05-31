@@ -80,9 +80,9 @@ contains
       if (cfg%swrdc == 1) &
          call fatalerr_collected('cropgrass_init', &
             'swrdc=1 not supported on TOML path; validator should have rejected.')
-      if (cfg%swinter == 2 .or. cfg%swinter == 3) &
+      if (cfg%swinter == 3) &
          call fatalerr_collected('cropgrass_init', &
-            'swinter=2 or 3 not supported on TOML path; validator should have rejected.')
+            'swinter=3 not supported on TOML path; validator should have rejected.')
       if (cfg%swtsum == 2) &
          call fatalerr_collected('cropgrass_init', &
             'swtsum=2 not supported on TOML path; validator should have rejected.')
@@ -129,6 +129,27 @@ contains
       state%crop%common%swinter = cfg%swinter
       if (cfg%swinter == 1) then
          state%crop%cofab = cfg%cofab
+      else if (cfg%swinter == 2 .and. allocated(cfg%gashtb)) then
+         ! Gash: split the 6-column (t, pfree, pstem, scanopy, avprec, avevap)
+         ! table into the five (t, value) atmosphere arrays that legacy
+         ! readgrass populated as globals.
+         block
+            integer :: r, nr
+            nr = size(cfg%gashtb, 1)
+            do r = 1, nr
+               if (2*r > size(state%atmosphere%pfreetb)) exit
+               state%atmosphere%pfreetb(2*r-1)   = cfg%gashtb(r, 1)
+               state%atmosphere%pfreetb(2*r)     = cfg%gashtb(r, 2)
+               state%atmosphere%pstemtb(2*r-1)   = cfg%gashtb(r, 1)
+               state%atmosphere%pstemtb(2*r)     = cfg%gashtb(r, 3)
+               state%atmosphere%scanopytb(2*r-1) = cfg%gashtb(r, 1)
+               state%atmosphere%scanopytb(2*r)   = cfg%gashtb(r, 4)
+               state%atmosphere%avprectb(2*r-1)  = cfg%gashtb(r, 1)
+               state%atmosphere%avprectb(2*r)    = cfg%gashtb(r, 5)
+               state%atmosphere%avevaptb(2*r-1)  = cfg%gashtb(r, 1)
+               state%atmosphere%avevaptb(2*r)    = cfg%gashtb(r, 6)
+            end do
+         end block
       end if
 
       ! Part 3: initial crop state (readgrass lines 3604-3606)

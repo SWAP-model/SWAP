@@ -241,8 +241,12 @@ subroutine test_cropgrass_swsalinity1_rejected()
 end subroutine
 
 @test
-subroutine test_cropgrass_swinter2_rejected()
+subroutine test_cropgrass_swinter2_accepted()
+   ! swinter=2 (Gash) is now supported on the TOML path — the Gash kernel is
+   ! shared and init splits gashtb into the state%atmosphere arrays. With a
+   ! valid gashtb there is no stub error.
    use funit
+   use iso_fortran_env, only: real64
    use cropgrass_config_mod, only: cropgrass_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
    type(cropgrass_config_t) :: c
@@ -250,13 +254,16 @@ subroutine test_cropgrass_swinter2_rejected()
    integer :: i
    logical :: found
    c%swinter = 2
+   allocate(c%gashtb(2, 6))
+   c%gashtb(1, :) = [0.0_real64,   0.9_real64, 0.05_real64, 0.4_real64, 6.0_real64, 1.5_real64]
+   c%gashtb(2, :) = [365.0_real64, 0.9_real64, 0.05_real64, 0.4_real64, 6.0_real64, 1.5_real64]
    call c%validate(errors)
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'swinter=2') > 0) found = .true.
+          index(errors%items(i)%message, 'swinter') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test
