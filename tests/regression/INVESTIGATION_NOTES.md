@@ -295,3 +295,28 @@ hysteresis/winter xfails. Registered as known_divergence, not pending_restore.
 Scope: only the DAILY meteo path is restored (hupselbrook is SWMETDETAIL=0). The
 sub-daily swinter=3 branch (siccaptb afgen) in the SWMETDETAIL=1 orchestrator is
 still stubbed — a follow-up when a sub-daily case needs it.
+
+### 2026-06-01 — swdrought=2 (De Jong van Lier): migration done, runtime HANGS (WIP)
+
+Attempted Tier-C restoration. The kernel migration is COMPLETE and COMPILES:
+recovered jongvanlier.f90 (JongvanLier + JongvanLierLoop) from 5c82f0a^, migrated
+its `use variables` reads (kroot/kstem/rxylem/rootradius/rootcoefa/rooteff/stephr/
+criterhr/wiltpoint) to new state%crop%common scalars + the retired
+`state%cfg%simulation%numerical%taccur` to state%crop%common%taccur, and MERGED the
+two subroutines into rootextraction_mod (siblings of matric_flux — avoids the
+jongvanlier↔rootextraction module cycle). Wired config reader + validation + init
+plumbing; dispatch `call JongvanLier(state)`; matricflux_build_table already live.
+
+BLOCKER: the modern run HANGS (>200s; legacy swap420gf runs fast). Signature is
+dt-collapse — the restored Newton-Raphson produces wrong transpiration → soil
+solver fails → adaptive dt shrinks toward zero → effectively unbounded timesteps.
+Two contributing facts: (a) the counter>1000 caps use fatalerr_collected (collects
++ continues) not legacy's fatalerr (stops) — added `exit` but still hangs, so it's
+the dt-collapse not those loops; (b) a value bug in the migration makes JvL diverge
+from legacy. Needs side-by-side instrumented debugging (compare JvL hleaf/Tactual/
+mflux per call legacy-vs-modern) — a dedicated session.
+
+REVERTED to keep the suite green; swdrought2 stays a pending_restore target. The
+full (compiling) migration is preserved at dev-docs/wip/swdrought2-jvl-restoration.patch
+(git apply to resume). NB: swap420gf itself SIGSEGVs on swsalinity=2 (the JvL
+osmotic-head sibling), so that path is doubly fragile.

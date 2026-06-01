@@ -1,0 +1,705 @@
+diff --git a/src/config/cropfixed_config.f90 b/src/config/cropfixed_config.f90
+index ced34bc..a4c9a66 100644
+--- a/src/config/cropfixed_config.f90
++++ b/src/config/cropfixed_config.f90
+@@ -117,7 +117,8 @@ module cropfixed_config_mod
+       integer :: schedule_switch = 0   !! 0=no scheduling, 1=apply (stub-errored)
+ 
+       ! Subordinate fields under stub-errored switches (schema 1:1; runtime never reads them)
+-      ! swdrought=2 fields (stub-errored at validate time):
++      ! swdrought=2 (De Jong van Lier) fields:
++      integer      :: swhydrlift = 0
+       real(real64) :: wiltpoint  = 0.0_real64
+       real(real64) :: kstem      = 0.0_real64
+       real(real64) :: rxylem     = 0.0_real64
+@@ -159,10 +160,19 @@ contains
+       ! ADR 0015: schema accepts the value 1:1 with legacy; runtime
+       ! plumbing for these branches has not been ported. Cases that
+       ! need them must run via the legacy executable.
++      ! swdrought=2 (De Jong van Lier microscopic uptake) is supported.
+       if (self%swdrought == 2) then
+-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+-            'cropfixed.swdrought=2 (De Jong van Lier) not yet supported in ' // &
+-            'the TOML pipeline; use the legacy executable.', 'cropfixed')
++         call check_int_enum(self%swhydrlift, [0, 1], 'cropfixed.swhydrlift', errors)
++         call check_real_range(self%wiltpoint,  -1.0e8_real64, -1.0e2_real64, 'cropfixed.wiltpoint', errors)
++         call check_real_range(self%kstem,      1.0e-10_real64, 1.0e1_real64, 'cropfixed.kstem',     errors)
++         call check_real_range(self%rxylem,     1.0e-4_real64,  1.0_real64,   'cropfixed.rxylem',    errors)
++         call check_real_range(self%rootradius, 1.0e-4_real64,  1.0_real64,   'cropfixed.rootradius',errors)
++         call check_real_range(self%kroot,      1.0e-10_real64, 1.0e10_real64,'cropfixed.kroot',     errors)
++         call check_real_range(self%rootcoefa,  0.0_real64,     1.0_real64,   'cropfixed.rootcoefa', errors)
++         call check_real_range(self%rooteff,    0.0_real64,     1.0_real64,   'cropfixed.rooteff',   errors)
++         call check_real_range(self%stephr,     0.0_real64,     10.0_real64,  'cropfixed.stephr',    errors)
++         call check_real_range(self%criterhr,   0.0_real64,     10.0_real64,  'cropfixed.criterhr',  errors)
++         call check_real_range(self%taccur,     0.0_real64,     1.0e-1_real64,'cropfixed.taccur',    errors)
+       end if
+       if (self%swoxygen == 2) then
+          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+diff --git a/src/crop/fixed/cropfixed_init.f90 b/src/crop/fixed/cropfixed_init.f90
+index 89e20ab..36d6377 100644
+--- a/src/crop/fixed/cropfixed_init.f90
++++ b/src/crop/fixed/cropfixed_init.f90
+@@ -39,7 +39,7 @@ contains
+       real(real64) :: depth, rootdis(202), sum
+ 
+       ! ---- Defense-in-depth: stub-error gates mirror cropfixed_config_validate.
+-      if (cfg%swdrought == 2 .or. cfg%swoxygen == 2 .or.                    &
++      if (cfg%swoxygen == 2 .or.                                           &
+           cfg%swrd == 3     .or. cfg%swsalinity /= 0 .or. cfg%schedule_switch == 1) then
+          call fatalerr_collected('cropfixed_init_from_config', &
+             'Unsupported runtime branch reached on the TOML path. The validator ' // &
+@@ -81,6 +81,21 @@ contains
+       state%crop%common%adcrh  = cfg%adcrh
+       state%crop%common%adcrl  = cfg%adcrl
+ 
++      ! De Jong van Lier microscopic uptake (swdrought=2) parameters.
++      if (cfg%swdrought == 2) then
++         state%crop%common%flhydrlift = (cfg%swhydrlift == 1)
++         state%crop%common%wiltpoint  = cfg%wiltpoint
++         state%crop%common%kstem      = cfg%kstem
++         state%crop%common%rxylem     = cfg%rxylem
++         state%crop%common%rootradius = cfg%rootradius
++         state%crop%common%kroot      = cfg%kroot
++         state%crop%common%rootcoefa  = cfg%rootcoefa
++         state%crop%common%rooteff    = cfg%rooteff
++         state%crop%common%stephr     = cfg%stephr
++         state%crop%common%criterhr   = cfg%criterhr
++         state%crop%common%taccur     = cfg%taccur
++      end if
++
+       state%crop%common%swsalinity = cfg%swsalinity
+       state%crop%common%saltmax   = cfg%saltmax
+       state%crop%common%saltslope = cfg%saltslope
+diff --git a/src/crop/rootextraction.f90 b/src/crop/rootextraction.f90
+index 9a69e33..0c412eb 100644
+--- a/src/crop/rootextraction.f90
++++ b/src/crop/rootextraction.f90
+@@ -105,13 +105,9 @@ module rootextraction_mod
+         endif
+       endif
+ 
+-! --- DROUGHT REDUCTION ACCORDING TO DE JONG VAN LIER ET AL. (2012)
+-      ! [GR-CROP 2026-05-25] swdrought=2 (de Jong van Lier microscopic uptake) is retired.
+-      ! See git history for the legacy implementation.
++! --- DROUGHT REDUCTION ACCORDING TO DE JONG VAN LIER ET AL. (2013)
+       if (crop%common%swdrought .eq. 2) then
+-        call fatalerr_collected('RootExtraction', &
+-          'swdrought=2 (Jong van Lier microscopic uptake) is retired. ' // &
+-          'See git history for the legacy implementation.')
++        call JongvanLier(state)
+       endif
+ 
+ ! === COMBINATION OF OXYGEN, DROUGHT, SALT AND FROST STRESS ====
+@@ -462,4 +458,504 @@ module rootextraction_mod
+       return
+   end subroutine matric_flux
+ 
++! ====================================================================
++! De Jong van Lier (2013) microscopic root uptake (swdrought=2).
++! Restored from src/crop/dormant/jongvanlier.f90 (5c82f0a^); the
++! `use variables` reads were migrated to state%crop%common aliases,
++! and merged here (siblings of matric_flux) to avoid a module cycle.
++! ====================================================================
++
++        subroutine JongvanLier(state)
++! ----------------------------------------------------------------------
++!     date      : August 2016
++!     purpose   : Calculate the root water extraction rate according to
++!                 De Jong van Lier et al. (2013)
++! ----------------------------------------------------------------------
++      use swap_array_dimensions, only: macp
++      use swap_log, only: log_warn
++      use array_utils, only: afgen
++      implicit none
++
++      type(swap_state_t), intent(inout) :: state
++
++! --- local variables
++      integer node,counter
++      real(8) Fy3
++      real(8) y1,y2,y3,Fy1,Fy2,hwet,ratio
++      real(8) hleafm1,hrootm1(macp)
++      real(8) reldepth,rdensity,phi,meandepth
++      real(8) maxstep,dHPLant,dHPlantMax
++      logical flconverg,flstress
++      character(len=200) messag
++
++! --- [GR-CROP 2026-05-25] sub-record aliases (crop, soil, atmo, mesh, cfg_sim).
++      associate( &
++         crop    => state%crop,                       &
++         soil    => state%soilwater,                  &
++         atmo    => state%atmosphere,                 &
++         mesh    => state%mesh,                       &
++         noddrz  => state%crop%common%noddrz,         &
++         kroot      => state%crop%common%kroot,        &
++         kstem      => state%crop%common%kstem,        &
++         rxylem     => state%crop%common%rxylem,       &
++         rootradius => state%crop%common%rootradius,   &
++         rootcoefa  => state%crop%common%rootcoefa,    &
++         stephr     => state%crop%common%stephr,       &
++         wiltpoint  => state%crop%common%wiltpoint     &
++      )
++
++! --- initialization
++      phi = 3.1415926d0
++      counter = 0
++      flstress = .false.
++      hleafm1 = soil%hleaf
++      flconverg = .false.
++
++! --- reset values below root zone to zero
++      do node = noddrz+1,mesh%numnod
++        soil%mflux(node)   = 0.d0
++        soil%mroot(node)   = 0.d0
++        soil%hroot(node)   = 0.d0
++        soil%rootrho(node) = 0.d0
++        soil%rootphi(node) = 0.d0
++      enddo
++
++! --- give hroot a value when root zone becomes larger and store previous values
++      do node = 1, noddrz
++        if (abs(soil%hroot(node)) .lt. 1.0d-12) then
++          soil%hroot(node) = soil%h(node)
++        end if
++        hrootm1(node) = soil%hroot(node)
++      enddo
++
++! --- initialization of rootrho and rootphi
++      do node = 1,noddrz-1
++        reldepth = -mesh%z(node)/crop%common%rd
++        rdensity = afgen(crop%common%rdctb,22,reldepth)
++        soil%rmax(node) = 1.d0/dsqrt(phi*rdensity)
++        soil%rootrho(node) = 4.d0/(rootradius*rootradius-rootcoefa*soil%rmax(node)&
++     &      *rootcoefa*soil%rmax(node) + 2.d0 * (soil%rmax(node)*soil%rmax(node) +     &
++     &      rootradius*rootradius)*log(rootcoefa*soil%rmax(node)/rootradius))
++        soil%rootphi(node) = soil%rootrho(node) * soil%rmax(node)*soil%rmax(node) *         &
++     &     log(rootradius/rxylem) * 0.5d0 / kroot
++      enddo
++! --- last node, partly filled with roots
++      node = noddrz
++      meandepth = (mesh%ztopcp(node)-crop%common%rd)*0.5d0
++      reldepth = meandepth/(-crop%common%rd)
++      rdensity = afgen(crop%common%rdctb,22,reldepth)
++      soil%rmax(node) = 1.d0/dsqrt(phi*rdensity)
++      soil%rootrho(node) = 4.d0/(rootradius*rootradius-rootcoefa*soil%rmax(node)  &
++     &      *rootcoefa*soil%rmax(node) + 2.d0 * (soil%rmax(node)*soil%rmax(node) +     &
++     &      rootradius*rootradius)*log(rootcoefa*soil%rmax(node)/rootradius))
++      soil%rootphi(node) = soil%rootrho(node) * soil%rmax(node)*soil%rmax(node) *           &
++     &     log(rootradius/rxylem) * 0.5d0 / kroot
++
++! --- calculate current matric flux potential in soil water
++      do node = 1,noddrz
++        soil%h(node) = min(1.0d3,max(soil%h(node),1.0d-8))
++        call matric_flux(soil%h(node),node,soil%mflux(node),state)
++      enddo
++
++! --- interpolate matric flux potential in lowest compartment that is partly filled with roots
++      node = noddrz
++      if (node.gt.1) then
++         soil%mflux(node) = soil%mflux(node) + (soil%mflux(node-1)-soil%mflux(node))/       &
++     &                 mesh%disnod(node) * (meandepth-mesh%z(node))
++      endif
++
++! --- determine highest pressure head in root zone
++      hwet = soil%h(1)
++      do node = 2,noddrz
++        if (soil%h(node) .gt. hwet) hwet = soil%h(node)
++      enddo
++
++! --- determine whether qrosum < ptra (flstress = true)
++! --- calculate root water extraction qrosum at Hleaf = wiltpoint and Tactual = Ptra
++      soil%hleaf = wiltpoint
++      dHPlant = atmo%ptra/Kstem
++      if (dHPlant .gt. (hwet - wiltpoint)) flstress = .true.
++
++      soil%Hxylem = soil%hleaf + dHPLant
++      call JongvanLierLoop(state)
++      if (soil%qrosum .lt. atmo%ptra) flstress = .true.
++
++! --- set hroot to previous values
++      do node = 1,noddrz
++        soil%hroot(node) = hrootm1(node)
++      enddo
++
++! --- FLSTRESS = FALSE: DETERMINE HLEAF WITH TACTUAL = PTRA
++      if (.not. flstress) then
++
++! --- calculate root extraction at previous value of hleaf
++      soil%hleaf = Hleafm1
++      soil%Hxylem = soil%hleaf + dHPLant
++      call JongvanLierLoop(state)
++
++! --- check convergence
++      if (abs(soil%qrosum-atmo%ptra) .lt. state%crop%common%taccur) flconverg = .true.
++
++! --- set initial values y3 and Fy3
++      y3 = soil%hleaf
++      Fy3 = atmo%ptra - soil%qrosum
++
++! --- start search on correct value of pressure head in leaves
++      do while (.not. flconverg)
++
++! --- reset y1 and Fy1
++      y1 = y3
++      Fy1 = Fy3
++
++      if (soil%qrosum .lt. atmo%ptra) then
++! ---   root water extraction too small, decrease Hleaf
++          y2 = y1 - StepHr*log10(max(abs(y1),1.d0))
++      else
++! ---   root water extraction too large, increase Hleaf
++          y2 = y1 + StepHr*log10(max(abs(y1),1.d0))
++      endif
++
++! --- calculate root extraction at modified pressure head y2 in leaf
++      soil%hleaf = y2
++      soil%Hxylem = soil%hleaf + dHPLant
++      call JongvanLierLoop(state)
++      Fy2 = atmo%ptra - soil%qrosum
++
++! --- determine new value of leaf pressure head with Newton Raphson algorithm
++      if (abs(Fy1-Fy2).lt. 1.d-10) then
++! ---   take maximum step
++        if (soil%qrosum .gt. atmo%ptra) then
++          maxstep = -0.05d0 * y1
++          maxstep = max(100.d0,maxstep)
++          y3 = y1 + maxstep
++        else
++          maxstep = 0.05d0 * (y1 - wiltpoint)
++          maxstep = max(100.d0,maxstep)
++          y3 = y1 - maxstep
++        endif
++      else
++! ---   take Newton Raphson step
++        y3 = y1 - (y2-y1)*Fy1 / (Fy2-Fy1)
++        if ((y3-y1) .gt. 0.d0) then
++          maxstep = -0.05d0 * y1
++          maxstep = max(100.d0,maxstep)
++          y3 = min((y1 + maxstep),y3)
++        else
++          maxstep = 0.05d0 * (y1 - wiltpoint)
++          maxstep = max(100.d0,maxstep)
++          y3 = max((y1 - maxstep),y3)
++        endif
++      endif
++      y3 = min(y3,hwet)
++      y3 = max(y3,wiltpoint)
++
++! --- new estimated value of leaf pressure head is equal to y3!
++ 300  soil%hleaf = y3
++      soil%Hxylem = soil%hleaf + dHPlant
++
++! --- calculate root extraction at y3
++      call JongvanLierLoop(state)
++      Fy3 = atmo%ptra - soil%qrosum
++
++! --- check convergence
++      if (abs(soil%qrosum-atmo%ptra) .lt. state%crop%common%taccur .or.                             &
++     &       abs(y3-y1) .lt. 1.0d0) flconverg = .true.
++
++! --- fatal error if too many iterations
++      counter = counter + 1
++      if (counter .gt. 1000) then
++         messag = '4 Too many iterations for microscopic root'          &
++     &             //' water uptake. Please adapt input!'
++         call log_warn('rootextraction', messag)
++         call fatalerr_collected ('rootextraction',messag)
++         exit
++      endif
++
++! --- apply linear interpolation when Fy1 and Fy3 have opposite sign
++      if (.not. flconverg) then
++        if (((Fy1 .gt. 0.d0 .and. Fy3 .lt. 0.d0) .or.                   &
++     &                     (Fy1 .lt. 0.d0 .and. Fy3 .gt. 0.d0)) .and.   &
++     &                      abs(y1-y3) .gt. 1.d0) then
++
++          y3 = y1 + (y3 - y1) * Fy1 / (Fy1 - Fy3)
++          y3 = min(y3,hwet)
++          y3 = max(y3,wiltpoint)
++          goto 300
++        endif
++      endif
++
++! --- WHILE-DO LOOP TO DETERMINE HLEAF WITHOUT DROUGHT STRESS
++      enddo
++
++      soil%qrosum = atmo%ptra
++      soil%hleaf = y3
++      dHplant = soil%qrosum/kstem
++      soil%Hxylem = soil%hleaf + dHPlant
++
++      else
++! --- FLSTRESS = TRUE: DETERMINE QROSUM WITH HLEAF = WILTPOINT
++      counter = 0
++
++! --- calculate root extraction at previous value of qrosum
++      soil%hleaf = wiltpoint
++      dHplant = soil%Tactual/kstem
++      if (dHplant .gt. (hwet - wiltpoint)) then
++        dHplant = 0.98 * (hwet - wiltpoint)
++        soil%Tactual = dHplant * kstem
++      endif
++      soil%Hxylem = soil%hleaf + dHPLant
++      call JongvanLierLoop(state)
++
++! --- check convergence
++      if (abs(soil%Tactual - soil%qrosum) .lt. state%crop%common%taccur) flconverg = .true.
++
++! --- set initial values y3 and Fy3
++      y3 = soil%Tactual
++      Fy3 = soil%Tactual - soil%qrosum
++
++! --- start search on correct value of qrosum
++      do while (.not. flconverg)
++
++! --- reset y1 and Fy1
++      y1 = y3
++      Fy1 = Fy3
++
++      if (soil%Tactual .gt. soil%qrosum) then
++! ---   root water extraction less than adopted, decrease tactual
++          y2 = y1 - 0.001d0
++      else
++! ---   root water extraction larger than adopted, increase tactual
++          y2 = y1 + 0.001d0
++      endif
++
++! --- calculate root extraction at modified pressure head y2 in leaf
++      soil%Tactual = y2
++      dHplant = soil%Tactual/kstem
++      soil%Hxylem = soil%hleaf + dHPLant
++      call JongvanLierLoop(state)
++      Fy2 = soil%Tactual - soil%qrosum
++
++! --- determine new value of tactual with Newton Raphson algorithm
++        y3 = y1 - (y2-y1)*Fy1 / (Fy2-Fy1)
++        maxstep = 0.05d0
++        if ((y3-y1) .gt. 0.d0) then
++          y3 = min((y1 + maxstep),y3)
++        else
++          y3 = max((y1 - maxstep),y3)
++        endif
++      dHPlantMax = hwet - wiltpoint
++      y3 = min(y3,(dHPlantMax * Kstem))
++      y3 = max(y3,0.d0)
++
++! --- new estimated value of tactual is equal to y3!
++ 400  soil%Tactual = y3
++      dHPlant = soil%Tactual/kstem
++      soil%Hxylem = soil%hleaf + dHPlant
++
++! --- calculate root extraction at y3
++      call JongvanLierLoop(state)
++      Fy3 = soil%Tactual - soil%qrosum
++
++! --- check convergence
++      if (abs(soil%Tactual - soil%qrosum) .lt. state%crop%common%taccur) flconverg = .true.
++
++! --- fatal error if too many iterations
++      counter = counter + 1
++      if (counter .gt. 1000) then
++         messag = '5 Too many iterations for microscopic root'          &
++     &             //' water uptake. Please adapt input!'
++         call log_warn('rootextraction', messag)
++         call fatalerr_collected ('rootextraction',messag)
++         exit
++      endif
++
++! --- apply linear interpolation when Fy1 and Fy3 have opposite sign
++      if (.not. flconverg) then
++        if ((Fy1 .gt. 0.d0 .and. Fy3 .lt. 0.d0) .or.                    &
++     &                     (Fy1 .lt. 0.d0 .and. Fy3 .gt. 0.d0)) then
++
++          y3 = y1 + (y3 - y1) * Fy1 / (Fy1 - Fy3)
++          goto 400
++        endif
++      endif
++
++! --- WHILE-DO LOOP TO DETERMINE HLEAF WITH DROUGHT STRESS
++      enddo
++
++      dHplant = soil%qrosum/kstem
++      soil%Hxylem = soil%hleaf + dHPlant
++
++      endif
++
++! --- qrot(node) has been calculated based on Jong van Lier (2013)
++
++      soil%qrosum = 0.0d0
++      do node = 1,noddrz
++        soil%qrosum = soil%qrot(node) + soil%qrosum
++      enddo
++
++      if ( (atmo%ptra - soil%qrosum) .lt. state%crop%common%taccur) then
++! ---   compensate convergence error
++        ratio = atmo%ptra / soil%qrosum
++        do node = 1,noddrz
++          soil%qrot(node) = soil%qrot(node) * ratio
++        enddo
++        soil%qrosum = atmo%ptra
++        soil%alpJvLier = 1.d0
++      else
++! ---   drought reduction factor
++        soil%alpJvLier = soil%qrosum / atmo%ptra
++! ---   calculate potential qrot
++        do node = 1,noddrz
++          soil%qrot(node) = soil%qrot(node)/soil%alpJvLier
++        enddo
++      endif
++
++      end associate
++      return
++
++  end subroutine JongvanLier
++
++! ----------------------------------------------------------------------
++!> Evaluate one microscopic uptake loop for a given xylem/leaf pressure state.
++!!
++!! @note
++!! date: August 2016
++!! purpose: Calculate microscopic root water uptake using hleaf
++!! @endnote
++  subroutine JongvanLierLoop(state)
++! ----------------------------------------------------------------------
++!     date      : August 2016
++!     purpose   : Calculate microscopic root water uptake using hleaf
++! ----------------------------------------------------------------------
++      use swap_array_dimensions, only: macp
++      use swap_log, only: log_warn
++      implicit none
++
++      type(swap_state_t), intent(inout) :: state
++
++! --- local variables
++      integer counter,node,lay
++      real(8) x1,x2,x3,Fx1,Fx2,qmax,conducsoil,conducroot
++      real(8) step,mflux1,mflux2,depth
++      character(len=200) messag
++
++! --- [GR-CROP 2026-05-25] sub-record aliases (crop, soil, atmo, mesh, time).
++      associate( &
++         crop   => state%crop,                        &
++         soil   => state%soilwater,                   &
++         atmo   => state%atmosphere,                  &
++         mesh   => state%mesh,                        &
++         time   => state%timecontrol,                 &
++         noddrz => state%crop%common%noddrz,          &
++         kroot      => state%crop%common%kroot,        &
++         rxylem     => state%crop%common%rxylem,       &
++         rootradius => state%crop%common%rootradius,   &
++         rootcoefa  => state%crop%common%rootcoefa,    &
++         rooteff    => state%crop%common%rooteff,      &
++         stephr     => state%crop%common%stephr,       &
++         criterhr   => state%crop%common%criterhr,     &
++         flhydrlift => state%crop%common%flhydrlift,   &
++         twilt      => state%crop%common%twilt         &
++      )
++
++! --  initialisatie
++      soil%qrosum = 0.d0
++      x1 = 999.d0
++      counter = 0
++      ConducRoot = KRoot / rootradius / log(rootradius/rxylem)
++
++      do node = 1,noddrz
++! ---   determine h and matricflux potential at root-soil interface
++        if (soil%h(node) .gt. -1.d0) then
++! ---      very wet conditions
++           lay = mesh%layer(node)
++           ConducSoil = soil%ksatfit(lay) / (rootcoefa*soil%rmax(node)) /  &
++     &                  log(rootcoefa*soil%rmax(node)/rootradius)
++           soil%hroot(node) = (ConducSoil*soil%h(node) + ConducRoot*soil%Hxylem) /  &
++     &                   (ConducSoil + ConducRoot)
++        else
++! ---      common conditions
++          x3 = soil%hroot(node)
++          do while (abs(x3-x1) .gt. CriterHr*log10(max(abs(x3),1.d0)))
++            Step = min(abs(x3-x1),StepHr*log10(max(abs(x3),1.d0)))
++            x1 = x3
++            x2 = x1 - Step
++            call matric_flux(x1,node,mflux1,state)
++            call matric_flux(x2,node,mflux2,state)
++            Fx1 = soil%Hxylem -x1 + soil%rootphi(node)*(soil%mflux(node)-mflux1)
++            Fx2 = soil%Hxylem -x2 + soil%rootphi(node)*(soil%mflux(node)-mflux2)
++            if (abs(Fx2-Fx1).lt.1.d-10) then
++              x3 = x2
++            else
++              x3 = x1 - (x2-x1)*Fx1 / (Fx2-Fx1)
++            endif
++            x3 = max(x3,min(soil%Hxylem,soil%h(node)))
++            x3 = min(x3,max(soil%Hxylem,soil%h(node)))
++! ---       fatal error if too many iterations
++            counter = counter + 1
++            if (counter .gt. 50) then
++              messag = '1 Too many iterations for microscopic root'    &
++     &               //' water uptake. Please adapt input!'
++              call log_warn('rootextraction', messag)
++              call fatalerr_collected ('rootextraction',messag)
++               exit
++            endif
++          enddo
++          x1 = 999.d0
++          counter = 0
++          soil%hroot(node) = x3
++        endif
++        call matric_flux(soil%hroot(node),node,soil%mroot(node),state)
++! ---   calculate root water extraction flux
++        if (node .lt. noddrz) then
++          soil%qrot(node) = rooteff * soil%rootrho(node) *                        &
++     &                 (soil%mflux(node)-soil%mroot(node)) * mesh%dz(node)
++          if (soil%mflux(node) .gt. soil%mroot(node) ) then
++! ---       water extraction, set maximum flux to 10% of available soil water
++            qmax = (soil%theta(node) - twilt(node)) * mesh%dz(node) * 0.1d0 / time%dt
++            qmax = min(qmax,atmo%ptra)
++            soil%qrot(node) = min(soil%qrot(node),qmax)
++          else
++! ---       possible hydraulic lift, set maximum flux to 0.1% change water content
++            if (flhydrlift) then
++              qmax = -0.001d0 * mesh%dz(node) / time%dt
++              soil%qrot(node) = max(soil%qrot(node),qmax)
++            else
++! ---         no hydraulic lift allowed
++              soil%qrot(node) = 0.d0
++              soil%hroot(node) = soil%h(node)
++              soil%mroot(node) = soil%mflux(node)
++            endif
++          endif
++        else
++! ---     last node, partly filled with roots
++          depth = mesh%ztopcp(node) + crop%common%rd
++          soil%qrot(node) = rooteff * soil%rootrho(node) *                        &
++     &                 (soil%mflux(node)-soil%mroot(node)) * depth
++          if (soil%mflux(node) .gt. soil%mroot(node) ) then
++! ---       water extraction, set maximum flux to 10% of available soil water
++            qmax = (soil%theta(node) - twilt(node)) * depth * 0.1d0 / time%dt
++            qmax = min(qmax,atmo%ptra)
++            soil%qrot(node) = min(soil%qrot(node),qmax)
++          else
++! ---       possible hydraulic lift, set maximum flux to 0.1% change water content
++            if (flhydrlift) then
++              qmax = -0.001d0 * depth / time%dt
++              soil%qrot(node) = max(soil%qrot(node),qmax)
++            else
++! ---         no hydraulic lift allowed
++              soil%qrot(node) = 0.d0
++              soil%hroot(node) = soil%h(node)
++              soil%mroot(node) = soil%mflux(node)
++            endif
++          endif
++        endif
++        soil%qrosum = soil%qrot(node) + soil%qrosum
++      enddo
++
++      end associate
++      return
++  end subroutine JongvanLierLoop
++
+ end module rootextraction_mod
+diff --git a/src/io/toml/read_cropfixed_toml.f90 b/src/io/toml/read_cropfixed_toml.f90
+index fa56915..e037152 100644
+--- a/src/io/toml/read_cropfixed_toml.f90
++++ b/src/io/toml/read_cropfixed_toml.f90
+@@ -117,6 +117,18 @@ contains
+          call get_optional_real_with_default(dr, 'hlim4',     config%hlim4,  0.0_real64, 'drought_stress.hlim4',  errors)
+          call get_optional_real_with_default(dr, 'adcrh',     config%adcrh,  0.0_real64, 'drought_stress.adcrh',  errors)
+          call get_optional_real_with_default(dr, 'adcrl',     config%adcrl,  0.0_real64, 'drought_stress.adcrl',  errors)
++         ! De Jong van Lier microscopic uptake (swdrought=2).
++         call get_optional_int_with_default (dr, 'swhydrlift', config%swhydrlift, 0,          'drought_stress.swhydrlift', errors)
++         call get_optional_real_with_default(dr, 'wiltpoint',  config%wiltpoint,  0.0_real64, 'drought_stress.wiltpoint',  errors)
++         call get_optional_real_with_default(dr, 'kstem',      config%kstem,      0.0_real64, 'drought_stress.kstem',      errors)
++         call get_optional_real_with_default(dr, 'rxylem',     config%rxylem,     0.0_real64, 'drought_stress.rxylem',     errors)
++         call get_optional_real_with_default(dr, 'rootradius', config%rootradius, 0.0_real64, 'drought_stress.rootradius', errors)
++         call get_optional_real_with_default(dr, 'kroot',      config%kroot,      0.0_real64, 'drought_stress.kroot',      errors)
++         call get_optional_real_with_default(dr, 'rootcoefa',  config%rootcoefa,  0.0_real64, 'drought_stress.rootcoefa',  errors)
++         call get_optional_real_with_default(dr, 'rooteff',    config%rooteff,    0.0_real64, 'drought_stress.rooteff',    errors)
++         call get_optional_real_with_default(dr, 'stephr',     config%stephr,     0.0_real64, 'drought_stress.stephr',     errors)
++         call get_optional_real_with_default(dr, 'criterhr',   config%criterhr,   0.0_real64, 'drought_stress.criterhr',   errors)
++         call get_optional_real_with_default(dr, 'taccur',     config%taccur,     0.0_real64, 'drought_stress.taccur',     errors)
+       end if
+ 
+       ! Salinity stress (subordinate fields read but stub-errored at validate)
+diff --git a/src/state/crop_common_state.f90 b/src/state/crop_common_state.f90
+index 2ead6c4..b87ac13 100644
+--- a/src/state/crop_common_state.f90
++++ b/src/state/crop_common_state.f90
+@@ -70,6 +70,17 @@ module crop_common_state_mod
+       ! Allocated lazily by the writer when swdrought=2 (currently never on TOML).
+       real(real64), allocatable :: twilt(:)              !! pressure head of compartment at wilting point (L)
+       logical      :: flhydrlift     = .false.           !! De Jong van Lier hydraulic-lift flag
++      ! De Jong van Lier (swdrought=2) scalar parameters (from .crp).
++      real(real64) :: kroot      = 0.0_real64            !! radial hydraulic conductivity of root tissue (cm/d)
++      real(real64) :: kstem      = 0.0_real64            !! hydraulic conductance leaf<->root xylem (1/d)
++      real(real64) :: rxylem     = 0.0_real64            !! xylem radius (cm)
++      real(real64) :: rootradius = 0.0_real64            !! root radius (cm)
++      real(real64) :: rootcoefa  = 0.0_real64            !! relative distance to mean soil water content (-)
++      real(real64) :: rooteff    = 0.0_real64            !! root system efficiency factor (-)
++      real(real64) :: stephr     = 0.0_real64            !! step in hroot/hxylem iteration (cm)
++      real(real64) :: criterhr   = 0.0_real64            !! hroot convergence criterion (cm)
++      real(real64) :: wiltpoint  = 0.0_real64            !! minimum pressure head in leaves (cm)
++      real(real64) :: taccur     = 0.0_real64            !! transpiration-rate convergence criterion (cm/d)
+ 
+       ! [GR-CROP 2026-05-25] Relative transpiration factor — written by the
+       ! active cropX_runtime task=3 from soil%tra/atmo%ptra; read by the same
+diff --git a/tests/regression/gen_switch_cases.py b/tests/regression/gen_switch_cases.py
+index c95ae00..48965d5 100644
+--- a/tests/regression/gen_switch_cases.py
++++ b/tests/regression/gen_switch_cases.py
+@@ -146,7 +146,11 @@ CASES.update({
+     "swdrought2": [dict(crp="maizes",
+                         legacy=[(r"^  SWDROUGHT = 1\b", "  SWDROUGHT = 2"),
+                                 (r"(^  ADCRL = 0\.1\b.*$)", r"\1" + _JVL)],
+-                        toml=[(r"^swdrought = 1\b", "swdrought = 2")])],
++                        toml=[(r"^swdrought = 2\b|^swdrought = 1\b",
++                               "swdrought = 2\nswhydrlift = 0\nwiltpoint = -20000.0\n"
++                               "kstem = 1.03e-4\nrxylem = 0.02\nrootradius = 0.05\n"
++                               "kroot = 3.5e-5\nrootcoefa = 0.53\nrooteff = 1.0\n"
++                               "stephr = 1.0\ncriterhr = 0.001\ntaccur = 0.001")])],
+     # swsalinity=2 (osmotic head) is intentionally omitted: swap420gf itself
+     # SIGSEGVs on it (matricflux) in this config, so no oracle fixture exists.
+ })
+diff --git a/tests/unit/config/test_cropfixed_config.pf b/tests/unit/config/test_cropfixed_config.pf
+index d3cf5a2..770f054 100644
+--- a/tests/unit/config/test_cropfixed_config.pf
++++ b/tests/unit/config/test_cropfixed_config.pf
+@@ -77,22 +77,37 @@ end subroutine
+ ! Phase 1 cropfixed port — stub-error validators for unsupported branches.
+ 
+ @test
+-subroutine test_cropfixed_swdrought_two_rejected()
++subroutine test_cropfixed_swdrought_two_accepted()
++   ! swdrought=2 (De Jong van Lier microscopic uptake) is now supported on the
++   ! TOML path — the JongvanLier kernel was restored. With valid JvL parameters
++   ! there is no stub error.
+    use funit
++   use iso_fortran_env, only: real64
+    use cropfixed_config_mod, only: cropfixed_config_t
+    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+    type(cropfixed_config_t) :: c
+    type(error_collection_t) :: errors
+    integer :: i
+    logical :: found
+-   c%swdrought = 2
++   c%swdrought  = 2
++   c%swhydrlift = 0
++   c%wiltpoint  = -20000.0_real64
++   c%kstem      = 1.03e-4_real64
++   c%rxylem     = 0.02_real64
++   c%rootradius = 0.05_real64
++   c%kroot      = 3.5e-5_real64
++   c%rootcoefa  = 0.53_real64
++   c%rooteff    = 1.0_real64
++   c%stephr     = 1.0_real64
++   c%criterhr   = 0.001_real64
++   c%taccur     = 0.001_real64
+    call c%validate(errors)
+    found = .false.
+    do i = 1, errors%count()
+       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+-          index(errors%items(i)%message, 'swdrought=2') > 0) found = .true.
++          index(errors%items(i)%message, 'swdrought') > 0) found = .true.
+    end do
+-   @assertTrue(found)
++   @assertFalse(found)
+ end subroutine
+ 
+ @test
