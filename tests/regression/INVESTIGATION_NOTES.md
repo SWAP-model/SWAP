@@ -378,3 +378,35 @@ Profiled the ~1000x slowdown (perf unavailable — used cpu_time + stub isolatio
 Net: swdrought=2 is restored + correct (JvL converges to sane values after the
 wiltpoint fix) but perf-blocked by the Richards-convergence sensitivity. Patch
 (incl. wiltpoint fix) preserved at dev-docs/wip/swdrought2-jvl-restoration.patch.
+
+### 2026-06-01 (cont.) — swdrought=2 perf ROOT CAUSE: solute sub-stepping, not the JvL/Richards
+
+Full profiling chain (cpu_time + marker isolation; perf unavailable). Each layer
+ruled out the previous suspect:
+- JvL kernel: CHEAP (137 calls = 182 us cpu, ~1us/call). NOT it.
+- headcalc (Richards): converges in numbit=2, called ~once/step. NOT it.
+- soilwater_step / dt-reduction loop: fldecdt never fires; <2000 calls. NOT it.
+- **solute_step: THE CULPRIT.** Markers around the post-Richards components showed
+  solute_step ENTERED 3350x but EXITED 3349x — the sim hangs INSIDE solute_step.
+
+Mechanism: solute transport sub-steps with a von Neumann dispersion stability limit
+(solute.f90 prepare_solute_dispersion): `dtsolu = min(dt, dz^2/(2*dispr))`,
+`dispr = diffus + ldis*|q|/theta`, then `do while (dt-tcumsol>1e-8)` with
+`dtsolu = max(dtsolu, dtmin)`. Under swdrought=2 the JvL extracts water toward the
+(correct, post-fix) wiltpoint=-20000, so a node's theta/soil flux q drives `dispr`
+large → `dtsolu` collapses to dtmin → the loop runs up to dt/dtmin (~40000)
+sub-steps PER timestep → the ~1000x.
+
+Legacy comparison: the legacy solute loop is BYTE-FOR-BYTE the same formula+clamp
+(solute.f90:110-121) yet runs the whole case in 0.70s — so legacy's `dispr` does
+NOT collapse. The difference is modern's soil water `q`/`theta` at the critical
+node vs 4.2.0 — i.e. the SAME modern-vs-4.2.0 soil-water numerical (adaptive-dt /
+Richards convergence-threshold) difference behind the hysteresis/winter
+known_divergences, here amplified through the solute stability criterion into a
+performance collapse rather than a value drift.
+
+CONCLUSION: NOT a leftover sync/dual-write (JvL/matric_flux/headcalc/solute loops
+are clean and identical to legacy). The fix is the core soil-water parity work
+(make modern q/theta match 4.2.0) — high risk to the 5 passing cases, out of scope.
+swdrought=2 stays restored-but-perf-blocked; patch at
+dev-docs/wip/swdrought2-jvl-restoration.patch.
