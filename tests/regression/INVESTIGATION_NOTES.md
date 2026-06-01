@@ -320,3 +320,32 @@ REVERTED to keep the suite green; swdrought2 stays a pending_restore target. The
 full (compiling) migration is preserved at dev-docs/wip/swdrought2-jvl-restoration.patch
 (git apply to resume). NB: swap420gf itself SIGSEGVs on swsalinity=2 (the JvL
 osmotic-head sibling), so that path is doubly fragile.
+
+### 2026-06-01 (cont.) — swdrought=2: root-caused the hang (wiltpoint bug), now a PERF wall
+
+Instrumented the hang. **Two findings:**
+
+1. **REAL BUG FOUND (the hypothesis was right).** `matricflux_build_table` /
+   `matric_flux` / the runtime `twilt` used `state%crop%common%hlim4` as a stand-in
+   for `wiltpoint` — a migration shortcut whose comment said *"wiltpoint legacy
+   global is always 0.0 on TOML"*. Once wiltpoint IS plumbed (-20000 vs hlim4's
+   -8000), the matric-flux table was cut off at the wrong pressure head, so the JvL
+   Newton-Raphson got inconsistent matric flux in the -8000..-20000 range and never
+   converged → dt held normal but the solver spun. Fixed: use
+   `state%crop%common%wiltpoint` at all three swdrought=2 sites (NOT the Feddes
+   swdrought=1 hlim4 uses). Debug confirmed: wiltpoint=-20000, kstem/kroot/taccur all
+   correct; JvL then converges to sane values (alp=1.0, hleaf=-54, qrosum=ptra).
+
+2. **NEW BLOCKER — ~1000x perf regression.** With convergence fixed, the sim
+   PROGRESSES correctly (dt normal ~0.02-0.04, sane JvL output) but is
+   catastrophically slow: ~10s/sim-day → would take hours. **Legacy swap420gf runs
+   the same case in 0.70 s.** So modern's JvL path is ~1000x slower — state-record
+   indirection (state%soilwater%mfluxtable(lay,count), state%mesh%layer(node), …) in
+   the matric_flux hot loop (called ~thousands of times/JvL call) vs legacy's flat
+   module globals, likely amplified by an inner-loop convergence-iteration
+   difference. Needs profiling + caching the hot state fields into locals — a
+   distinct optimization task.
+
+Status: the swdrought=2 restoration is now CORRECT but perf-blocked. Reverted to
+keep the suite green (swdrought2 stays pending_restore). Updated patch (incl. the
+wiltpoint fix) at dev-docs/wip/swdrought2-jvl-restoration.patch.

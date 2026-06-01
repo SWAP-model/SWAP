@@ -70,8 +70,21 @@ index 89e20ab..36d6377 100644
        state%crop%common%swsalinity = cfg%swsalinity
        state%crop%common%saltmax   = cfg%saltmax
        state%crop%common%saltslope = cfg%saltslope
+diff --git a/src/crop/fixed/cropfixed_runtime.f90 b/src/crop/fixed/cropfixed_runtime.f90
+index 8bbf619..f82b210 100644
+--- a/src/crop/fixed/cropfixed_runtime.f90
++++ b/src/crop/fixed/cropfixed_runtime.f90
+@@ -148,7 +148,7 @@
+         endif
+         if (.not. allocated(crop%common%twilt)) allocate(crop%common%twilt(mesh%numnod))
+         do i = 1,mesh%numnod
+-         crop%common%twilt(i) = watcon(crop%common%hlim4, &
++         crop%common%twilt(i) = watcon(crop%common%wiltpoint, &
+                             soil%vg_params(i), &
+                             soil%iHWCKmodel(soil%layer(i)), &
+                             i, soil)
 diff --git a/src/crop/rootextraction.f90 b/src/crop/rootextraction.f90
-index 9a69e33..0c412eb 100644
+index 9a69e33..56648d4 100644
 --- a/src/crop/rootextraction.f90
 +++ b/src/crop/rootextraction.f90
 @@ -105,13 +105,9 @@ module rootextraction_mod
@@ -90,6 +103,33 @@ index 9a69e33..0c412eb 100644
        endif
  
  ! === COMBINATION OF OXYGEN, DROUGHT, SALT AND FROST STRESS ====
+@@ -357,7 +353,7 @@ module rootextraction_mod
+         enddo
+       enddo
+ 
+-      start = int(100.d0*log10(-state%crop%common%hlim4))   ! [GR-CROP 2026-05-25] wiltpoint → hlim4 (dead path)
++      start = int(100.d0*log10(-state%crop%common%wiltpoint))   ! De Jong van Lier leaf wilting point
+       do lay = 1,state%mesh%numlay
+         phead1 = -10.d0**(dble(start)/100.d0)
+ 
+@@ -417,7 +413,7 @@ module rootextraction_mod
+ 
+ ! --- matric flux potential based on soil water pressure head
+         lay = state%mesh%layer(node)  ! [GR-BH C7]
+-        if (phead .lt. state%crop%common%hlim4) then   ! [GR-CROP 2026-05-25] wiltpoint → hlim4
++        if (phead .lt. state%crop%common%wiltpoint) then   ! De Jong van Lier leaf wilting point
+ ! ---     very dry range
+           outcome = 0.0d0
+         elseif (phead .gt. -1.023293d0) then
+@@ -439,7 +435,7 @@ module rootextraction_mod
+           lay = state%mesh%layer(node)  ! [GR-BH C7]
+ !         osmotic head in cm
+           hosm = state%crop%common%salthead * state%solute%cml(node)
+-          hsalt = state%crop%common%hlim4 + hosm   ! [GR-CROP 2026-05-25] wiltpoint → hlim4
++          hsalt = state%crop%common%wiltpoint + hosm   ! De Jong van Lier leaf wilting point
+           if (hosm .lt. 1.d-3) then
+ ! ---       very dry range
+             mfluxsalt = 0.0d0
 @@ -462,4 +458,504 @@ module rootextraction_mod
        return
    end subroutine matric_flux
