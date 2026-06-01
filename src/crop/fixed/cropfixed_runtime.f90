@@ -127,7 +127,7 @@
 
 ! --- initial storage on canopy
       if (crop%common%swinter.eq.3) then
-        atmo%siccapact = 0.0d0   ! [GR-CROP 2026-05-25] swinter=3 (Gash) stub-errored on TOML; siccaplai always 0
+        atmo%siccapact = crop%common%siccaplai * crop%lai   ! adapted-Rutter storage capacity
       endif
 
 ! --- initial dry weight of roots at soil surface; oxygen module
@@ -208,7 +208,7 @@
 
 ! --- update canopy storage capacity
       if (crop%common%swinter.eq.3) then
-        atmo%siccapact = 0.0d0   ! [GR-CROP 2026-05-25] swinter=3 (Gash) stub-errored on TOML; siccaplai always 0
+        atmo%siccapact = crop%common%siccaplai * crop%lai   ! adapted-Rutter storage capacity
       endif
 
 ! --- dry weight of roots at soil surface; oxygen module

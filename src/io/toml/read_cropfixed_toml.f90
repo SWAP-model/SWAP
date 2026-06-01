@@ -150,6 +150,9 @@ contains
          call read_real_pair_array(inter, 'scanopytb', config%scanopytb, 'interception.scanopytb', errors)
          call read_real_pair_array(inter, 'avprectb',  config%avprectb,  'interception.avprectb',  errors)
          call read_real_pair_array(inter, 'avevaptb',  config%avevaptb,  'interception.avevaptb',  errors)
+         ! Adapted-Rutter storage interception (swinter=3).
+         call get_optional_real_with_default(inter, 'fimin',     config%fimin,     0.0_real64, 'interception.fimin',     errors)
+         call get_optional_real_with_default(inter, 'siccaplai', config%siccaplai, 0.0_real64, 'interception.siccaplai', errors)
       end if
 
       ! Scheduling top-level switch

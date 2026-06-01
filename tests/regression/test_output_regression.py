@@ -174,8 +174,10 @@ CASES.update({
                                   "oxygen-stress 0.01cm TACT divergence); see INVESTIGATION_NOTES.md"),
     # deleted/dormant compute, restoration targets (modern fatal-errors -> xfail)
     "swinter3":      _switch_case("swinter3",
-                                  pending_restore="swinter=3 (adapted-Rutter storage interception) "
-                                  "compute deleted; recover msw1eic from f653aed^"),
+                                  known_divergence="swinter=3 (adapted-Rutter) RESTORED & faithful — "
+                                  "bit-identical to 4.2.0 under fixed dt; the adaptive-dt run diverges "
+                                  "because msw1eic integrates over dt directly (amplifies the known "
+                                  "adaptive-dt desync); see INVESTIGATION_NOTES.md"),
     "swdrought2":    _switch_case("swdrought2",
                                   pending_restore="swdrought=2 (De Jong van Lier) compute deleted; "
                                   "recover jongvanlier.f90 from 5c82f0a^"),

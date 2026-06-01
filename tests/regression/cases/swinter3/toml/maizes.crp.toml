@@ -59,3 +59,6 @@ adcrl     = 0.1
 [interception]
 swinter = 3
 cofab   = 0.25
+fimin = 0.04
+siccaplai = 0.0042
+

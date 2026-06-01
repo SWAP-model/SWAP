@@ -101,7 +101,7 @@ module cropfixed_config_mod
       real(real64) :: dcritrtz  = 0.0_real64
 
       ! Part 14 — interception
-      integer :: swinter = 1   !! 0=none, 1=Von Hoyningen-Hune (supported), 2=Gash (supported), 3=storage-cap (stub-errored)
+      integer :: swinter = 1   !! 0=none, 1=Von Hoyningen-Hune, 2=Gash, 3=adapted-Rutter storage
       ! Gash forest-interception tables (swinter=2), each a flat (t, value) pair
       ! list. Plumbed at init into the matching state%atmosphere arrays.
       real(real64), allocatable :: pfreetb(:)    !! free throughfall coefficient vs time
@@ -109,6 +109,9 @@ module cropfixed_config_mod
       real(real64), allocatable :: scanopytb(:)  !! canopy storage capacity vs time
       real(real64), allocatable :: avprectb(:)   !! average rainfall intensity vs time
       real(real64), allocatable :: avevaptb(:)   !! average wet-canopy evaporation vs time
+      ! Adapted-Rutter storage interception (swinter=3)
+      real(real64) :: fimin     = 0.0_real64     !! minimum relative canopy evaporation factor
+      real(real64) :: siccaplai = 0.0_real64     !! interception storage capacity per unit LAI (cm)
 
       ! Part 15 — irrigation scheduling top-level switch
       integer :: schedule_switch = 0   !! 0=no scheduling, 1=apply (stub-errored)
@@ -166,14 +169,10 @@ contains
             'cropfixed.swoxygen=2 (Bartholomeus) not yet supported in ' // &
             'the TOML pipeline; use the legacy executable.', 'cropfixed')
       end if
-      ! swinter=2 (Gash forest interception) is supported. swinter=3
-      ! (storage-capacity / adapted-Rutter) compute was removed during
-      ! migration, so it stays rejected.
+      ! swinter=2 (Gash) and swinter=3 (adapted-Rutter storage) are supported.
       if (self%swinter == 3) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropfixed.swinter=3 (storage-cap interception) not yet ' // &
-            'supported in the TOML pipeline; use the legacy executable.', &
-            'cropfixed')
+         call check_real_range(self%fimin,     0.0_real64, 1.0_real64,    'cropfixed.fimin',     errors)
+         call check_real_range(self%siccaplai, 0.0_real64, 1.0e-2_real64, 'cropfixed.siccaplai', errors)
       end if
       if (self%swinter == 2 .and. .not. allocated(self%pfreetb)) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &

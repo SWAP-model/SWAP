@@ -274,3 +274,24 @@ maizes swdrought=2 + swsalinity=2 case, the LEGACY reference crashes in
 `matricflux_`/`jongvanlier_` (SIGSEGV) on the hupselbrook config. So 4.2.0 itself
 cannot run osmotic-head salinity here and no oracle fixture can be produced —
 swsalinity=2 is omitted from the suite. (swdrought=2 alone runs fine.)
+
+### 2026-06-01 — swinter=3 (adapted-Rutter) RESTORED (Tier-C cluster 2)
+
+Recovered the deleted `msw1eic` + `ruttervw` kernel (verbatim from f653aed^, real(4)
+MetaSWAP ODE kept for byte-identity) into src/atmosphere/interception.f90, restored
+the DAILY swinter=3 branch in meteo_orchestrator (Section 5: gctp, ruttervw,
+DivIntercep), and re-wired the inputs: cropfixed_config reads fimin/siccaplai,
+cropfixed_init plumbs fimin→atmosphere + siccaplai→crop state, cropfixed_runtime
+computes siccapact = siccaplai*lai (was hard-zeroed). swinter=3 validator/init
+guards removed.
+
+**Faithful — bit-identical to 4.2.0 under fixed dt** (the /tmp fixed-dt probe: all
+output columns, worst diff 0.0). Under adaptive dt it diverges ~2.3 cm INTERC/GWL on
+the maize year, because the Rutter kernel integrates its canopy ODE over `dt`
+DIRECTLY (legacy ruttervw uses the global adaptive `dt`, not the daily `dttp=1`), so
+it is acutely sensitive to the SAME adaptive-dt first-step desync that drives the
+hysteresis/winter xfails. Registered as known_divergence, not pending_restore.
+
+Scope: only the DAILY meteo path is restored (hupselbrook is SWMETDETAIL=0). The
+sub-daily swinter=3 branch (siccaptb afgen) in the SWMETDETAIL=1 orchestrator is
+still stubbed — a follow-up when a sub-daily case needs it.

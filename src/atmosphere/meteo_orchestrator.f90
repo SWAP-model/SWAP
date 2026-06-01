@@ -24,7 +24,7 @@
 module meteo_mod
 
   use meteo_process_mod, only: ReadMeteoDay, ResetMetFlx
-  use interception_mod, only: VonHHBraden, Gash, DivIntercep
+  use interception_mod, only: VonHHBraden, Gash, DivIntercep, ruttervw
   use et_mod, only: PenMon, reduceva_daily, pm_inputs_t, pm_outputs_t
   use runoff_mod, only: cn_step
   use swap_state_mod, only: swap_state_t
@@ -88,6 +88,7 @@ contains
     real(8) :: aintc, interc, eintc, etr, hum, win
     real(8) :: wfrac, netrainflux, rainflux
     real(8) :: Edirect, Tdirect, Tdirectwet, Edirectpond
+    real(8) :: gctp
 
     associate (time => state%timecontrol,   &
                atmo => state%atmosphere)
@@ -112,9 +113,24 @@ contains
     Edirectpond = pmo%Edirectpond
 
     ! === Section 5: Interception option NHI (adapted Rutter model) ===
-    ! swinter=3 (adapted-Rutter / MetaSWAP msw1eic) is rejected by the TOML
-    ! config validators, so this branch is unreachable on the TOML path; the
-    ! ruttervw/msw1eic kernel was removed with the MetaSWAP drop.
+    ! Daily branch only — siccapact is set in the crop runtime for daily mode.
+    if (state%crop%common%swinter .eq. 3) then
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
+        gctp = state%crop%common%gc
+      else
+        gctp = 1.0d0 - exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
+        if (gctp .lt. 1.0d-5) atmo%siccapact = 0.0d0
+      endif
+
+      ! Calculate interception, adapted Rutter method
+      call ruttervw(gctp, time%dt, atmo%siccapact, &
+                    atmo%fimin, state%crop%ew0, atmo%grai, &
+                    atmo%sicact, aintc, eintc)
+
+      ! Divide interception into rain and irrigation parts; compute net rain
+      ! (nraida) and net sprinkling irrigation (nird).
+      call DivIntercep(aintc, state)
+    endif
 
     ! === Section 6: Fraction of the day the crop is wet ===
     call compute_wet_fraction(state, config, aintc, eintc, Tdirectwet, interc, 1, wfrac)

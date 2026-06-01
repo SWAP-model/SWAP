@@ -195,6 +195,7 @@ module crop_common_state_mod
       integer, allocatable :: croptype(:)              !! per-rotation crop model: 1=fixed, 2=wofost, 3=grass
       real(real64) :: gc           = 0.0_real64        !! ground cover (-) — fixed-crop runtime
       real(real64) :: siccaptb(2*MAGRS) = 0.0_real64   !! NHI interception capacity table (cm) vs time
+      real(real64) :: siccaplai    = 0.0_real64        !! interception storage capacity per unit LAI (cm) — swinter=3
 
    contains
       procedure :: init => crop_common_state_init

@@ -16,7 +16,7 @@ module interception_mod
 
   use swap_state_mod, only: swap_state_t
 
-  public :: VonHHBraden, Gash, DivIntercep
+  public :: VonHHBraden, Gash, DivIntercep, ruttervw, msw1eic
 
 contains
 
@@ -172,5 +172,170 @@ contains
     end associate
 
   end subroutine DivIntercep
+
+  !> @brief Adapted Rutter (Sparse-Gash) interception — wrapper for msw1eic.
+  !> Explicit-args subroutine (no state dependency). Not pure: msw1eic can stop
+  !> on a malformed canopy. Restored from f653aed^ for swinter=3.
+  subroutine ruttervw(gctp, dt, siccapact, fimin, ew0, grai, sicact, aintc, eintc)
+    use swap_log, only: log_unit_handle
+    implicit none
+
+    real(8), intent(in)    :: gctp       ! Soil cover [-]
+    real(8), intent(in)    :: dt         ! Time step [d]
+    real(8), intent(in)    :: siccapact  ! Active canopy storage capacity [cm]
+    real(8), intent(in)    :: fimin      ! Minimum relative canopy evaporation factor [-]
+    real(8), intent(in)    :: ew0        ! Reference wet-canopy evaporation rate [mm/d]
+    real(8), intent(in)    :: grai       ! Gross daily rain flux [cm/d]
+    real(8), intent(inout) :: sicact     ! Canopy storage [cm] — read on entry, updated on exit
+    real(8), intent(out)   :: aintc      ! Intercepted rainfall [cm/d]
+    real(8), intent(out)   :: eintc      ! Interception evaporation [cm/d]
+
+    ! Local conversion buffers for the (real(4), metaswap-compatible) msw1eic
+    integer(4) :: nuk_i4, ibd_i4(1), ib_i4
+    real(4)    :: dc_r4, dtsw_r4, csk_r4(1), vxick_r4(1), fecmnk_r4(1)
+    real(4)    :: ETw0_r4(1), Pgdtsw_r4(1), Sic_r4(1), Sicolddtsw_r4(1)
+    real(4)    :: Picdtsw_r4(1), Eicdtsw_r4(1), tcap_r4(1), beta_r4(1)
+    real(4)    :: zeta_r4(1), fricdtsw_r4(1)
+
+    nuk_i4       = 1
+    ibd_i4(1)    = 1
+    ib_i4        = log_unit_handle()  ! quarantined msw1eic still expects a unit number
+    dc_r4        = 1.0e-4
+    dtsw_r4      = real(dt)
+    csk_r4(1)    = real(gctp)
+    vxick_r4(1)  = real(siccapact)
+    fecmnk_r4(1) = real(fimin)
+    ETw0_r4(1)   = real(ew0*0.1d0)
+    Pgdtsw_r4(1) = real(grai)
+    Sic_r4(1)    = real(sicact)
+
+    call msw1eic(nuk_i4, ibd_i4, dc_r4, dtsw_r4, csk_r4, vxick_r4, &
+                 fecmnk_r4, ETw0_r4, Pgdtsw_r4, Sic_r4, Sicolddtsw_r4, Picdtsw_r4, &
+                 Eicdtsw_r4, tcap_r4, beta_r4, zeta_r4, fricdtsw_r4, ib_i4)
+
+    sicact = dble(Sic_r4(1))
+    aintc  = dble(Picdtsw_r4(1))
+    eintc  = dble(Eicdtsw_r4(1))
+
+  end subroutine ruttervw
+
+  !> @brief Sparse-Gash canopy interception ODE (adapted Rutter). Restored from
+  !> f653aed^. real(4) MetaSWAP kernel (MSW1EIC.FOR, 2009 Alterra), kept verbatim
+  !> for byte-identical reproduction of SWAP 4.2.0's swinter=3 path.
+  subroutine msw1eic(nuk,ibd,dc,dtsw,csk,vxick,fecmnk,ETw0,Pgdtsw, &
+                     Sic,Sicolddtsw,Picdtsw,Eicdtsw,tcap,beta,zeta, &
+                     fricdtsw,ib)
+    implicit none
+
+    integer(4), intent(in)    :: nuk
+    integer(4), intent(in)    :: ibd(1)
+    real(4),    intent(in)    :: dc
+    real(4),    intent(in)    :: dtsw
+    real(4),    intent(in)    :: csk(1)
+    real(4),    intent(in)    :: vxick(1)
+    real(4),    intent(in)    :: fecmnk(1)
+    real(4),    intent(in)    :: ETw0(1)
+    real(4),    intent(in)    :: Pgdtsw(1)
+    real(4),    intent(inout) :: Sic(1)
+    real(4),    intent(inout) :: Sicolddtsw(1)
+    real(4),    intent(out)   :: Picdtsw(1)
+    real(4),    intent(out)   :: Eicdtsw(1)
+    real(4),    intent(out)   :: tcap(1)
+    real(4),    intent(out)   :: beta(1)
+    real(4),    intent(out)   :: zeta(1)
+    real(4),    intent(out)   :: fricdtsw(1)
+    integer(4), intent(in)    :: ib
+
+    integer(4) :: k
+
+    do k=1,nuk
+      if (ibd(k) .ge. 1) then
+
+        ! Check that non-zero interception capacity has non-zero soil cover
+        if (vxick(k) .gt. dc) then
+          if (csk(k) .lt. dc) then
+            write(ib,9199) k
+            write(*,9199) k
+            stop
+          endif
+        endif
+9199    format(' Interception capacity >0, but soil cover = 0, k =',i10)
+
+        ! Check first for shortcut to zero interception storage
+        if ( vxick(k) .lt. dc .or. &
+             (Sic(k) .lt. dc .and. Pgdtsw(k) .lt. dc) ) then
+
+          if (Sic(k) .gt. dc) then
+            Eicdtsw(k) = Sic(k)/dtsw
+            Sic(k)     = 0.
+          else
+            Eicdtsw(k) = 0.
+          endif
+          Picdtsw(k)   = 0.
+        else
+
+          Sicolddtsw(k) = Sic(k)
+
+          ! Shortcut: full reservoir that stays full
+          if ( Sicolddtsw(k) .ge. (vxick(k) - 2*dc) .and. &
+               (csk(k)*Pgdtsw(k)) .ge. ETw0(k) ) then
+
+            Sic(k)      = vxick(k)
+            Eicdtsw(k)  = ETw0(k)
+          else
+
+            ! beta=0 in the differential equation
+            if (ETw0(k) .lt. dc .or. fecmnk(k) .gt. 0.99999) then
+
+              Sic(k) = Sicolddtsw(k) + (csk(k)*Pgdtsw(k) - ETw0(k))*dtsw
+              Sic(k) = min(Sic(k),vxick(k))
+              Sic(k) = max(Sic(k),0.)
+              if (Sic(k) .lt. vxick(k)) then
+                Eicdtsw(k) = (Sicolddtsw(k) - Sic(k))/dtsw + &
+                             csk(k)*Pgdtsw(k)
+              else
+                Eicdtsw(k) = ETw0(k)
+              endif
+            else
+
+              beta(k) = (1.0 - fecmnk(k))*ETw0(k)/(vxick(k))
+              zeta(k) = csk(k)*Pgdtsw(k) - fecmnk(k)*ETw0(k)
+
+              Sic(k) = (Sicolddtsw(k) - zeta(k)/beta(k))* &
+                       exp(-beta(k)*dtsw) + zeta(k)/beta(k)
+
+              Sic(k) = max(Sic(k),0.)
+
+              if (Sic(k) .lt. vxick(k)) then
+                Eicdtsw(k) = (Sicolddtsw(k)-Sic(k))/dtsw + &
+                             csk(k)*Pgdtsw(k)
+              else
+
+                Sic(k)  = vxick(k)
+                tcap(k) = (1./beta(k))* &
+                          log((Sicolddtsw(k)-zeta(k)/beta(k))/ &
+                              (vxick(k) - zeta(k)/beta(k)))
+
+                Eicdtsw(k) = (1./dtsw)*( Sicolddtsw(k) - Sic(k) + &
+                                        csk(k)*Pgdtsw(k)*tcap(k) + &
+                                        ETw0(k)*(dtsw - tcap(k)) )
+              endif
+            endif
+
+          endif
+
+          Picdtsw(k) = (Sic(k)-Sicolddtsw(k))/dtsw + Eicdtsw(k)
+        endif
+
+        if (ETw0(k) .gt. dc) then
+          fricdtsw(k) = Eicdtsw(k)/ETw0(k)
+        else
+          fricdtsw(k) = 0.
+        endif
+
+      endif
+    enddo
+
+  end subroutine msw1eic
 
 end module interception_mod

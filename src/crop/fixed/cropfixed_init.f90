@@ -40,7 +40,6 @@ contains
 
       ! ---- Defense-in-depth: stub-error gates mirror cropfixed_config_validate.
       if (cfg%swdrought == 2 .or. cfg%swoxygen == 2 .or.                    &
-          cfg%swinter == 3 .or.                                            &
           cfg%swrd == 3     .or. cfg%swsalinity /= 0 .or. cfg%schedule_switch == 1) then
          call fatalerr_collected('cropfixed_init_from_config', &
             'Unsupported runtime branch reached on the TOML path. The validator ' // &
@@ -94,6 +93,10 @@ contains
 
       state%crop%common%swinter = cfg%swinter
       state%crop%cofab = cfg%cofab
+      ! Adapted-Rutter storage interception (swinter=3): fimin lives on the
+      ! atmosphere state; siccaplai feeds siccapact = siccaplai*lai in the runtime.
+      state%atmosphere%fimin       = cfg%fimin
+      state%crop%common%siccaplai  = cfg%siccaplai
 
       state%crop%common%schedule = cfg%schedule_switch
 

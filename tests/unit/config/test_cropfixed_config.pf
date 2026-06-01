@@ -323,22 +323,27 @@ subroutine test_cropfixed_swsalinity_two_rejected()
 end subroutine
 
 @test
-subroutine test_cropfixed_swinter_three_rejected()
+subroutine test_cropfixed_swinter_three_accepted()
+   ! swinter=3 (adapted-Rutter storage interception) is now supported on the
+   ! TOML path — the msw1eic kernel was restored and fimin/siccaplai wired.
    use funit
+   use iso_fortran_env, only: real64
    use cropfixed_config_mod, only: cropfixed_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
    type(cropfixed_config_t) :: c
    type(error_collection_t) :: errors
    integer :: i
    logical :: found
-   c%swinter = 3
+   c%swinter   = 3
+   c%fimin     = 0.04_real64
+   c%siccaplai = 0.0042_real64
    call c%validate(errors)
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
           index(errors%items(i)%message, 'swinter') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test
