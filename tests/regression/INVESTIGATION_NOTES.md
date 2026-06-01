@@ -349,3 +349,32 @@ Instrumented the hang. **Two findings:**
 Status: the swdrought=2 restoration is now CORRECT but perf-blocked. Reverted to
 keep the suite green (swdrought2 stays pending_restore). Updated patch (incl. the
 wiltpoint fix) at dev-docs/wip/swdrought2-jvl-restoration.patch.
+
+### 2026-06-01 (cont.) — swdrought=2 perf: it's the Richards solver, NOT the JvL
+
+Profiled the ~1000x slowdown (perf unavailable — used cpu_time + stub isolation):
+
+- **The JvL kernel is CHEAP.** Direct cpu_time: 137 JvL calls = 182 us total
+  (~1 us/call); only ~15-21 matric_flux calls/JvL-call; matricflux_build_table runs
+  exactly ONCE. So the JvL is NOT the cost.
+- **The cost is the per-timestep Richards solve.** Each outer step is ~0.146 s
+  wall vs ~us without swdrought=2, but <1 us of that is JvL. An early-return JvL
+  stub made the sim finish in 0.45 s — BUT that stub also zeroed soil%qrot, so it
+  removed the solver's *response* to the JvL qrot, not the JvL cost.
+- **Mechanism.** RootExtraction (→JvL) is called ONCE per outer step (same as
+  legacy, swap.f90:209), computing qrot held fixed through the Richards solve. The
+  modern `headcalc` does not converge well with the JvL qrot → trips the
+  `time%fldtreduce` dt-reduction loop (swap_mod.f90) → many soilwater_step retries
+  per outer step → slow. dt itself reads normal (0.02-0.04) at the outer level; the
+  spin is in the inner reduce/retry. Legacy runs the identical case in 0.70 s, so
+  legacy's headcalc converges with the same qrot.
+- **Conclusion.** This is the SAME adaptive-dt / Richards convergence-threshold
+  sensitivity that drives the hysteresis/winter known_divergences — here amplified
+  by the stiff JvL coupling into a *performance* spiral. NOT a leftover sync /
+  dual-write (checked JongvanLier/JongvanLierLoop/matric_flux — clean Newton-Raphson,
+  no array copies). Fixing it means touching core headcalc convergence (high risk to
+  the 5 passing cases), so it is out of scope for a mechanical restoration.
+
+Net: swdrought=2 is restored + correct (JvL converges to sane values after the
+wiltpoint fix) but perf-blocked by the Richards-convergence sensitivity. Patch
+(incl. wiltpoint fix) preserved at dev-docs/wip/swdrought2-jvl-restoration.patch.
