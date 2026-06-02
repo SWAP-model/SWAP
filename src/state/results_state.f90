@@ -53,12 +53,14 @@ contains
       class(results_state_t), intent(inout) :: self
       real(real64),           intent(in)    :: time
       real(real64),           intent(in)    :: vals(:)
-      integer :: m
-      m = min(size(vals), self%ncols)
+      ! Caller invariant: exactly one value per configured column. A mismatch
+      ! means the column set and the emitted row drifted apart — a programming
+      ! bug we surface loudly rather than silently truncate/zero-pad.
+      if (size(vals) /= self%ncols) &
+         error stop 'results_state_t%add_row: size(vals) /= ncols'
       self%chunk_n = self%chunk_n + 1
-      self%chunk_t(self%chunk_n)        = time
-      self%chunk_v(self%chunk_n, 1:m)   = vals(1:m)
-      if (m < self%ncols) self%chunk_v(self%chunk_n, m+1:self%ncols) = 0.0_real64
+      self%chunk_t(self%chunk_n)               = time
+      self%chunk_v(self%chunk_n, 1:self%ncols) = vals
       if (self%chunk_n == self%flush_every) call self%flush()
    end subroutine results_state_add_row
 

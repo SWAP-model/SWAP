@@ -690,7 +690,7 @@ module csv_output
       ! output file; write header (headless: skip file I/O)
       ! IO-OUT/C2b: open via csv_writer_t (status='replace', action='write' — output
       ! is always written fresh; the prior 'unknown'/'readwrite' was a generic fallback).
-      if (.not. state%timecontrol%headless) then
+      if (state%timecontrol%csv_enabled == 1 .and. .not. state%timecontrol%headless) then
          filcsv = trim(state%timecontrol%pathwork)//trim(state%timecontrol%outfil)//'_output.csv'
          call scalar_w%open(filcsv, errs)
          if (errs%has_errors()) call fatalerr_collected('csv_out', 'cannot open output CSV: ' // trim(filcsv))
@@ -761,7 +761,7 @@ module csv_output
 
          call state%results%add_row(time%t1900, vals(1:ncount))
 
-         if (.not. time%headless) then
+         if (time%csv_enabled == 1 .and. .not. time%headless) then
             if (.not. time%flprintshort) then
                call scalar_w%row(vals(1:ncount), leading=trim(time%date))
             else
@@ -781,7 +781,7 @@ module csv_output
 
       ! [SS-BMI2] headless guard: file was only opened when not headless
       ! IO-OUT/C2b: close via csv_writer_t.
-      if (.not. state%timecontrol%headless) then
+      if (state%timecontrol%csv_enabled == 1 .and. .not. state%timecontrol%headless) then
          call scalar_w%close()
       end if
 
@@ -1284,14 +1284,18 @@ module csv_output
    subroutine csv_output_init(state)
       use csv_output_tz, only: csv_out_tz_header
       type(swap_state_t), intent(inout) :: state
-      if (state%timecontrol%csv_enabled    == 1) call csv_out_header(state)
+      ! Always run the scalar machinery so the in-memory results record
+      ! (state%results) populates whether or not a CSV file is written. The
+      ! file itself is gated on csv_enabled inside csv_out_header/write/close,
+      ! so csv_enabled=0 means "no file" while the record still fills.
+      call csv_out_header(state)
       if (state%timecontrol%csv_enabled_tz == 1) call csv_out_tz_header(state)
    end subroutine csv_output_init
 
    subroutine csv_output_step(state)
       use csv_output_tz, only: csv_out_tz_write, csv_out_tz_flush
       type(swap_state_t), intent(inout) :: state
-      if (state%timecontrol%csv_enabled    == 1) call csv_out_write(state)
+      call csv_out_write(state)
       if (state%timecontrol%csv_enabled_tz == 1) call csv_out_tz_write(state)
       ! IO-OUT/C2b: drain runtime buffer at each year boundary so partial
       ! results survive a crash/kill. flush is a no-op when the writer was
@@ -1305,7 +1309,7 @@ module csv_output
    subroutine csv_output_finalize(state)
       use csv_output_tz, only: csv_out_tz_close
       type(swap_state_t), intent(inout) :: state
-      if (state%timecontrol%csv_enabled    == 1) call csv_out_close(state)
+      call csv_out_close(state)
       if (state%timecontrol%csv_enabled_tz == 1) call csv_out_tz_close(state)
    end subroutine csv_output_finalize
 
