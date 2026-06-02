@@ -240,6 +240,7 @@ sources = [
     'src/state/crop_state.f90',
     'src/state/nutrients_state.f90',
     'src/state/swap_state.f90',
+    'src/state/results_state.f90',
 
     # Utils
     # [GR-IO 2026-05-25 Phase 5] sharedsimulation.f90 moved to src/utils/dormant/

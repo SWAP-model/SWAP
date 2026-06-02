@@ -1,0 +1,22 @@
+! Tests for results_state_t — the per-instance in-memory scalar-output record.
+
+@test
+subroutine test_results_add_row_stores_values()
+   use funit
+   use iso_fortran_env, only: real64
+   use results_state_mod, only: results_state_t
+
+   type(results_state_t) :: r
+
+   call r%init([character(len=24) :: 'RAIN', 'TACT'], &
+               [character(len=12) :: 'cm', 'cm'], flush_every=2)
+   call r%add_row(100.0_real64, [1.0_real64, 2.0_real64])
+   call r%add_row(101.0_real64, [3.0_real64, 4.0_real64])
+   call r%finalize()
+
+   @assertEqual(2, r%ncols)
+   @assertEqual(2, r%nrows)
+   @assertEqual(100.0_real64, r%times(1), 1.0e-12_real64)
+   @assertEqual(4.0_real64,   r%values(2, 2), 1.0e-12_real64)
+   @assertEqual('TACT', trim(r%col_names(2)))
+end subroutine test_results_add_row_stores_values

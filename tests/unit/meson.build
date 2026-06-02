@@ -157,6 +157,7 @@ if get_option('enable_pfunit')
         '../../src/state/crop_state.f90',
         '../../src/state/nutrients_state.f90',
         '../../src/state/swap_state.f90',
+        '../../src/state/results_state.f90',
         # [GR-IO 2026-05-25 Phase 6 Step 6] initialize.f90 deleted.
         '../../src/soilwater/waterbalance.f90',
         '../../src/soilwater/soilhydraulics.f90',
@@ -302,6 +303,7 @@ if get_option('enable_pfunit')
         'state/test_atmosphere_state.pf',
         'state/test_tillage_state.pf',
         'state/test_timecontrol_state.pf',
+        'state/test_results_state.pf',
         'crop/test_cropfixed_init.pf',
         'crop/test_cropwofost_init.pf',
         'crop/test_cropgrass_init.pf',

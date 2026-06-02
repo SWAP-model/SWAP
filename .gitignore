@@ -16,6 +16,8 @@ compile_commands.json
 
 # SWAP results and temporary files
 result*
+!src/state/results_state.f90
+!tests/unit/state/test_results_state.pf
 swap.ok
 *swap.log
 reruns.log
