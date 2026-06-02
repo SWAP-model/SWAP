@@ -149,6 +149,62 @@ That ordering drives the roadmap.
 
 ---
 
+### 3.4 Decision & in-memory-init prototype (updated 2026-06-02)
+
+Dialogue refined §3.3 to a sharper, more standard-aligned conclusion, plus a
+first implementation slice.
+
+**Refined binding decision.** The BMI-vs-XMI framing was the wrong axis; the
+real problem is a **split instance model** — `swap_bmi_mod` and `swap_capi_mod`
+share one singleton (`capi_state`/`capi_config`), while `swap_xmi_mod` is the
+only ensemble-backed path. Target end-state:
+
+- **One `libswap`** over a handle-based instance core, exposing the **BMI method
+  set + XMI extensions** (the `libmf6` pattern — XMI ⊇ BMI, so one library, not
+  two colliding ones). Both consumers drive it via **`xmipy`**.
+- **Keep a CAPI-flavored init/override surface** for pyswap's per-instance
+  *parameterization* (config override at init) — the one thing the BMI/XMI
+  runtime-`set_value` model doesn't cover.
+- **Drop standalone Fortran BMI** (strictly dominated); regenerate CSDMS-BMI in
+  Python over the C-API if ever needed. Standalone executable unaffected.
+- **pyswap reuses `xmipy` (the wrapper), not `imod_coupler` (the app):** the
+  coupler is a lockstep multi-model orchestrator; pyswap's many-*independent*-
+  columns problem isn't a coupling problem. A Python glue layer
+  (pyswap + flopy + imod_coupler) to make coupled SWAP–MODFLOW model-building
+  smooth is a worthwhile, separate interop goal.
+
+**Diskless-init invariant.** Standalone reads disk; Python feeds memory; both
+converge on the *same* `swap_config_t` → identical seeding → identical run.
+Nothing downstream of the config knows the difference (keeps physics
+byte-identical).
+
+**Reality found:** the existing in-memory `load_swap_config_from_string`
+consumed only the TOML *body* from memory; companions were still read from disk:
+load-time TOML subfiles (`.dra.toml`, `.crp.toml`) and seed-time CSV data
+(meteo `283.csv` via `atmosphere_state%init`, and all other CSV tables via the
+shared `read_csv_table`).
+
+**Implemented (committed, TDD, byte-identical):**
+- `config_source_t` (`src/io/toml/config_source.f90`) — a companion-content
+  provider: disk-backed (standalone) or in-memory blobs (Python). Threaded as an
+  argument, no module global. (commit `7a72fc7`)
+- Threaded through the **load-time** companion readers (`read_drainage_toml`,
+  `load_crop_rotation_files`) → an in-memory hupselbrook load (drainage + 3 crop
+  subfiles as blobs) yields the same config as disk (`dramet=2`); standalone
+  passes no source → disk fallback. (commit `58b8a0e`) — pFUnit 814, check-fast
+  4/4 byte-identical.
+
+**Remaining for a runnable Python-driven prototype:**
+- **M2 — seed-time CSV from memory.** Add a from-text path at the shared
+  `read_csv_table` layer (unlocks in-memory for *all* CSV companions), thread an
+  optional `config_source_t` through `swap_init_from_loaded_config →
+  state%atmosphere%init → meteo table load`. This is the keystone to a diskless
+  *init* and touches a shared layer — do it as its own TDD slice.
+- **M3 — surface + driver.** A CAPI push (`swap_attach_config_file(name,
+  content, n)`) holding blobs on the singleton between calls; a Python `ctypes`
+  driver that pushes TOML + companions, `initialize`, loops `update`, reads
+  results (`swap_view_array`/water-balance) — verified against the disk run.
+
 ## 4. Cross-cutting anti-patterns
 
 These recur across subsystems and are best fixed as themed arcs, not per-file.
