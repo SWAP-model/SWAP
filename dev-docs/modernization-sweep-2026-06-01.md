@@ -194,16 +194,35 @@ shared `read_csv_table`).
   passes no source → disk fallback. (commit `58b8a0e`) — pFUnit 814, check-fast
   4/4 byte-identical.
 
-**Remaining for a runnable Python-driven prototype:**
-- **M2 — seed-time CSV from memory.** Add a from-text path at the shared
-  `read_csv_table` layer (unlocks in-memory for *all* CSV companions), thread an
-  optional `config_source_t` through `swap_init_from_loaded_config →
-  state%atmosphere%init → meteo table load`. This is the keystone to a diskless
-  *init* and touches a shared layer — do it as its own TDD slice.
-- **M3 — surface + driver.** A CAPI push (`swap_attach_config_file(name,
-  content, n)`) holding blobs on the singleton between calls; a Python `ctypes`
-  driver that pushes TOML + companions, `initialize`, loops `update`, reads
-  results (`swap_view_array`/water-balance) — verified against the disk run.
+**Decouple-reading-from-init (mirrors the TOML workflow).** A mapping workflow
+inventoried every io-in-init companion read: **~15 sites, all funnel through
+`read_csv_table` via a typed `%load`, all config-like-readonly, all movable.**
+The chosen pattern: read companions at the config-load edge into `config`; state
+`init` consumes config with zero I/O (kills the io-in-init anti-pattern and makes
+diskless-ness fall out for free).
+
+**Implemented (committed, TDD, byte-identical) — prototype COMPLETE:**
+- **M2 — meteo decoupled** (commit `2173055`). `read_csv_table_text` (in-memory
+  twin of `read_csv_table`, shared parsing); `meteo_daily_table_load` made
+  source-aware; `config%meteo%meteo` filled at config-load; `atmosphere%init`
+  copies it (no file I/O). check-full **11/0 + 7 pre-existing xfail**,
+  byte-identical.
+- **M3 — diskless init from Python** (commit `9063664`). C-API
+  `swap_attach_config_file` / `swap_clear_config_files`;
+  `swap_initialize_from_toml_string` resolves companions from the pushed blobs.
+  `prototype/pyswap_inmemory_demo.py` runs hupselbrook in-memory vs on-disk
+  through the same `libswap_bmi.so` — water balances **bit-identical**
+  (`|diff|=0.0`, all 10 fields). The Fortran reads zero files on the in-memory
+  path.
+
+**Remaining (next arcs, not blocking the prototype):**
+- Apply the identical decouple-to-config move to the other ~12 CSV companions
+  (bottom-boundary tables, drainage owl, irrigation fixed/ssdi, nutrients,
+  warm-restart h/cml profiles, meteo detail/rain). Each is mechanical now that
+  the pattern + `read_csv_table_text` exist.
+- The handle-based multi-instance core (Arc 2) — the singleton still caps one
+  instance/process; pyswap many-column needs the handle registry + per-column
+  config. The diskless init built here is a prerequisite that's now in place.
 
 ## 4. Cross-cutting anti-patterns
 
