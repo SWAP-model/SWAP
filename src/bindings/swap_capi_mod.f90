@@ -257,4 +257,68 @@ contains
       ierr = 0
    end function swap_get_water_balance
 
+   !----------------------------------------------------------------------
+   ! In-memory results record accessors
+   !----------------------------------------------------------------------
+
+   function swap_results_shape(nrows, ncols) result(ierr) bind(C, name='swap_results_shape')
+      integer(c_int), intent(out) :: nrows, ncols
+      integer(c_int)              :: ierr
+      nrows = capi_state%results%nrows
+      ncols = capi_state%results%ncols
+      ierr  = 0
+   end function swap_results_shape
+
+   !> Zero-copy view of the (nrows x ncols) values array. Fortran column-major:
+   !! element (i,j) is at flat index (j-1)*nrows + (i-1).
+   function swap_view_results(ptr, nrows, ncols) result(ierr) bind(C, name='swap_view_results')
+      type(c_ptr),    intent(out) :: ptr
+      integer(c_int), intent(out) :: nrows, ncols
+      integer(c_int)              :: ierr
+      nrows = capi_state%results%nrows
+      ncols = capi_state%results%ncols
+      if (allocated(capi_state%results%values) .and. nrows > 0 .and. ncols > 0) then
+         ptr  = c_loc(capi_state%results%values(1,1))
+         ierr = 0
+      else
+         ptr  = c_null_ptr
+         ierr = 1
+      end if
+   end function swap_view_results
+
+   !> Zero-copy view of the time axis (nrows doubles).
+   function swap_view_results_times(ptr, nrows) result(ierr) bind(C, name='swap_view_results_times')
+      type(c_ptr),    intent(out) :: ptr
+      integer(c_int), intent(out) :: nrows
+      integer(c_int)              :: ierr
+      nrows = capi_state%results%nrows
+      if (allocated(capi_state%results%times) .and. nrows > 0) then
+         ptr  = c_loc(capi_state%results%times(1))
+         ierr = 0
+      else
+         ptr  = c_null_ptr
+         ierr = 1
+      end if
+   end function swap_view_results_times
+
+   !> NUL-delimited column names packed into buf (truncated to n bytes).
+   function swap_results_columns(buf, n) result(ierr) bind(C, name='swap_results_columns')
+      character(kind=c_char), intent(out) :: buf(*)
+      integer(c_int),  value, intent(in)  :: n
+      integer(c_int)                      :: ierr
+      integer :: i, k, c
+      k = 0
+      do c = 1, capi_state%results%ncols
+         do i = 1, len_trim(capi_state%results%col_names(c))
+            k = k + 1
+            if (k > n) then; buf(min(k,n)) = c_null_char; ierr = 1; return; end if
+            buf(k) = capi_state%results%col_names(c)(i:i)
+         end do
+         k = k + 1
+         if (k > n) then; buf(min(k,n)) = c_null_char; ierr = 1; return; end if
+         buf(k) = c_null_char
+      end do
+      ierr = 0
+   end function swap_results_columns
+
 end module swap_capi_mod
