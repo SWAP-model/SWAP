@@ -56,6 +56,11 @@ def load_lib():
     lib.update.argtypes = []
     lib.swap_get_scalar.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_double)]
     lib.swap_get_water_balance.argtypes = [ctypes.POINTER(WaterBalance)]
+    lib.finalize.argtypes = []
+    lib.swap_results_shape.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+    lib.swap_view_results.argtypes = [ctypes.POINTER(ctypes.c_void_p),
+                                      ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+    lib.swap_results_columns.argtypes = [ctypes.c_char_p, ctypes.c_int]
     return lib
 
 
@@ -68,6 +73,8 @@ def run_to_end(lib):
         lib.update()
     wb = WaterBalance()
     lib.swap_get_water_balance(ctypes.byref(wb))
+    # flush in-memory results record and run end-of-sim bookkeeping
+    lib.finalize()
     return {n: getattr(wb, n) for n, _ in wb._fields_}
 
 
@@ -90,6 +97,24 @@ def worker(mode):
         print(SENTINEL + json.dumps({"error": f"init rc={rc}"}))
         return 1
     wb = run_to_end(lib)
+    nr, nc = ctypes.c_int(0), ctypes.c_int(0)
+    lib.swap_results_shape(ctypes.byref(nr), ctypes.byref(nc))
+    ptr = ctypes.c_void_p()
+    rc = lib.swap_view_results(ctypes.byref(ptr), ctypes.byref(nr), ctypes.byref(nc))
+    cols_buf = ctypes.create_string_buffer(8192)
+    lib.swap_results_columns(cols_buf, len(cols_buf))
+    names = [s.decode() for s in cols_buf.raw.split(b"\x00") if s][: nc.value]
+    first_row, last_row = [], []
+    if rc == 0 and nr.value > 0 and nc.value > 0:
+        flat = (ctypes.c_double * (nr.value * nc.value)).from_address(ptr.value)
+        # Fortran column-major: element (i,j) at j*nrows + i
+        first_row = [flat[j * nr.value + 0] for j in range(nc.value)]
+        last_row = [flat[j * nr.value + (nr.value - 1)] for j in range(nc.value)]
+    wb["_results_nrows"] = nr.value
+    wb["_results_ncols"] = nc.value
+    wb["_results_cols"] = names
+    wb["_results_first_row"] = first_row
+    wb["_results_last_row"] = last_row
     print(SENTINEL + json.dumps(wb))
     return 0
 
@@ -122,12 +147,33 @@ def main():
     print(f"{'field':>16} {'in-memory':>18} {'disk':>18} {'|diff|':>12}")
     print("-" * 68)
     ok = True
+    _meta_keys = {"_results_nrows", "_results_ncols", "_results_cols",
+                  "_results_first_row", "_results_last_row"}
     for k in mem:
+        if k in _meta_keys:
+            continue
         d = abs(mem[k] - disk[k])
         if d > 1e-10:
             ok = False
         print(f"{k:>16} {mem[k]:18.8f} {disk[k]:18.8f} {d:12.2e}")
     print("-" * 68)
+
+    print("\nResults record (in-memory):")
+    print(f"  shape   = {mem['_results_nrows']} rows x {mem['_results_ncols']} cols")
+    print(f"  columns = {mem['_results_cols']}")
+    print(f"  first row (mem) = {[round(x, 6) for x in mem['_results_first_row']]}")
+    if mem.get("_results_first_row") and disk.get("_results_first_row") \
+       and len(mem["_results_first_row"]) == len(disk["_results_first_row"]):
+        rec_ok = all(abs(a - b) <= 1e-10
+                     for a, b in zip(mem["_results_first_row"], disk["_results_first_row"])) \
+                 and all(abs(a - b) <= 1e-10
+                         for a, b in zip(mem["_results_last_row"], disk["_results_last_row"]))
+        print("  record mem==disk:", "PASS" if rec_ok else "FAIL")
+        ok = ok and rec_ok
+    else:
+        print("  record mem==disk: SKIP (no rows / shape mismatch)")
+        ok = False
+
     print("RESULT:", "PASS — diskless in-memory run is bit-identical to disk"
           if ok else "FAIL — divergence")
     sys.exit(0 if ok else 1)
