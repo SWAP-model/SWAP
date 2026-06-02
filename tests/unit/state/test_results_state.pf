@@ -20,3 +20,25 @@ subroutine test_results_add_row_stores_values()
    @assertEqual(4.0_real64,   r%values(2, 2), 1.0e-12_real64)
    @assertEqual('TACT', trim(r%col_names(2)))
 end subroutine test_results_add_row_stores_values
+
+@test
+subroutine test_results_flush_every_n_and_partial_tail()
+   use funit
+   use iso_fortran_env, only: real64
+   use results_state_mod, only: results_state_t
+
+   type(results_state_t) :: r
+   integer :: k
+
+   call r%init([character(len=24) :: 'A'], [character(len=12) :: '-'], flush_every=2)
+   ! 5 rows with flush_every=2 => flushes after row 2 and 4; finalize flushes row 5.
+   do k = 1, 5
+      call r%add_row(real(k, real64), [real(10*k, real64)])
+   end do
+   ! before finalize: 4 rows committed, 1 buffered
+   @assertEqual(4, r%nrows)
+   call r%finalize()
+   @assertEqual(5, r%nrows)
+   @assertEqual(50.0_real64, r%values(5, 1), 1.0e-12_real64)
+   @assertEqual(5.0_real64,  r%times(5),     1.0e-12_real64)
+end subroutine test_results_flush_every_n_and_partial_tail
