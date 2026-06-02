@@ -1,0 +1,20 @@
+! Tests for config_source_t — the companion-content provider that lets the
+! config loader resolve companion files either from disk (standalone) or
+! from in-memory blobs (Python-driven), yielding identical text.
+
+@test
+subroutine test_memory_source_returns_registered_blob()
+   use funit
+   use config_source_mod, only: config_source_t, config_source_memory
+
+   type(config_source_t)         :: src
+   character(len=:), allocatable :: text
+   logical                       :: found
+
+   src = config_source_memory()
+   call src%add_blob('foo.toml', 'x = 1')
+   call src%get_text('foo.toml', text, found)
+
+   @assertTrue(found)
+   @assertEqual('x = 1', text)
+end subroutine test_memory_source_returns_registered_blob
