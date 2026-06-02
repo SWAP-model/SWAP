@@ -7,6 +7,7 @@ module load_swap_config_string_mod
    use swap_config_mod, only: swap_config_t
    use load_swap_config_mod, only: apply_section_readers
    use load_crop_rotation_files_mod, only: load_crop_rotation_files
+   use config_source_mod, only: config_source_t
    use error_mod, only: error_collection_t, ERR_PARSE_MALFORMED_TOML
    implicit none
    private
@@ -14,10 +15,11 @@ module load_swap_config_string_mod
 
 contains
 
-   subroutine load_swap_config_from_string(toml_text, config, errors)
+   subroutine load_swap_config_from_string(toml_text, config, errors, source)
       character(len=*),                    intent(in)    :: toml_text
       type(swap_config_t),                 intent(inout) :: config
       type(error_collection_t),            intent(inout) :: errors
+      type(config_source_t), optional,     intent(in)    :: source
 
       type(toml_table), allocatable, target :: doc
       type(toml_table), pointer             :: doc_ptr
@@ -30,13 +32,13 @@ contains
       end if
 
       doc_ptr => doc
-      call apply_section_readers(doc_ptr, "./", config, errors)
+      call apply_section_readers(doc_ptr, "./", config, errors, source=source)
 
       ! Load per-rotation .crp.toml subfiles. Separate phase because:
       ! (1) general%pathwork must be populated first (by read_general_toml).
       ! (2) The per-crop readers are I/O — separated from pure config parsing
       !     per interpretation A of W5.
-      call load_crop_rotation_files(config%general, config%crop, errors)
+      call load_crop_rotation_files(config%general, config%crop, errors, source=source)
    end subroutine load_swap_config_from_string
 
 end module load_swap_config_string_mod

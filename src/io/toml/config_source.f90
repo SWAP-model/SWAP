@@ -72,16 +72,57 @@ contains
       integer :: i
 
       found = .false.
-      if (allocated(self%blobs)) then
-         do i = 1, size(self%blobs)
-            if (self%blobs(i)%name == trim(name)) then
-               text  = self%blobs(i)%content
-               found = .true.
-               return
-            end if
-         end do
+      text  = ''
+
+      if (self%in_memory) then
+         if (allocated(self%blobs)) then
+            do i = 1, size(self%blobs)
+               if (self%blobs(i)%name == trim(name)) then
+                  text  = self%blobs(i)%content
+                  found = .true.
+                  return
+               end if
+            end do
+         end if
+      else
+         if (allocated(self%base_dir)) then
+            call read_file_to_string(self%base_dir // trim(name), text, found)
+         else
+            call read_file_to_string(trim(name), text, found)
+         end if
       end if
-      if (.not. found) text = ''
    end subroutine config_source_get_text
+
+   !> Read an entire file into an allocatable string. found=.false. if the
+   !! file cannot be opened. Stream access preserves the file's bytes
+   !! (incl. newlines) so a TOML parser sees exactly the on-disk content.
+   subroutine read_file_to_string(path, text, found)
+      character(len=*),              intent(in)  :: path
+      character(len=:), allocatable, intent(out) :: text
+      logical,                       intent(out) :: found
+      integer :: u, ios, fsize
+
+      found = .false.
+      open (newunit=u, file=path, access='stream', form='unformatted', &
+            status='old', action='read', iostat=ios)
+      if (ios /= 0) then
+         text = ''
+         return
+      end if
+      inquire (unit=u, size=fsize)
+      if (fsize > 0) then
+         allocate (character(len=fsize) :: text)
+         read (u, iostat=ios) text
+         if (ios /= 0) then
+            close (u)
+            text = ''
+            return
+         end if
+      else
+         text = ''
+      end if
+      close (u)
+      found = .true.
+   end subroutine read_file_to_string
 
 end module config_source_mod

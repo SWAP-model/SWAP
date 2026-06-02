@@ -6,7 +6,7 @@
 !! Called from load_swap_config after apply_section_readers completes,
 !! so config%general%pathwork is populated by then.
 module load_crop_rotation_files_mod
-   use tomlf, only: toml_table, toml_load, toml_error
+   use tomlf, only: toml_table, toml_load, toml_loads, toml_error
    use crop_config_mod, only: crop_config_t
    use general_config_mod, only: general_config_t
    use read_cropfixed_toml_mod, only: read_cropfixed_toml
@@ -21,17 +21,19 @@ module load_crop_rotation_files_mod
 
 contains
 
-   subroutine load_crop_rotation_files(general, crop, errors)
+   subroutine load_crop_rotation_files(general, crop, errors, source)
+      use config_source_mod, only: config_source_t
       type(general_config_t),    intent(in)    :: general
       type(crop_config_t),       intent(inout) :: crop
       type(error_collection_t),  intent(inout) :: errors
+      type(config_source_t), optional, intent(in) :: source
 
       type(toml_table), allocatable, target :: crp_doc
       type(toml_table), pointer             :: crp_doc_ptr
       type(toml_error), allocatable         :: terr
       integer :: i, n
-      logical :: file_exists
-      character(len=:), allocatable :: file_abs, pathwork_eff
+      logical :: file_exists, from_mem
+      character(len=:), allocatable :: file_abs, pathwork_eff, crp_text
 
       if (.not. allocated(crop%rotation_file)) return
       n = size(crop%rotation_file)
@@ -46,13 +48,20 @@ contains
       do i = 1, n
          if (len_trim(crop%rotation_file(i)) == 0) cycle
 
-         file_abs = resolve_relative_path(pathwork_eff, trim(crop%rotation_file(i)))
-         inquire(file=trim(file_abs), exist=file_exists)
-         if (.not. file_exists) cycle   ! file absent — skip silently
-
-         call toml_load(crp_doc, trim(file_abs), error=terr)
+         ! Resolve the .crp.toml subfile from the in-memory source if one
+         ! supplies it, else from disk. Absent in either case → skip silently.
+         from_mem = .false.
+         if (present(source)) call source%get_text(trim(crop%rotation_file(i)), crp_text, from_mem)
+         if (from_mem) then
+            call toml_loads(crp_doc, crp_text, error=terr)
+         else
+            file_abs = resolve_relative_path(pathwork_eff, trim(crop%rotation_file(i)))
+            inquire(file=trim(file_abs), exist=file_exists)
+            if (.not. file_exists) cycle   ! file absent — skip silently
+            call toml_load(crp_doc, trim(file_abs), error=terr)
+         end if
          if (allocated(terr)) then
-            call errors%append(ERR_PARSE_MALFORMED_TOML, trim(terr%message), trim(file_abs))
+            call errors%append(ERR_PARSE_MALFORMED_TOML, trim(terr%message), trim(crop%rotation_file(i)))
             cycle
          end if
          crp_doc_ptr => crp_doc

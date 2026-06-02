@@ -18,3 +18,87 @@ subroutine test_memory_source_returns_registered_blob()
    @assertTrue(found)
    @assertEqual('x = 1', text)
 end subroutine test_memory_source_returns_registered_blob
+
+@test
+subroutine test_disk_source_reads_file_content()
+   use funit
+   use config_source_mod, only: config_source_t, config_source_disk
+
+   type(config_source_t)         :: src
+   character(len=:), allocatable :: text
+   logical                       :: found
+
+   src = config_source_disk('tests/unit/io/fixtures/')
+   call src%get_text('config_source_sample.toml', text, found)
+
+   @assertTrue(found)
+   @assertTrue(index(text, 'key = "value"') > 0)
+   @assertTrue(index(text, 'number = 42')  > 0)
+end subroutine test_disk_source_reads_file_content
+
+@test
+subroutine test_disk_source_missing_file_not_found()
+   use funit
+   use config_source_mod, only: config_source_t, config_source_disk
+
+   type(config_source_t)         :: src
+   character(len=:), allocatable :: text
+   logical                       :: found
+
+   src = config_source_disk('tests/unit/io/fixtures/')
+   call src%get_text('does_not_exist_xyz.toml', text, found)
+
+   @assertFalse(found)
+end subroutine test_disk_source_missing_file_not_found
+
+@test
+subroutine test_inmemory_config_load_matches_disk()
+   ! End-to-end: loading hupselbrook with companion subfiles (drainage
+   ! .dra.toml + crop .crp.toml) supplied as in-memory blobs yields the
+   ! same config as the disk load — proving the source threads through the
+   ! loader and that nothing downstream knows the difference.
+   use funit
+   use swap_config_mod,             only: swap_config_t
+   use load_swap_config_mod,        only: load_swap_config
+   use load_swap_config_string_mod, only: load_swap_config_from_string
+   use config_source_mod,           only: config_source_t, &
+                                          config_source_memory, config_source_disk
+   use error_mod,                   only: error_collection_t
+
+   character(*), parameter       :: dir = 'tests/swap-cases/toml/1.hupselbrook/'
+   type(swap_config_t)           :: cfg_disk, cfg_mem
+   type(error_collection_t)      :: e_disk, e_mem
+   type(config_source_t)         :: disk, mem
+   character(len=:), allocatable :: toml_text, t
+   logical                       :: ok
+
+   ! Disk reference load.
+   call load_swap_config(dir // 'swap.toml', cfg_disk, e_disk)
+   @assertFalse(e_disk%has_fatals())
+
+   ! Slurp every load-time companion via a disk source, register as blobs.
+   disk = config_source_disk(dir)
+   call disk%get_text('swap.toml', toml_text, ok)
+   @assertTrue(ok)
+   mem = config_source_memory()
+   call disk%get_text('swap.dra.toml', t, ok)
+   @assertTrue(ok)
+   call mem%add_blob('swap.dra.toml', t)
+   call disk%get_text('maizes.crp.toml', t, ok)
+   @assertTrue(ok)
+   call mem%add_blob('maizes.crp.toml', t)
+   call disk%get_text('potatod.crp.toml', t, ok)
+   @assertTrue(ok)
+   call mem%add_blob('potatod.crp.toml', t)
+   call disk%get_text('grassd.crp.toml', t, ok)
+   @assertTrue(ok)
+   call mem%add_blob('grassd.crp.toml', t)
+
+   ! In-memory load — companions resolved from blobs, zero disk reads.
+   call load_swap_config_from_string(toml_text, cfg_mem, e_mem, source=mem)
+
+   @assertFalse(e_mem%has_fatals())
+   ! dramet=2 lives only in swap.dra.toml → proves the subfile came from memory.
+   @assertEqual(2, cfg_mem%drain%dramet)
+   @assertEqual(cfg_disk%drain%dramet, cfg_mem%drain%dramet)
+end subroutine test_inmemory_config_load_matches_disk

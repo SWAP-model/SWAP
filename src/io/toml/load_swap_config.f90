@@ -16,6 +16,7 @@ module load_swap_config_mod
    use read_output_csv_toml_mod,   only: read_output_csv_toml
    use read_nutrients_toml_mod,    only: read_nutrients_toml
    use load_crop_rotation_files_mod, only: load_crop_rotation_files
+   use config_source_mod, only: config_source_t
    use error_mod, only: error_collection_t, ERR_PARSE_MALFORMED_TOML
    implicit none
    private
@@ -62,12 +63,13 @@ contains
    !! that config%general%pathwork is populated before read_drainage_toml
    !! uses it as its subfile base path and before load_crop_rotation_files
    !! (called from load_swap_config) follows .crp.toml file references.
-   subroutine apply_section_readers(doc_ptr, base_dir, config, errors)
+   subroutine apply_section_readers(doc_ptr, base_dir, config, errors, source)
       use path_helpers_mod, only: directory_of
       type(toml_table), pointer,           intent(in)    :: doc_ptr
       character(len=*),                    intent(in)    :: base_dir
       type(swap_config_t),                 intent(inout) :: config
       type(error_collection_t),            intent(inout) :: errors
+      type(config_source_t), optional,     intent(in)    :: source
 
       character(len=:), allocatable :: pathwork_eff
 
@@ -83,7 +85,7 @@ contains
          pathwork_eff = base_dir
       end if
 
-      call read_drainage_toml   (doc_ptr, config%drain,      errors, base_path=pathwork_eff)
+      call read_drainage_toml   (doc_ptr, config%drain,      errors, base_path=pathwork_eff, source=source)
       call read_soil_toml       (doc_ptr, config%soil,       errors)
       call read_bottom_boundary_toml(doc_ptr, config%bottom_boundary, errors)
       call read_heat_toml       (doc_ptr, config%heat,       errors)

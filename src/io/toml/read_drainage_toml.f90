@@ -2,7 +2,7 @@
 !! Supports inline drainage data OR external file via `[drainage].file = "..."`.
 module read_drainage_toml_mod
    use iso_fortran_env, only: real64
-   use tomlf, only: toml_table, toml_array, toml_error, toml_load, get_value, len
+   use tomlf, only: toml_table, toml_array, toml_error, toml_load, toml_loads, get_value, len
    use drainage_config_mod, only: drainage_config_t
    use toml_field_helpers_mod, only: get_table, get_array_of_tables,   &
                                      get_optional_int_with_default,    &
@@ -100,26 +100,44 @@ contains
                                           'drainage.surface_runoff.rapdraresref', errors)
    end subroutine read_drainage_surface_runoff
 
-   subroutine read_drainage_toml(doc, config, errors, base_path)
+   subroutine read_drainage_toml(doc, config, errors, base_path, source)
+      use config_source_mod, only: config_source_t
       type(toml_table), pointer,  intent(in)    :: doc
       type(drainage_config_t),    intent(inout) :: config
       type(error_collection_t),   intent(inout) :: errors
       character(len=*), optional, intent(in)    :: base_path
+      type(config_source_t), optional, intent(in) :: source
 
       type(toml_table), pointer             :: drain_tab, ext_root, ext_sec
       type(toml_table), allocatable, target :: ext_doc
       type(toml_error), allocatable         :: terr
-      character(len=:), allocatable         :: file_rel, file_abs
+      character(len=:), allocatable         :: file_rel, file_abs, ext_text
+      logical                               :: from_mem, have_ext
 
       call get_table(doc, 'drainage', drain_tab, 'drainage', errors)
       if (.not. associated(drain_tab)) return
 
       call get_optional_string_with_default(drain_tab, 'file', file_rel, '', 'drainage.file', errors)
-      if (len_trim(file_rel) > 0 .and. present(base_path)) then
-         file_abs = resolve_relative_path(base_path, file_rel)
-         call toml_load(ext_doc, trim(file_abs), error=terr)
+
+      ! Resolve the external drainage subfile from the in-memory source if one
+      ! supplies it, else from disk relative to base_path. Both yield ext_doc.
+      have_ext = .false.
+      if (len_trim(file_rel) > 0) then
+         from_mem = .false.
+         if (present(source)) call source%get_text(file_rel, ext_text, from_mem)
+         if (from_mem) then
+            call toml_loads(ext_doc, ext_text, error=terr)
+            have_ext = .true.
+         else if (present(base_path)) then
+            file_abs = resolve_relative_path(base_path, file_rel)
+            call toml_load(ext_doc, trim(file_abs), error=terr)
+            have_ext = .true.
+         end if
+      end if
+
+      if (have_ext) then
          if (allocated(terr)) then
-            call errors%append(ERR_PARSE_MALFORMED_TOML, trim(terr%message), trim(file_abs))
+            call errors%append(ERR_PARSE_MALFORMED_TOML, trim(terr%message), trim(file_rel))
             return
          end if
          ext_root => ext_doc
