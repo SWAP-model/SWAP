@@ -14,6 +14,7 @@ module swap_capi_mod
    use load_swap_config_string_mod, only: load_swap_config_from_string
    use error_mod,       only: error_collection_t
    use meteo_buffer_mod, only: attach_external_meteo_buffer
+   use config_source_mod, only: config_source_t, config_source_memory
    implicit none
    private
 
@@ -23,6 +24,11 @@ module swap_capi_mod
    ! Multi-instance handles are Phase 3.
    type(swap_state_t),          save, public, target :: capi_state
    type(swap_config_t), target, save, public         :: capi_config
+
+   ! In-memory companion blobs (TOML subfiles + CSV tables) pushed from
+   ! Python via swap_attach_config_file, consumed by the in-memory init so
+   ! the run reads zero files. Empty (in_memory=.false.) => disk fallback.
+   type(config_source_t), save :: capi_companions
 
    type, bind(C), public :: swap_water_balance_t
       real(c_double) :: rain
@@ -79,7 +85,11 @@ contains
          f_text(i:i) = buf(i)
       end do
 
-      call load_swap_config_from_string(f_text, capi_config, errors)
+      if (capi_companions%in_memory) then
+         call load_swap_config_from_string(f_text, capi_config, errors, source=capi_companions)
+      else
+         call load_swap_config_from_string(f_text, capi_config, errors)
+      end if
       if (errors%has_fatals()) then
          ierr = 1
          return
@@ -95,6 +105,47 @@ contains
       call swap_init_from_loaded_config(capi_state, capi_config)
       ierr = 0
    end function swap_initialize_from_toml_string
+
+   !----------------------------------------------------------------------
+   ! In-memory companion files (diskless init)
+   !----------------------------------------------------------------------
+
+   !> Drop any previously-attached companion blobs and switch the singleton
+   !! into in-memory mode. Call before a batch of swap_attach_config_file.
+   function swap_clear_config_files() result(ierr) bind(C, name='swap_clear_config_files')
+      integer(c_int) :: ierr
+      capi_companions = config_source_memory()
+      ierr = 0
+   end function swap_clear_config_files
+
+   !> Register one companion file (TOML subfile or CSV table) by name with
+   !! its contents, so the next swap_initialize_from_toml_string resolves it
+   !! from memory instead of disk. `name` is the filename as referenced in
+   !! the config (e.g. "swap.dra.toml", "283.csv").
+   function swap_attach_config_file(name, n_name, content, n_content) result(ierr) &
+            bind(C, name='swap_attach_config_file')
+      character(kind=c_char), intent(in)    :: name(*)
+      integer(c_int),  value, intent(in)    :: n_name
+      character(kind=c_char), intent(in)    :: content(*)
+      integer(c_int),  value, intent(in)    :: n_content
+      integer(c_int)                        :: ierr
+      character(len=:), allocatable :: f_name, f_content
+      integer :: i
+
+      if (.not. capi_companions%in_memory) capi_companions = config_source_memory()
+
+      allocate(character(len=n_name) :: f_name)
+      do i = 1, n_name
+         f_name(i:i) = name(i)
+      end do
+      allocate(character(len=n_content) :: f_content)
+      do i = 1, n_content
+         f_content(i:i) = content(i)
+      end do
+
+      call capi_companions%add_blob(f_name, f_content)
+      ierr = 0
+   end function swap_attach_config_file
 
    !----------------------------------------------------------------------
    ! Input buffer attach
