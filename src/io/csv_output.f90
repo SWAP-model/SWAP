@@ -697,6 +697,26 @@ module csv_output
          call makeheader(scalar_w%unit, filcsv, state)
       end if
 
+      ! Build the selected column names/units in the SAME order csv_out_write
+      ! flattens vals (iyes, then per node), and initialise the per-instance
+      ! in-memory record. Always — independent of headless file output.
+      block
+         integer :: jj, kk, nc
+         character(len=24) :: rnames(Mnodes*M)
+         character(len=12) :: runits(Mnodes*M)
+         nc = 0
+         do jj = 1, M
+            if (vars%iyes(jj) == 1) then
+               do kk = 1, vars%Nnodes(jj)
+                  nc = nc + 1
+                  rnames(nc) = vars%head(kk, jj)
+                  runits(nc) = vars%unit(jj)
+               end do
+            end if
+         end do
+         call state%results%init(rnames(1:nc), runits(1:nc))
+      end block
+
       ! store inital values (always — needed for dstor computation in fill_values)
       ! SS-ATM A-2.5: ssnow read from state%atmosphere (atmosphere home).
       ! SS-SWC S-2.11: volact,pond read from state%soilwater.
@@ -723,15 +743,12 @@ module csv_output
       call fill_values(state)
       call set_values(state)
 
-      ! write to CSV (headless: skip)
-      ! IO-OUT/C2b: flatten active vars (same emission order as before) into a
-      ! 1-D array and emit via csv_writer_t%row. row() prepends the leading
-      ! datetime string + comma, joins values with commas, and writes NO
-      ! trailing comma — byte-identical to the previous hand-built line that
-      ! stripped its trailing comma via line(1:il-1). fmt_real == what_form.
-      if (.not. state%timecontrol%headless) then
-         associate (time => state%timecontrol)
-         ! flatten the active values in emission order
+      ! IO-OUT/C2b + results record: flatten the active values (selected +
+      ! node-expanded, same emission order as the CSV) ONCE, append to the
+      ! per-instance record (always), then write the CSV row (file only when
+      ! not headless). Building vals outside the headless guard is what lets
+      ! the in-memory record populate in pyswap's headless mode.
+      associate (time => state%timecontrol)
          ncount = 0
          do j = 1, M
             if (vars%iyes(j) == 1) then
@@ -742,15 +759,17 @@ module csv_output
             end if
          end do
 
-         if (.not. time%flprintshort) then                                 ! SS-TC TC-13
-            call scalar_w%row(vals(1:ncount), leading=trim(time%date))     ! SS-TC TC-13
-         else
-            ! determine date-time
-            call dtdpst ('year-month-day hour:minute:seconds', time%t1900, datexti)  ! SS-TC TC-13
-            call scalar_w%row(vals(1:ncount), leading=trim(datexti))
+         call state%results%add_row(time%t1900, vals(1:ncount))
+
+         if (.not. time%headless) then
+            if (.not. time%flprintshort) then
+               call scalar_w%row(vals(1:ncount), leading=trim(time%date))
+            else
+               call dtdpst ('year-month-day hour:minute:seconds', time%t1900, datexti)
+               call scalar_w%row(vals(1:ncount), leading=trim(datexti))
+            end if
          end if
-         end associate
-      end if
+      end associate
 
    end subroutine csv_out_write
 
@@ -765,6 +784,8 @@ module csv_output
       if (.not. state%timecontrol%headless) then
          call scalar_w%close()
       end if
+
+      call state%results%finalize()
 
    end subroutine csv_out_close
 

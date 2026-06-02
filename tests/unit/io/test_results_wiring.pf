@@ -1,0 +1,33 @@
+! Integration: after a headless run, state%results holds one row per output
+! step with the selected (inlist) columns — i.e. the record is populated even
+! when the CSV file is suppressed.
+
+@test
+subroutine test_results_populated_headless()
+   use funit
+   use iso_fortran_env,   only: real64
+   use swap_state_mod,    only: swap_state_t
+   use swap_config_mod,   only: swap_config_t
+   use swap_mod,          only: swap_init, swap_run_step, swap_close
+
+   type(swap_state_t)  :: state
+   type(swap_config_t) :: config
+   character(*), parameter :: cfg = 'tests/swap-cases/toml/1.hupselbrook/swap.toml'
+   integer :: guard
+
+   state%timecontrol%headless = .true.
+   call swap_init(cfg, state, config)
+   ! headless is reset by init in some builds; force it for the run.
+   state%timecontrol%headless = .true.
+
+   guard = 0
+   do while (.not. state%timecontrol%flRunEnd .and. guard < 1000000)
+      call swap_run_step(state, config)
+      guard = guard + 1
+   end do
+   call swap_close(state, config)
+
+   @assertTrue(state%results%ncols > 0)
+   @assertTrue(state%results%nrows > 0)
+   @assertEqual(state%results%nrows, size(state%results%times))
+end subroutine test_results_populated_headless

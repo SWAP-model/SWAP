@@ -18,6 +18,7 @@ compile_commands.json
 result*
 !src/state/results_state.f90
 !tests/unit/state/test_results_state.pf
+!tests/unit/io/test_results_wiring.pf
 swap.ok
 *swap.log
 reruns.log

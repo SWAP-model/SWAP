@@ -253,6 +253,7 @@ if get_option('enable_pfunit')
         'io/test_output_registry.pf',
         'io/test_file_io.pf',
         'io/test_csv_aggregates.pf',
+        'io/test_results_wiring.pf',
         'io/toml/test_path_helpers.pf',
         'io/toml/test_toml_field_helpers.pf',
         'io/toml/test_read_general_toml.pf',
