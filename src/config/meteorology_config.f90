@@ -3,6 +3,7 @@ module meteorology_config_mod
    use iso_fortran_env, only: real64
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
    use validation_mod, only: check_int_enum, check_real_range, check_not_empty
+   use meteo_csv_mod, only: meteo_daily_table_t
    implicit none
    private
 
@@ -57,6 +58,9 @@ module meteorology_config_mod
       real(real64) :: angstromb = 0.50_real64
       type(meteorology_evaporation_t) :: evaporation
       type(meteorology_snow_t)        :: snow
+      !! Daily meteo CSV loaded at config-load time (decoupled from state
+      !! init). Standalone fills it from disk; Python from an in-memory blob.
+      type(meteo_daily_table_t)       :: meteo
    contains
       procedure :: validate => meteorology_config_validate
       procedure :: finalize => meteorology_config_finalize

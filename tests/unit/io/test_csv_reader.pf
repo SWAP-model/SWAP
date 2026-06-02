@@ -1,6 +1,33 @@
 ! Tests for csv_reader_mod (Phase 4f cleanup — unified reader).
 
 @test
+subroutine test_read_csv_table_text_inmemory()
+   ! In-memory parse must equal disk parse for the same bytes.
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table_text
+   use error_mod, only: error_collection_t
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+   character(len=*), parameter :: nl = char(10)
+   character(len=*), parameter :: text = &
+      'date,gwl'         // nl // &
+      '1980-04-24,-88.0' // nl // &
+      '1980-04-25,-90.0' // nl
+
+   call read_csv_table_text(text, ['date', 'gwl '], table, errors)
+
+   @assertFalse(errors%has_fatals())
+   @assertTrue(allocated(table))
+   @assertEqual(2, size(table, 1))
+   @assertEqual(2, size(table, 2))
+   ! 1980-04-24 = days-since-1900 = 29334 (same as the disk fixture test).
+   @assertEqual(29334.0_real64, table(1, 1), 1.0_real64)
+   @assertEqual(-88.0_real64,   table(1, 2), 1.0e-6_real64)
+   @assertEqual(-90.0_real64,   table(2, 2), 1.0e-6_real64)
+end subroutine test_read_csv_table_text_inmemory
+
+@test
 subroutine test_date_keyed_happy()
    use funit
    use iso_fortran_env, only: real64

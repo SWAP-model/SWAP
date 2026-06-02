@@ -77,6 +77,25 @@ contains
       call read_simulation_toml (doc_ptr, config%simulation, errors)
       call read_meteorology_toml(doc_ptr, config%meteo,      errors)
 
+      ! Decouple the daily meteo CSV read from state init: load it here at
+      ! config-load (from `source` if in-memory, else disk at pathatm) so
+      ! state%atmosphere%init does no file I/O. Mirrors the .dra/.crp subfiles.
+      block
+         character(len=300) :: metfile_lc
+         external :: lowerc
+         metfile_lc = ''
+         if (allocated(config%meteo%metfile)) metfile_lc = config%meteo%metfile
+         call lowerc(metfile_lc)
+         if (index(trim(metfile_lc), '.csv') > 0) then
+            if (allocated(config%general%pathatm)) then
+               call config%meteo%meteo%load(trim(metfile_lc), errors, &
+                                            source=source, base=config%general%pathatm)
+            else
+               call config%meteo%meteo%load(trim(metfile_lc), errors, source=source)
+            end if
+         end if
+      end block
+
       ! Guard: if [general] was absent or returned early, pathwork is not
       ! allocated; fall back to base_dir so the subfile readers still work.
       if (allocated(config%general%pathwork)) then

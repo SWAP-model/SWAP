@@ -20,8 +20,101 @@ module csv_reader_mod
    private
 
    public :: read_csv_table
+   public :: read_csv_table_text
 
 contains
+
+   !> In-memory twin of read_csv_table: parses CSV from a character buffer
+   !! (e.g. a companion blob supplied by Python) instead of a file. Shares
+   !! the same header validation and row parsing, so the resulting `table`
+   !! is byte-identical to reading the same bytes from disk.
+   subroutine read_csv_table_text(text, expected_header, table, errors)
+      character(len=*),          intent(in)    :: text
+      character(len=*),          intent(in)    :: expected_header(:)
+      real(real64), allocatable, intent(out)   :: table(:,:)
+      type(error_collection_t),  intent(inout) :: errors
+
+      integer :: ncols, nrows, irow, pos
+      character(len=:), allocatable :: line
+      logical :: header_done, date_keyed, datetime_keyed
+      character(len=*), parameter :: src = '(in-memory)'
+
+      ncols = size(expected_header)
+      date_keyed     = (ncols >= 1) .and. (to_lower(trim(expected_header(1))) == 'date')
+      datetime_keyed = (ncols >= 1) .and. (to_lower(trim(expected_header(1))) == 'datetime')
+
+      ! Pass 1: locate header, count data rows.
+      header_done = .false.
+      nrows = 0
+      pos = 1
+      do while (pos <= len(text))
+         call next_line(text, pos, line)
+         if (is_skippable(line)) cycle
+         if (.not. header_done) then
+            call validate_header(line, expected_header, src, errors)
+            if (errors%has_fatals()) return
+            header_done = .true.
+            cycle
+         end if
+         nrows = nrows + 1
+      end do
+
+      if (.not. header_done) then
+         call errors%append(ERR_PARSE_MISSING_HEADER, &
+            src // ": missing header line", 'csv_reader')
+         return
+      end if
+
+      allocate(table(nrows, ncols))
+      table = 0.0_real64
+      if (nrows == 0) return
+
+      ! Pass 2: parse data rows.
+      header_done = .false.
+      irow = 0
+      pos = 1
+      do while (pos <= len(text))
+         call next_line(text, pos, line)
+         if (is_skippable(line)) cycle
+         if (.not. header_done) then
+            header_done = .true.
+            cycle
+         end if
+         irow = irow + 1
+         call parse_row(line, irow, ncols, date_keyed, datetime_keyed, src, table, errors)
+         if (errors%has_fatals()) then
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+      end do
+   end subroutine read_csv_table_text
+
+   !> Extract the next line from `text` starting at `pos`; advance `pos` past
+   !! the line terminator. A trailing CR is stripped so CRLF and LF parse
+   !! identically. `line` excludes the terminator.
+   subroutine next_line(text, pos, line)
+      character(len=*),              intent(in)    :: text
+      integer,                       intent(inout) :: pos
+      character(len=:), allocatable, intent(out)   :: line
+      integer :: nl_idx, e, n
+      n = len(text)
+      nl_idx = index(text(pos:n), char(10))
+      if (nl_idx == 0) then
+         line = text(pos:n)
+         pos  = n + 1
+      else
+         e = pos + nl_idx - 2          ! last char before the \n
+         if (e >= pos) then
+            line = text(pos:e)
+         else
+            line = ''
+         end if
+         pos = pos + nl_idx            ! advance past the \n
+      end if
+      if (len(line) > 0) then
+         if (line(len(line):len(line)) == char(13)) line = line(1:len(line) - 1)
+      end if
+   end subroutine next_line
 
    subroutine read_csv_table(path, expected_header, table, errors)
       character(len=*),          intent(in)    :: path

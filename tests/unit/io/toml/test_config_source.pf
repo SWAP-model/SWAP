@@ -93,6 +93,9 @@ subroutine test_inmemory_config_load_matches_disk()
    call disk%get_text('grassd.crp.toml', t, ok)
    @assertTrue(ok)
    call mem%add_blob('grassd.crp.toml', t)
+   call disk%get_text('283.csv', t, ok)
+   @assertTrue(ok)
+   call mem%add_blob('283.csv', t)
 
    ! In-memory load — companions resolved from blobs, zero disk reads.
    call load_swap_config_from_string(toml_text, cfg_mem, e_mem, source=mem)
@@ -102,3 +105,54 @@ subroutine test_inmemory_config_load_matches_disk()
    @assertEqual(2, cfg_mem%drain%dramet)
    @assertEqual(cfg_disk%drain%dramet, cfg_mem%drain%dramet)
 end subroutine test_inmemory_config_load_matches_disk
+
+@test
+subroutine test_inmemory_meteo_table_matches_disk()
+   ! The daily meteo CSV is now read at config-load (decoupled from state
+   ! init). Supplying it as an in-memory blob must populate config%meteo%meteo
+   ! identically to the disk read.
+   use funit
+   use iso_fortran_env,             only: real64
+   use swap_config_mod,             only: swap_config_t
+   use load_swap_config_mod,        only: load_swap_config
+   use load_swap_config_string_mod, only: load_swap_config_from_string
+   use config_source_mod,           only: config_source_t, &
+                                          config_source_memory, config_source_disk
+   use error_mod,                   only: error_collection_t
+
+   character(*), parameter       :: dir = 'tests/swap-cases/toml/1.hupselbrook/'
+   type(swap_config_t)           :: cfg_disk, cfg_mem
+   type(error_collection_t)      :: e_disk, e_mem
+   type(config_source_t)         :: disk, mem
+   character(len=:), allocatable :: toml_text, t
+   logical                       :: ok
+
+   ! Disk reference — config-load now reads the meteo CSV into the config.
+   call load_swap_config(dir // 'swap.toml', cfg_disk, e_disk)
+   @assertFalse(e_disk%has_fatals())
+   @assertTrue(cfg_disk%meteo%meteo%is_loaded)
+
+   ! In-memory: feed swap.toml + every load-time companion + the meteo CSV.
+   disk = config_source_disk(dir)
+   call disk%get_text('swap.toml', toml_text, ok)
+   @assertTrue(ok)
+   mem = config_source_memory()
+   call disk%get_text('swap.dra.toml', t, ok)
+   call mem%add_blob('swap.dra.toml', t)
+   call disk%get_text('maizes.crp.toml', t, ok)
+   call mem%add_blob('maizes.crp.toml', t)
+   call disk%get_text('potatod.crp.toml', t, ok)
+   call mem%add_blob('potatod.crp.toml', t)
+   call disk%get_text('grassd.crp.toml', t, ok)
+   call mem%add_blob('grassd.crp.toml', t)
+   call disk%get_text('283.csv', t, ok)
+   @assertTrue(ok)
+   call mem%add_blob('283.csv', t)
+
+   call load_swap_config_from_string(toml_text, cfg_mem, e_mem, source=mem)
+
+   @assertFalse(e_mem%has_fatals())
+   @assertTrue(cfg_mem%meteo%meteo%is_loaded)
+   @assertEqual(size(cfg_disk%meteo%meteo%rows), size(cfg_mem%meteo%meteo%rows))
+   @assertEqual(cfg_disk%meteo%meteo%rows(1)%rad, cfg_mem%meteo%meteo%rows(1)%rad, 1.0e-9_real64)
+end subroutine test_inmemory_meteo_table_matches_disk

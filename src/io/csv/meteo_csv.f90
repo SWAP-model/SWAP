@@ -82,17 +82,22 @@ module meteo_csv_mod
 
 contains
 
-   subroutine meteo_daily_table_load(self, path, errors)
-      use csv_reader_mod, only: read_csv_table
+   subroutine meteo_daily_table_load(self, name, errors, source, base)
+      use csv_reader_mod,    only: read_csv_table, read_csv_table_text
+      use config_source_mod, only: config_source_t
       use error_mod,      only: ERR_VALIDATION_CROSS_FIELD, ERR_VALIDATION_OUT_OF_RANGE
-      class(meteo_daily_table_t), intent(inout) :: self
-      character(len=*),           intent(in)    :: path
-      type(error_collection_t),   intent(inout) :: errors
+      class(meteo_daily_table_t),      intent(inout) :: self
+      character(len=*),                intent(in)    :: name
+      type(error_collection_t),        intent(inout) :: errors
+      type(config_source_t), optional, intent(in)    :: source
+      character(len=*),      optional, intent(in)    :: base
 
       real(real64), allocatable :: tbl(:,:)
       character(len=14) :: hdr(9)
       integer :: n, r
       character(len=200) :: msg
+      character(len=:), allocatable :: text
+      logical :: from_mem
 
       ! Reset is_loaded so a failed load on a reused instance doesn't
       ! leave a stale .true. flag from a previous successful load.
@@ -100,7 +105,18 @@ contains
 
       hdr = [character(len=14) :: 'date          ', 'rad           ', 'tmin          ', 'tmax          ', &
              'hum           ', 'wind          ', 'rain          ', 'etref         ', 'wet           ']
-      call read_csv_table(trim(path), hdr, tbl, errors)
+
+      ! Resolve from the in-memory source (Python) if it supplies the blob,
+      ! else from disk at base//name (or name alone). Identical bytes either way.
+      from_mem = .false.
+      if (present(source)) call source%get_text(name, text, from_mem)
+      if (from_mem) then
+         call read_csv_table_text(text, hdr, tbl, errors)
+      else if (present(base)) then
+         call read_csv_table(trim(base) // trim(name), hdr, tbl, errors)
+      else
+         call read_csv_table(trim(name), hdr, tbl, errors)
+      end if
       if (errors%has_fatals()) return
 
       n = size(tbl, 1)

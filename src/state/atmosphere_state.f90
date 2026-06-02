@@ -357,11 +357,9 @@ contains
          if (allocated(config%meteo%metfile)) metfile_lc = config%meteo%metfile
          call lowerc(metfile_lc)
 
-         if (index(trim(metfile_lc), '.csv') > 0) then
-            csvpath = trim(config%general%pathatm) // trim(metfile_lc)
-            call self%meteo%load(trim(csvpath), errs_daily)
-            call errs_daily%abort_if_fatal()
-         end if
+         ! Daily meteo table is now read at config-load time (config%meteo%meteo,
+         ! decoupled from init). Copy it onto state — no file I/O here.
+         self%meteo = config%meteo%meteo
 
          if (config%meteo%swmetdetail == 1) then
             if (allocated(config%meteo%detail_file) .and. &
