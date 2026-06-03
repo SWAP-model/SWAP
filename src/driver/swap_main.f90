@@ -7,30 +7,15 @@ program swap_main
    use swap_mod,        only: swap_init, swap_run_step, swap_close
    use swap_state_mod,  only: swap_state_t
    use swap_config_mod, only: swap_config_t
-   use swap_log,         only: log_init, log_close
-   use diagnostics_mod,  only: diagnostics_config_t, diag_overrides_t, &
-                               default_cli_config, read_env_overrides,  &
-                               resolve_diagnostics_config
+   use swap_log,         only: log_close
+   use diagnostics_mod,  only: default_cli_config, init_logging_from_env
    implicit none
 
    type(swap_state_t)           :: state
    type(swap_config_t), target  :: config  ! target retained for callers that take a pointer into config (crop_config_global retired)
    logical                      :: fileopen
 
-   block
-      type(diagnostics_config_t) :: dcfg
-      type(diag_overrides_t)     :: none_ov, env_ov
-      call read_env_overrides(env_ov)
-      dcfg = resolve_diagnostics_config(default_cli_config(), none_ov, env_ov, none_ov)
-      if (allocated(dcfg%log_file)) then
-         call log_init(log_level=dcfg%level, log_file=dcfg%log_file, &
-                       to_stdout=dcfg%to_stdout, to_stderr=dcfg%to_stderr, &
-                       timestamps=dcfg%timestamps)
-      else
-         call log_init(log_level=dcfg%level, to_stdout=dcfg%to_stdout, &
-                       to_stderr=dcfg%to_stderr, timestamps=dcfg%timestamps)
-      end if
-   end block
+   call init_logging_from_env(default_cli_config())
 
    call swap_init('swap.toml', state, config)
    do while (.not. state%timecontrol%flRunEnd)

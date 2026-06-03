@@ -15,10 +15,8 @@ module swap_capi_mod
    use error_mod,       only: error_collection_t
    use meteo_buffer_mod, only: attach_external_meteo_buffer
    use config_source_mod, only: config_source_t, config_source_memory
-   use swap_log,        only: log_init, log_set_level, log_set_stdout
-   use diagnostics_mod, only: diagnostics_config_t, diag_overrides_t, &
-                              default_embedded_config, read_env_overrides, &
-                              resolve_diagnostics_config
+   use swap_log,        only: log_set_level, log_set_stdout
+   use diagnostics_mod, only: default_embedded_config, init_logging_from_env
    implicit none
    private
 
@@ -64,25 +62,6 @@ contains
       end do
    end subroutine c_to_f_string
 
-   !> Resolve the diagnostics config (embedded default + env) and (re)open the
-   !! logger. Called as the first executable statement of every C-API initialize
-   !! entry point so a Python/MODFLOW host gets embedding-safe defaults
-   !! (to_stdout=.false.). Idempotent: log_init re-opens.
-   subroutine capi_init_logging()
-      type(diagnostics_config_t) :: dcfg
-      type(diag_overrides_t)     :: none_ov, env_ov
-      call read_env_overrides(env_ov)
-      dcfg = resolve_diagnostics_config(default_embedded_config(), none_ov, env_ov, none_ov)
-      if (allocated(dcfg%log_file)) then
-         call log_init(log_level=dcfg%level, log_file=dcfg%log_file, &
-                       to_stdout=dcfg%to_stdout, to_stderr=dcfg%to_stderr, &
-                       timestamps=dcfg%timestamps)
-      else
-         call log_init(log_level=dcfg%level, to_stdout=dcfg%to_stdout, &
-                       to_stderr=dcfg%to_stderr, timestamps=dcfg%timestamps)
-      end if
-   end subroutine capi_init_logging
-
    !----------------------------------------------------------------------
    ! Host logging control (highest-precedence C-API surface)
    !----------------------------------------------------------------------
@@ -121,7 +100,7 @@ contains
       type(error_collection_t) :: errors
       integer :: i
 
-      call capi_init_logging()
+      call init_logging_from_env(default_embedded_config())
 
       allocate(character(len=n) :: f_text)
       do i = 1, n

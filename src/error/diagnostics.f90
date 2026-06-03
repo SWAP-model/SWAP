@@ -6,7 +6,7 @@
 !! the per-instance state-borne diagnostics record is a later phase.
 module diagnostics_mod
    use swap_log, only: LOGLEVEL_DEBUG, LOGLEVEL_INFO, LOGLEVEL_WARN, &
-                       LOGLEVEL_ERROR, LOGLEVEL_NONE
+                       LOGLEVEL_ERROR, LOGLEVEL_NONE, log_init
    implicit none
    private
 
@@ -14,6 +14,7 @@ module diagnostics_mod
    public :: log_level_from_name
    public :: merge_overrides, resolve_diagnostics_config
    public :: read_env_overrides, default_cli_config, default_embedded_config
+   public :: init_logging_from_env
 
    !> Fully-resolved logging settings handed to log_init.
    type :: diagnostics_config_t
@@ -133,6 +134,26 @@ contains
          ov%to_stderr  = (buf(1:1) == '1' .or. buf(1:1) == 't' .or. buf(1:1) == 'T')
       end if
    end subroutine read_env_overrides
+
+   !> Resolve a base config against the environment (env > base) and
+   !! initialise the logger. Entry points call this with their default
+   !! (CLI vs embedded). Higher-precedence C-API/TOML overrides are applied
+   !! afterwards via their own setters.
+   subroutine init_logging_from_env(base)
+      type(diagnostics_config_t), intent(in) :: base
+      type(diagnostics_config_t) :: dcfg
+      type(diag_overrides_t)     :: none_ov, env_ov
+      call read_env_overrides(env_ov)
+      dcfg = resolve_diagnostics_config(base, none_ov, env_ov, none_ov)
+      if (allocated(dcfg%log_file)) then
+         call log_init(log_level=dcfg%level, log_file=dcfg%log_file, &
+                       to_stdout=dcfg%to_stdout, to_stderr=dcfg%to_stderr, &
+                       timestamps=dcfg%timestamps)
+      else
+         call log_init(log_level=dcfg%level, to_stdout=dcfg%to_stdout, &
+                       to_stderr=dcfg%to_stderr, timestamps=dcfg%timestamps)
+      end if
+   end subroutine init_logging_from_env
 
    !> ASCII upper-case helper (pure, no locale).
    pure function upcase(s) result(u)
