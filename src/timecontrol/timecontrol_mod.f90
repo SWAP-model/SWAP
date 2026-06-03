@@ -17,14 +17,8 @@ module timecontrol_mod
 contains
 
    subroutine timecontrol_init(state, config)
-      ! [GR-CROP C1] flCropCalendar/icrop: dual-write to both legacy global + state%crop%common%X
-      ! [SS-GR-FINAL B8] DEFERRED: all symbols — init-path config/flags; no state home yet; Phase C3
+
       use swap_log, only: log_warn
-      ! [GR-CROP 2026-05-25] flCropCalendar/icrop/cropstart/project → state/config reads.
-      ! [GR-TIME 2026-05-25] swirfix/swsnow/swhea/swsolu/swetsine/nirri now read
-      ! from state%cfg/state%crop%irrigation; bare-global use-variables retired.
-      ! [state%cfg retirement 2026-05-28] config arg added; all state%cfg reads
-      ! replaced with direct config%X reads; swmetdetail/swrain/swssdi snapshotted.
       use error_mod, only: fatalerr_collected
       implicit none
       type(swap_state_t),          intent(inout) :: state
@@ -235,12 +229,6 @@ contains
    end subroutine timecontrol_init
 
    subroutine timecontrol_advance(state)
-      ! [GR-CROP Phase B] raintimearray migrated → state%atmosphere%raintimearray via associate.
-      ! [GR-CROP C1] flCropCalendar/flCropOutput/icrop: reads from state%crop%common%X; writes dual to state+legacy
-      ! [SS-GR-FINAL B8] DEFERRED: all residual symbols; Phase C3
-      ! [GR-CROP 2026-05-25] flCropCalendar/flCropOutput/flCropHarvest/icrop → state%crop%common.
-      ! [GR-TIME 2026-05-25] outdat/outdatint migrated to state%timecontrol;
-      ! flSSDI bare global replaced with `state%cfg%irrigation%swssdi == 1`.
 
       use irrigation_mod, only: ssdi_irrigation_reset
       use error_mod, only: fatalerr_collected
