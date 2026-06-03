@@ -25,3 +25,44 @@ subroutine test_log_level_from_name_unknown_defaults_to_info()
    @assertEqual(LOGLEVEL_INFO, log_level_from_name('gibberish'))
    @assertEqual(LOGLEVEL_INFO, log_level_from_name(''))
 end subroutine
+
+@test
+subroutine test_merge_overrides_applies_only_set_fields()
+   use funit
+   use diagnostics_mod, only: diagnostics_config_t, diag_overrides_t, merge_overrides
+   use swap_log,        only: LOGLEVEL_INFO, LOGLEVEL_DEBUG
+   implicit none
+   type(diagnostics_config_t) :: base, out
+   type(diag_overrides_t)     :: ov
+   base%level = LOGLEVEL_INFO
+   base%to_stdout = .true.
+   ! Only override the level; to_stdout must be untouched.
+   ov%has_level = .true.
+   ov%level     = LOGLEVEL_DEBUG
+   out = merge_overrides(base, ov)
+   @assertEqual(LOGLEVEL_DEBUG, out%level)
+   @assertTrue(out%to_stdout)
+end subroutine
+
+@test
+subroutine test_resolve_precedence_capi_over_env_over_toml_over_base()
+   use funit
+   use diagnostics_mod, only: diagnostics_config_t, diag_overrides_t, &
+                              resolve_diagnostics_config
+   use swap_log,        only: LOGLEVEL_INFO, LOGLEVEL_DEBUG, LOGLEVEL_WARN, LOGLEVEL_ERROR
+   implicit none
+   type(diagnostics_config_t) :: base, out
+   type(diag_overrides_t)     :: toml, env, capi
+   base%level = LOGLEVEL_INFO
+   toml%has_level = .true.; toml%level = LOGLEVEL_WARN
+   env%has_level  = .true.; env%level  = LOGLEVEL_DEBUG
+   capi%has_level = .true.; capi%level = LOGLEVEL_ERROR
+   out = resolve_diagnostics_config(base, toml, env, capi)
+   ! capi wins
+   @assertEqual(LOGLEVEL_ERROR, out%level)
+
+   ! With capi absent, env wins over toml.
+   capi%has_level = .false.
+   out = resolve_diagnostics_config(base, toml, env, capi)
+   @assertEqual(LOGLEVEL_DEBUG, out%level)
+end subroutine

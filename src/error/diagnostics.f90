@@ -10,11 +10,10 @@ module diagnostics_mod
    implicit none
    private
 
-   ! Task 1: types + level-name parsing only.
-   ! merge_overrides, resolve_diagnostics_config, read_env_overrides,
-   ! default_cli_config, default_embedded_config are added in later tasks.
    public :: diagnostics_config_t, diag_overrides_t
    public :: log_level_from_name
+   public :: merge_overrides, resolve_diagnostics_config
+   ! read_env_overrides, default_cli_config, default_embedded_config are added in later tasks.
 
    !> Fully-resolved logging settings handed to log_init.
    type :: diagnostics_config_t
@@ -58,6 +57,29 @@ contains
       case default;             level = LOGLEVEL_INFO
       end select
    end function log_level_from_name
+
+   !> Apply a sparse override set onto a base config (only set fields win).
+   pure function merge_overrides(base, ov) result(cfg)
+      type(diagnostics_config_t), intent(in) :: base
+      type(diag_overrides_t),     intent(in) :: ov
+      type(diagnostics_config_t)             :: cfg
+      cfg = base
+      if (ov%has_level)      cfg%level      = ov%level
+      if (ov%has_stdout)     cfg%to_stdout  = ov%to_stdout
+      if (ov%has_stderr)     cfg%to_stderr  = ov%to_stderr
+      if (ov%has_timestamps) cfg%timestamps = ov%timestamps
+      if (ov%has_file)       cfg%log_file   = ov%log_file
+   end function merge_overrides
+
+   !> Resolve the final config with precedence  capi > env > toml > base.
+   pure function resolve_diagnostics_config(base, toml, env, capi) result(cfg)
+      type(diagnostics_config_t), intent(in) :: base
+      type(diag_overrides_t),     intent(in) :: toml, env, capi
+      type(diagnostics_config_t)             :: cfg
+      cfg = merge_overrides(base, toml)
+      cfg = merge_overrides(cfg,  env)
+      cfg = merge_overrides(cfg,  capi)
+   end function resolve_diagnostics_config
 
    !> ASCII upper-case helper (pure, no locale).
    pure function upcase(s) result(u)
