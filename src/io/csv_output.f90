@@ -699,23 +699,25 @@ module csv_output
 
       ! Build the selected column names/units in the SAME order csv_out_write
       ! flattens vals (iyes, then per node), and initialise the per-instance
-      ! in-memory record. Always — independent of headless file output.
-      block
-         integer :: jj, kk, nc
-         character(len=24) :: rnames(Mnodes*M)
-         character(len=12) :: runits(Mnodes*M)
-         nc = 0
-         do jj = 1, M
-            if (vars%iyes(jj) == 1) then
-               do kk = 1, vars%Nnodes(jj)
-                  nc = nc + 1
-                  rnames(nc) = vars%head(kk, jj)
-                  runits(nc) = vars%unit(jj)
-               end do
-            end if
-         end do
-         call state%results%init(rnames(1:nc), runits(1:nc))
-      end block
+      ! in-memory record. Gated on results_in_memory == 1 (opt-in).
+      if (state%timecontrol%results_in_memory == 1) then
+         block
+            integer :: jj, kk, nc
+            character(len=24) :: rnames(Mnodes*M)
+            character(len=12) :: runits(Mnodes*M)
+            nc = 0
+            do jj = 1, M
+               if (vars%iyes(jj) == 1) then
+                  do kk = 1, vars%Nnodes(jj)
+                     nc = nc + 1
+                     rnames(nc) = vars%head(kk, jj)
+                     runits(nc) = vars%unit(jj)
+                  end do
+               end if
+            end do
+            call state%results%init(rnames(1:nc), runits(1:nc))
+         end block
+      end if
 
       ! store inital values (always — needed for dstor computation in fill_values)
       ! SS-ATM A-2.5: ssnow read from state%atmosphere (atmosphere home).
@@ -759,7 +761,8 @@ module csv_output
             end if
          end do
 
-         call state%results%add_row(time%t1900, vals(1:ncount))
+         if (state%timecontrol%results_in_memory == 1) &
+            call state%results%add_row(time%t1900, vals(1:ncount))
 
          if (time%csv_enabled == 1 .and. .not. time%headless) then
             if (.not. time%flprintshort) then
@@ -785,7 +788,7 @@ module csv_output
          call scalar_w%close()
       end if
 
-      call state%results%finalize()
+      if (state%timecontrol%results_in_memory == 1) call state%results%finalize()
 
    end subroutine csv_out_close
 
