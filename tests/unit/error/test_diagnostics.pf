@@ -1,0 +1,27 @@
+! Tests for diagnostics_mod (Phase A): level-name parsing + precedence merge.
+
+@test
+subroutine test_log_level_from_name_known_values()
+   use funit
+   use diagnostics_mod, only: log_level_from_name
+   use swap_log,        only: LOGLEVEL_DEBUG, LOGLEVEL_INFO, LOGLEVEL_WARN, &
+                              LOGLEVEL_ERROR, LOGLEVEL_NONE
+   implicit none
+   @assertEqual(LOGLEVEL_DEBUG, log_level_from_name('debug'))
+   @assertEqual(LOGLEVEL_INFO,  log_level_from_name('INFO'))
+   @assertEqual(LOGLEVEL_WARN,  log_level_from_name('Warn'))
+   @assertEqual(LOGLEVEL_WARN,  log_level_from_name('warning'))
+   @assertEqual(LOGLEVEL_ERROR, log_level_from_name('ERROR'))
+   @assertEqual(LOGLEVEL_NONE,  log_level_from_name('off'))
+   @assertEqual(LOGLEVEL_NONE,  log_level_from_name('none'))
+end subroutine
+
+@test
+subroutine test_log_level_from_name_unknown_defaults_to_info()
+   use funit
+   use diagnostics_mod, only: log_level_from_name
+   use swap_log,        only: LOGLEVEL_INFO
+   implicit none
+   @assertEqual(LOGLEVEL_INFO, log_level_from_name('gibberish'))
+   @assertEqual(LOGLEVEL_INFO, log_level_from_name(''))
+end subroutine

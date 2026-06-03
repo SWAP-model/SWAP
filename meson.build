@@ -96,6 +96,7 @@ sources = [
     'src/core/swap_log.f90',
     'src/core/dtutil.f90',
     'src/error/error.f90',
+    'src/error/diagnostics.f90',
     'src/error/fatalerr.f90',
     'src/validation/validation.f90',
     'src/config/general_config.f90',

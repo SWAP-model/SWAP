@@ -1,0 +1,77 @@
+!> Diagnostics configuration layer (Phase A).
+!!
+!! Pure resolution of logging settings from layered sources with the
+!! precedence  C-API > env > TOML > built-in default. This
+!! phase owns only the *config* (level/file/routing) + a precedence merge;
+!! the per-instance state-borne diagnostics record is a later phase.
+module diagnostics_mod
+   use swap_log, only: LOGLEVEL_DEBUG, LOGLEVEL_INFO, LOGLEVEL_WARN, &
+                       LOGLEVEL_ERROR, LOGLEVEL_NONE
+   implicit none
+   private
+
+   ! Task 1: types + level-name parsing only.
+   ! merge_overrides, resolve_diagnostics_config, read_env_overrides,
+   ! default_cli_config, default_embedded_config are added in later tasks.
+   public :: diagnostics_config_t, diag_overrides_t
+   public :: log_level_from_name
+
+   !> Fully-resolved logging settings handed to log_init.
+   type :: diagnostics_config_t
+      integer                       :: level      = LOGLEVEL_INFO
+      logical                       :: to_stdout  = .true.
+      logical                       :: to_stderr  = .true.
+      logical                       :: timestamps = .false.
+      character(len=:), allocatable :: log_file       ! unallocated => no file
+   end type diagnostics_config_t
+
+   !> A sparse set of overrides from one source. Only fields whose
+   !! has_* flag is .true. override the base config in merge_overrides.
+   !! The value fields (level/to_stdout/...) are sentinels read only when
+   !! their has_* flag is .true.
+   type :: diag_overrides_t
+      logical                       :: has_level      = .false.
+      integer                       :: level          = LOGLEVEL_INFO
+      logical                       :: has_stdout     = .false.
+      logical                       :: to_stdout      = .true.
+      logical                       :: has_stderr     = .false.
+      logical                       :: to_stderr      = .true.
+      logical                       :: has_timestamps = .false.
+      logical                       :: timestamps     = .false.
+      logical                       :: has_file       = .false.
+      character(len=:), allocatable :: log_file
+   end type diag_overrides_t
+
+contains
+
+   !> Map a level name (case-insensitive) to a LOGLEVEL_* value.
+   !! Unknown/empty => LOGLEVEL_INFO (safe default).
+   pure function log_level_from_name(name) result(level)
+      character(len=*), intent(in) :: name
+      integer :: level
+      select case (upcase(trim(adjustl(name))))
+      case ('DEBUG');           level = LOGLEVEL_DEBUG
+      case ('INFO');            level = LOGLEVEL_INFO
+      case ('WARN', 'WARNING'); level = LOGLEVEL_WARN
+      case ('ERROR');           level = LOGLEVEL_ERROR
+      case ('NONE', 'OFF');     level = LOGLEVEL_NONE
+      case default;             level = LOGLEVEL_INFO
+      end select
+   end function log_level_from_name
+
+   !> ASCII upper-case helper (pure, no locale).
+   pure function upcase(s) result(u)
+      character(len=*), intent(in) :: s
+      character(len=len(s))        :: u
+      integer :: i, c
+      do i = 1, len(s)
+         c = iachar(s(i:i))
+         if (c >= iachar('a') .and. c <= iachar('z')) then
+            u(i:i) = achar(c - 32)
+         else
+            u(i:i) = s(i:i)
+         end if
+      end do
+   end function upcase
+
+end module diagnostics_mod
