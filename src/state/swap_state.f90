@@ -20,6 +20,7 @@ module swap_state_mod
    use crop_state_mod,          only: crop_state_t
    use nutrients_state_mod,     only: nutrients_state_t
    use results_state_mod,       only: results_state_t
+   use diagnostics_mod,         only: diagnostics_t
    implicit none
    private
    public :: swap_state_t
@@ -37,6 +38,7 @@ module swap_state_mod
       type(crop_state_t)         :: crop
       type(nutrients_state_t)    :: nutrients
       type(results_state_t)      :: results
+      type(diagnostics_t)        :: diag
    end type swap_state_t
 
 end module swap_state_mod

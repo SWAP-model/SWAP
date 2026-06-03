@@ -220,6 +220,9 @@ contains
          end subroutine CropGrowth
       end interface
 
+      call state%diag%set_simtime(state%timecontrol%date, &
+                                  state%timecontrol%daynr, state%timecontrol%daycum)
+
       associate (time => state%timecontrol, &
                  crop => state%crop)
 

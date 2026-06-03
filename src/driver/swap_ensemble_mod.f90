@@ -63,6 +63,7 @@ contains
       do i = 1, ncol
          call swap_init_from_loaded_config(columns(i), configs(column_config(i)))
          if (library_fatal_raised()) then; rc = 2; return; end if
+         columns(i)%diag%instance_id = i
          columns(i)%soilwater%flcoupled_gwl = .true.
       end do
 
