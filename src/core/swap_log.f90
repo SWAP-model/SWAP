@@ -72,34 +72,42 @@ contains
     ! Initialization and Cleanup
     ! ===========================================================================
     
-    subroutine log_init(log_level, log_file, to_stdout, timestamps)
+    subroutine log_init(log_level, log_file, to_stdout, timestamps, to_stderr)
         !> Initialize the logging system
         integer, intent(in), optional :: log_level        ! Minimum level to log
         character(len=*), intent(in), optional :: log_file ! File to write logs to
         logical, intent(in), optional :: to_stdout        ! Also write to stdout
         logical, intent(in), optional :: timestamps       ! Include timestamps
-        
+        logical, intent(in), optional :: to_stderr        ! Also write warnings/errors to stderr
+
         integer :: ios
-        
+
         ! Set log level
         if (present(log_level)) then
             current_level = log_level
         else
             current_level = LOGLEVEL_INFO
         end if
-        
+
         ! Set stdout option
         if (present(to_stdout)) then
             log_to_stdout = to_stdout
         else
             log_to_stdout = .true.
         end if
-        
+
         ! Set timestamp option
         if (present(timestamps)) then
             include_timestamp = timestamps
         else
             include_timestamp = .true.
+        end if
+
+        ! Set stderr option
+        if (present(to_stderr)) then
+            log_to_stderr = to_stderr
+        else
+            log_to_stderr = .true.
         end if
         
         ! Open log file if specified

@@ -13,7 +13,7 @@ module diagnostics_mod
    public :: diagnostics_config_t, diag_overrides_t
    public :: log_level_from_name
    public :: merge_overrides, resolve_diagnostics_config
-   ! read_env_overrides, default_cli_config, default_embedded_config are added in later tasks.
+   public :: read_env_overrides, default_cli_config, default_embedded_config
 
    !> Fully-resolved logging settings handed to log_init.
    type :: diagnostics_config_t
@@ -80,6 +80,59 @@ contains
       cfg = merge_overrides(cfg,  env)
       cfg = merge_overrides(cfg,  capi)
    end function resolve_diagnostics_config
+
+   !> Built-in default config for a standalone CLI run.
+   pure function default_cli_config() result(cfg)
+      type(diagnostics_config_t) :: cfg
+      cfg%level      = LOGLEVEL_INFO
+      cfg%to_stdout  = .true.
+      cfg%to_stderr  = .true.
+      cfg%timestamps = .false.
+      cfg%log_file   = 'swap_swap.log'
+   end function default_cli_config
+
+   !> Built-in default config when embedded (BMI/C-API/XMI): never write the
+   !! host's stdout; no log file unless the caller asks (env/C-API).
+   pure function default_embedded_config() result(cfg)
+      type(diagnostics_config_t) :: cfg
+      cfg%level      = LOGLEVEL_INFO
+      cfg%to_stdout  = .false.
+      cfg%to_stderr  = .true.
+      cfg%timestamps = .false.
+      ! log_file deliberately left unallocated
+   end function default_embedded_config
+
+   !> Read logging overrides from the environment:
+   !!   SWAP_LOG_LEVEL   = DEBUG|INFO|WARN|ERROR|NONE
+   !!   SWAP_LOG_FILE    = <path>
+   !!   SWAP_LOG_STDOUT  = 0|1 (or true/false)
+   !!   SWAP_LOG_STDERR  = 0|1 (or true/false)
+   !! Impure (reads the environment).
+   subroutine read_env_overrides(ov)
+      type(diag_overrides_t), intent(out) :: ov
+      character(len=256) :: buf
+      integer :: ln, st
+      call get_environment_variable('SWAP_LOG_LEVEL', buf, length=ln, status=st)
+      if (st == 0 .and. ln > 0) then
+         ov%has_level = .true.
+         ov%level     = log_level_from_name(buf(:ln))
+      end if
+      call get_environment_variable('SWAP_LOG_FILE', buf, length=ln, status=st)
+      if (st == 0 .and. ln > 0) then
+         ov%has_file = .true.
+         ov%log_file = buf(:ln)
+      end if
+      call get_environment_variable('SWAP_LOG_STDOUT', buf, length=ln, status=st)
+      if (st == 0 .and. ln > 0) then
+         ov%has_stdout = .true.
+         ov%to_stdout  = (buf(1:1) == '1' .or. buf(1:1) == 't' .or. buf(1:1) == 'T')
+      end if
+      call get_environment_variable('SWAP_LOG_STDERR', buf, length=ln, status=st)
+      if (st == 0 .and. ln > 0) then
+         ov%has_stderr = .true.
+         ov%to_stderr  = (buf(1:1) == '1' .or. buf(1:1) == 't' .or. buf(1:1) == 'T')
+      end if
+   end subroutine read_env_overrides
 
    !> ASCII upper-case helper (pure, no locale).
    pure function upcase(s) result(u)

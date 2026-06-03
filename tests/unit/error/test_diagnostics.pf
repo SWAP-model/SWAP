@@ -95,3 +95,21 @@ subroutine test_log_destination_warn_error_go_to_stderr()
    @assertFalse(out)
    @assertFalse(err)
 end subroutine
+
+@test
+subroutine test_default_configs_cli_vs_embedded()
+   use funit
+   use diagnostics_mod, only: diagnostics_config_t, default_cli_config, &
+                              default_embedded_config
+   use swap_log,        only: LOGLEVEL_INFO
+   implicit none
+   type(diagnostics_config_t) :: cli, emb
+   cli = default_cli_config()
+   emb = default_embedded_config()
+   @assertTrue(cli%to_stdout)
+   @assertEqual(LOGLEVEL_INFO, cli%level)
+   @assertTrue(allocated(cli%log_file))
+   @assertEqual('swap_swap.log', cli%log_file)
+   @assertFalse(emb%to_stdout)
+   @assertFalse(allocated(emb%log_file))
+end subroutine
