@@ -12,9 +12,15 @@ uses the standard BMI initialize(path).
 If the two water balances match to 1e-10, the diskless path is proven
 equivalent to disk.
 
+Three modes are exercised:
+  mem  — headless, results_in_memory=1 (arrays populated)
+  disk — headless, default (arrays empty; water-balance only)
+  file — NOT headless, default (streamed CSV written to disk)
+
     python prototype/pyswap_inmemory_demo.py
 """
 import ctypes
+import csv
 import json
 import os
 import subprocess
@@ -61,6 +67,7 @@ def load_lib():
     lib.swap_view_results.argtypes = [ctypes.POINTER(ctypes.c_void_p),
                                       ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
     lib.swap_results_columns.argtypes = [ctypes.c_char_p, ctypes.c_int]
+    lib.swap_output_filepath.argtypes = [ctypes.c_char_p, ctypes.c_int]
     return lib
 
 
@@ -89,6 +96,8 @@ def worker(mode):
             lib.swap_attach_config_file(name.encode(), len(name), content, len(content))
         with open(os.path.join(CASE, "swap.toml"), "rb") as fh:
             toml = fh.read()
+        # Opt in to the in-memory results record
+        toml += b"\n[output.csv]\nresults_in_memory = 1\n"
         rc = lib.swap_initialize_from_toml_string(toml, len(toml))
     else:
         path = os.path.join(CASE, "swap.toml").encode()
@@ -97,26 +106,66 @@ def worker(mode):
         print(SENTINEL + json.dumps({"error": f"init rc={rc}"}))
         return 1
     wb = run_to_end(lib)
-    nr, nc = ctypes.c_int(0), ctypes.c_int(0)
-    lib.swap_results_shape(ctypes.byref(nr), ctypes.byref(nc))
-    ptr = ctypes.c_void_p()
-    rc = lib.swap_view_results(ctypes.byref(ptr), ctypes.byref(nr), ctypes.byref(nc))
-    cols_buf = ctypes.create_string_buffer(8192)
-    lib.swap_results_columns(cols_buf, len(cols_buf))
-    names = [s.decode() for s in cols_buf.raw.split(b"\x00") if s][: nc.value]
-    first_row, last_row = [], []
-    if rc == 0 and nr.value > 0 and nc.value > 0:
-        flat = (ctypes.c_double * (nr.value * nc.value)).from_address(ptr.value)
-        # Fortran column-major: element (i,j) at j*nrows + i
-        first_row = [flat[j * nr.value + 0] for j in range(nc.value)]
-        last_row = [flat[j * nr.value + (nr.value - 1)] for j in range(nc.value)]
-    wb["_results_nrows"] = nr.value
-    wb["_results_ncols"] = nc.value
-    wb["_results_cols"] = names
-    wb["_results_first_row"] = first_row
-    wb["_results_last_row"] = last_row
+
+    # Pull the in-memory results record — only populated in mem mode
+    if mode == "mem":
+        nr, nc = ctypes.c_int(0), ctypes.c_int(0)
+        lib.swap_results_shape(ctypes.byref(nr), ctypes.byref(nc))
+        ptr = ctypes.c_void_p()
+        rc2 = lib.swap_view_results(ctypes.byref(ptr), ctypes.byref(nr), ctypes.byref(nc))
+        cols_buf = ctypes.create_string_buffer(8192)
+        lib.swap_results_columns(cols_buf, len(cols_buf))
+        names = [s.decode() for s in cols_buf.raw.split(b"\x00") if s][: nc.value]
+        first_row, last_row = [], []
+        if rc2 == 0 and nr.value > 0 and nc.value > 0:
+            flat = (ctypes.c_double * (nr.value * nc.value)).from_address(ptr.value)
+            # Fortran column-major: element (i,j) at j*nrows + i
+            first_row = [flat[j * nr.value + 0] for j in range(nc.value)]
+            last_row = [flat[j * nr.value + (nr.value - 1)] for j in range(nc.value)]
+        wb["_results_nrows"] = nr.value
+        wb["_results_ncols"] = nc.value
+        wb["_results_cols"] = names
+        wb["_results_first_row"] = first_row
+        wb["_results_last_row"] = last_row
+    else:
+        # disk mode: record is empty by design (not opted in)
+        wb["_results_nrows"] = 0
+        wb["_results_ncols"] = 0
+        wb["_results_cols"] = []
+        wb["_results_first_row"] = []
+        wb["_results_last_row"] = []
+
     print(SENTINEL + json.dumps(wb))
     return 0
+
+
+def file_worker(lib):
+    lib.swap_set_headless(0)
+    lib.swap_clear_config_files()
+    for name in COMPANIONS:
+        with open(os.path.join(CASE, name), "rb") as fh:
+            content = fh.read()
+        lib.swap_attach_config_file(name.encode(), len(name), content, len(content))
+    with open(os.path.join(CASE, "swap.toml"), "rb") as fh:
+        toml = fh.read()
+    rc = lib.swap_initialize_from_toml_string(toml, len(toml))
+    if rc != 0:
+        return {"error": f"file init rc={rc}"}
+    run_to_end(lib)
+    pbuf = ctypes.create_string_buffer(4096)
+    lib.swap_output_filepath(pbuf, len(pbuf))
+    path = pbuf.value.decode()
+    if not path or not os.path.exists(path):
+        return {"error": f"output file not found: {path!r}"}
+    with open(path, newline="") as fh:
+        rows = list(csv.reader(fh))
+    # Skip comment lines (starting with '*') and the column-header line
+    data_rows = [r for r in rows if r and not r[0].startswith("*") and not r[0].upper().startswith("DATETIME")]
+    return {
+        "file": os.path.basename(path),
+        "datarows": len(data_rows),
+        "header0": rows[0][0] if rows else "",
+    }
 
 
 def run_mode(mode):
@@ -135,7 +184,13 @@ def run_mode(mode):
 
 def main():
     if len(sys.argv) == 3 and sys.argv[1] == "worker":
-        sys.exit(worker(sys.argv[2]))
+        mode = sys.argv[2]
+        if mode in ("mem", "disk"):
+            sys.exit(worker(mode))
+        elif mode == "file":
+            lib = load_lib()
+            print(SENTINEL + json.dumps(file_worker(lib)))
+            sys.exit(0)
 
     mem = run_mode("mem")
     disk = run_mode("disk")
@@ -158,21 +213,22 @@ def main():
         print(f"{k:>16} {mem[k]:18.8f} {disk[k]:18.8f} {d:12.2e}")
     print("-" * 68)
 
-    print("\nResults record (in-memory):")
+    print("\nResults record (memory mode):")
     print(f"  shape   = {mem['_results_nrows']} rows x {mem['_results_ncols']} cols")
     print(f"  columns = {mem['_results_cols']}")
-    print(f"  first row (mem) = {[round(x, 6) for x in mem['_results_first_row']]}")
-    if mem.get("_results_first_row") and disk.get("_results_first_row") \
-       and len(mem["_results_first_row"]) == len(disk["_results_first_row"]):
-        rec_ok = all(abs(a - b) <= 1e-10
-                     for a, b in zip(mem["_results_first_row"], disk["_results_first_row"])) \
-                 and all(abs(a - b) <= 1e-10
-                         for a, b in zip(mem["_results_last_row"], disk["_results_last_row"]))
-        print("  record mem==disk:", "PASS" if rec_ok else "FAIL")
-        ok = ok and rec_ok
+    rec_ok = mem["_results_nrows"] > 0 and mem["_results_ncols"] > 0
+    print("  record populated:", "PASS" if rec_ok else "FAIL")
+    ok = ok and rec_ok
+
+    fr = run_mode("file")
+    if "error" in fr:
+        print("file mode failed:", fr["error"]); ok = False
     else:
-        print("  record mem==disk: SKIP (no rows / shape mismatch)")
-        ok = False
+        print("\nStreaming CSV (huge-run path):")
+        print(f"  wrote {fr['datarows']} data rows to {fr['file']}")
+        same = fr["datarows"] == mem["_results_nrows"]
+        print("  file rows == record rows:", "PASS" if same else "FAIL")
+        ok = ok and same
 
     print("RESULT:", "PASS — diskless in-memory run is bit-identical to disk"
           if ok else "FAIL — divergence")
