@@ -10,6 +10,10 @@ module swap_ensemble_mod
    use load_swap_config_mod, only: load_swap_config
    use error_mod,       only: error_collection_t, &
                               set_library_mode, library_fatal_raised, clear_library_fatal
+   use swap_log,        only: log_init
+   use diagnostics_mod, only: diagnostics_config_t, diag_overrides_t, &
+                              default_embedded_config, read_env_overrides, &
+                              resolve_diagnostics_config
    implicit none
    private
 
@@ -38,6 +42,20 @@ contains
       type(error_collection_t) :: errors
       integer :: i
       rc = 0
+      block
+         type(diagnostics_config_t) :: dcfg
+         type(diag_overrides_t)     :: none_ov, env_ov
+         call read_env_overrides(env_ov)
+         dcfg = resolve_diagnostics_config(default_embedded_config(), none_ov, env_ov, none_ov)
+         if (allocated(dcfg%log_file)) then
+            call log_init(log_level=dcfg%level, log_file=dcfg%log_file, &
+                          to_stdout=dcfg%to_stdout, to_stderr=dcfg%to_stderr, &
+                          timestamps=dcfg%timestamps)
+         else
+            call log_init(log_level=dcfg%level, to_stdout=dcfg%to_stdout, &
+                          to_stderr=dcfg%to_stderr, timestamps=dcfg%timestamps)
+         end if
+      end block
       call set_library_mode(.true.)
       call clear_library_fatal()
       ncol = ncol_in

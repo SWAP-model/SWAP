@@ -15,6 +15,10 @@ module swap_bmi_mod
    ! same (state, config) pair.
    use swap_capi_mod,   only: bmi_state => capi_state, bmi_config => capi_config
    ! [GR-BH Task 24] numnod/dz removed — now read via bmi_state%mesh%numnod / bmi_state%mesh%dz
+   use swap_log,        only: log_init
+   use diagnostics_mod, only: diagnostics_config_t, diag_overrides_t, &
+                              default_embedded_config, read_env_overrides, &
+                              resolve_diagnostics_config
    implicit none
    private
 
@@ -29,6 +33,20 @@ contains
       integer(c_int),  value, intent(in)    :: n
       integer(c_int)                        :: rc
       character(len=256) :: f_config_file
+      block
+         type(diagnostics_config_t) :: dcfg
+         type(diag_overrides_t)     :: none_ov, env_ov
+         call read_env_overrides(env_ov)
+         dcfg = resolve_diagnostics_config(default_embedded_config(), none_ov, env_ov, none_ov)
+         if (allocated(dcfg%log_file)) then
+            call log_init(log_level=dcfg%level, log_file=dcfg%log_file, &
+                          to_stdout=dcfg%to_stdout, to_stderr=dcfg%to_stderr, &
+                          timestamps=dcfg%timestamps)
+         else
+            call log_init(log_level=dcfg%level, to_stdout=dcfg%to_stdout, &
+                          to_stderr=dcfg%to_stderr, timestamps=dcfg%timestamps)
+         end if
+      end block
       call c_to_f_string(config_file, f_config_file)
       call swap_init(trim(f_config_file), bmi_state, bmi_config)
       rc = 0
