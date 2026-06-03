@@ -97,6 +97,38 @@ subroutine test_log_destination_warn_error_go_to_stderr()
 end subroutine
 
 @test
+subroutine test_logging_overrides_from_text_with_table()
+   use funit
+   use diagnostics_mod, only: diag_overrides_t, read_logging_overrides_from_text
+   use swap_log,        only: LOGLEVEL_DEBUG
+   implicit none
+   type(diag_overrides_t) :: ov
+   character(len=:), allocatable :: text
+   text = '[logging]'//new_line('a')// &
+          'level = "debug"'//new_line('a')// &
+          'to_stdout = true'//new_line('a')
+   call read_logging_overrides_from_text(text, ov)
+   @assertTrue(ov%has_level)
+   @assertEqual(LOGLEVEL_DEBUG, ov%level)
+   @assertTrue(ov%has_stdout)
+   @assertTrue(ov%to_stdout)
+end subroutine
+
+@test
+subroutine test_logging_overrides_from_text_without_table()
+   use funit
+   use diagnostics_mod, only: diag_overrides_t, read_logging_overrides_from_text
+   implicit none
+   type(diag_overrides_t) :: ov
+   character(len=:), allocatable :: text
+   text = '[output]'//new_line('a')// &
+          'foo = 1'//new_line('a')
+   call read_logging_overrides_from_text(text, ov)
+   @assertFalse(ov%has_level)
+   @assertFalse(ov%has_stdout)
+end subroutine
+
+@test
 subroutine test_default_configs_cli_vs_embedded()
    use funit
    use diagnostics_mod, only: diagnostics_config_t, default_cli_config, &

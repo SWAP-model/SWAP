@@ -16,7 +16,8 @@ module swap_capi_mod
    use meteo_buffer_mod, only: attach_external_meteo_buffer
    use config_source_mod, only: config_source_t, config_source_memory
    use swap_log,        only: log_set_level, log_set_stdout
-   use diagnostics_mod, only: default_embedded_config, init_logging_from_env
+   use diagnostics_mod, only: diag_overrides_t, default_embedded_config, &
+                              read_logging_overrides_from_text, init_logging
    implicit none
    private
 
@@ -98,14 +99,16 @@ contains
       integer(c_int)                        :: ierr
       character(len=:), allocatable :: f_text
       type(error_collection_t) :: errors
+      type(diag_overrides_t)   :: toml_ov
       integer :: i
-
-      call init_logging_from_env(default_embedded_config())
 
       allocate(character(len=n) :: f_text)
       do i = 1, n
          f_text(i:i) = buf(i)
       end do
+
+      call read_logging_overrides_from_text(f_text, toml_ov)
+      call init_logging(default_embedded_config(), toml_ov)
 
       if (capi_companions%in_memory) then
          call load_swap_config_from_string(f_text, capi_config, errors, source=capi_companions)

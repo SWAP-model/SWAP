@@ -14,7 +14,8 @@ module diagnostics_mod
    public :: log_level_from_name
    public :: merge_overrides, resolve_diagnostics_config
    public :: read_env_overrides, default_cli_config, default_embedded_config
-   public :: init_logging_from_env
+   public :: init_logging_from_env, init_logging
+   public :: read_logging_overrides_from_file, read_logging_overrides_from_text
 
    !> Fully-resolved logging settings handed to log_init.
    type :: diagnostics_config_t
@@ -141,10 +142,27 @@ contains
    !! afterwards via their own setters.
    subroutine init_logging_from_env(base)
       type(diagnostics_config_t), intent(in) :: base
+      type(diag_overrides_t)     :: none_ov
+      call init_logging(base, none_ov)
+   end subroutine init_logging_from_env
+
+   !> Resolve base < toml < env and initialise the logger (one resolve, early).
+   !! Entry points read their [logging] overrides and pass them here; the env
+   !! still wins over TOML, and any higher-precedence C-API override is applied
+   !! by its own setter afterwards.
+   subroutine init_logging(base, toml_ov)
+      type(diagnostics_config_t), intent(in) :: base
+      type(diag_overrides_t),     intent(in) :: toml_ov
       type(diagnostics_config_t) :: dcfg
       type(diag_overrides_t)     :: none_ov, env_ov
       call read_env_overrides(env_ov)
-      dcfg = resolve_diagnostics_config(base, none_ov, env_ov, none_ov)
+      dcfg = resolve_diagnostics_config(base, toml_ov, env_ov, none_ov)
+      call apply_logging_config(dcfg)
+   end subroutine init_logging
+
+   !> Hand a fully-resolved diagnostics config to the logger backend.
+   subroutine apply_logging_config(dcfg)
+      type(diagnostics_config_t), intent(in) :: dcfg
       if (allocated(dcfg%log_file)) then
          call log_init(log_level=dcfg%level, log_file=dcfg%log_file, &
                        to_stdout=dcfg%to_stdout, to_stderr=dcfg%to_stderr, &
@@ -153,7 +171,79 @@ contains
          call log_init(log_level=dcfg%level, to_stdout=dcfg%to_stdout, &
                        to_stderr=dcfg%to_stderr, timestamps=dcfg%timestamps)
       end if
-   end subroutine init_logging_from_env
+   end subroutine apply_logging_config
+
+   !> Extract [logging] overrides from a parsed TOML document.
+   !! Recognised keys: level (string), file (string), to_stdout, to_stderr,
+   !! timestamps (booleans). Absent [logging] table => empty overrides.
+   subroutine extract_logging_overrides(doc, ov)
+      use tomlf, only: toml_table, get_value
+      type(toml_table), pointer, intent(in)  :: doc
+      type(diag_overrides_t),    intent(out) :: ov
+      type(toml_table), pointer     :: sec
+      character(len=:), allocatable :: sval
+      logical :: bval
+      integer :: stat
+      call get_value(doc, 'logging', sec, requested=.false.)
+      if (.not. associated(sec)) return
+      call get_value(sec, 'level', sval, stat=stat)
+      if (stat == 0 .and. allocated(sval)) then
+         if (len_trim(sval) > 0) then
+            ov%has_level = .true.
+            ov%level     = log_level_from_name(sval)
+         end if
+      end if
+      call get_value(sec, 'file', sval, stat=stat)
+      if (stat == 0 .and. allocated(sval)) then
+         if (len_trim(sval) > 0) then
+            ov%has_file  = .true.
+            ov%log_file  = sval
+         end if
+      end if
+      call get_value(sec, 'to_stdout', bval, stat=stat)
+      if (stat == 0) then
+         ov%has_stdout = .true.
+         ov%to_stdout  = bval
+      end if
+      call get_value(sec, 'to_stderr', bval, stat=stat)
+      if (stat == 0) then
+         ov%has_stderr = .true.
+         ov%to_stderr  = bval
+      end if
+      call get_value(sec, 'timestamps', bval, stat=stat)
+      if (stat == 0) then
+         ov%has_timestamps = .true.
+         ov%timestamps     = bval
+      end if
+   end subroutine extract_logging_overrides
+
+   !> Parse [logging] overrides from a TOML file path (missing/malformed => empty).
+   subroutine read_logging_overrides_from_file(path, ov)
+      use tomlf, only: toml_table, toml_error, toml_load
+      character(len=*),       intent(in)  :: path
+      type(diag_overrides_t), intent(out) :: ov
+      type(toml_table), allocatable, target :: doc
+      type(toml_table), pointer             :: doc_ptr
+      type(toml_error), allocatable         :: terr
+      call toml_load(doc, path, error=terr)
+      if (allocated(terr)) return
+      doc_ptr => doc
+      call extract_logging_overrides(doc_ptr, ov)
+   end subroutine read_logging_overrides_from_file
+
+   !> Parse [logging] overrides from a TOML text buffer (in-memory C-API path).
+   subroutine read_logging_overrides_from_text(text, ov)
+      use tomlf, only: toml_table, toml_error, toml_loads
+      character(len=*),       intent(in)  :: text
+      type(diag_overrides_t), intent(out) :: ov
+      type(toml_table), allocatable, target :: doc
+      type(toml_table), pointer             :: doc_ptr
+      type(toml_error), allocatable         :: terr
+      call toml_loads(doc, text, error=terr)
+      if (allocated(terr)) return
+      doc_ptr => doc
+      call extract_logging_overrides(doc_ptr, ov)
+   end subroutine read_logging_overrides_from_text
 
    !> ASCII upper-case helper (pure, no locale).
    pure function upcase(s) result(u)

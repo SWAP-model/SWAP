@@ -8,14 +8,17 @@ program swap_main
    use swap_state_mod,  only: swap_state_t
    use swap_config_mod, only: swap_config_t
    use swap_log,         only: log_close
-   use diagnostics_mod,  only: default_cli_config, init_logging_from_env
+   use diagnostics_mod,  only: diag_overrides_t, default_cli_config, &
+                               read_logging_overrides_from_file, init_logging
    implicit none
 
    type(swap_state_t)           :: state
    type(swap_config_t), target  :: config  ! target retained for callers that take a pointer into config (crop_config_global retired)
    logical                      :: fileopen
+   type(diag_overrides_t)       :: toml_ov
 
-   call init_logging_from_env(default_cli_config())
+   call read_logging_overrides_from_file('swap.toml', toml_ov)
+   call init_logging(default_cli_config(), toml_ov)
 
    call swap_init('swap.toml', state, config)
    do while (.not. state%timecontrol%flRunEnd)

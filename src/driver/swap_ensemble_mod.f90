@@ -10,7 +10,8 @@ module swap_ensemble_mod
    use load_swap_config_mod, only: load_swap_config
    use error_mod,       only: error_collection_t, &
                               set_library_mode, library_fatal_raised, clear_library_fatal
-   use diagnostics_mod, only: default_embedded_config, init_logging_from_env
+   use diagnostics_mod, only: diag_overrides_t, default_embedded_config, &
+                              read_logging_overrides_from_file, init_logging
    implicit none
    private
 
@@ -37,9 +38,11 @@ contains
       character(len=*), intent(in) :: config_file
       integer,          intent(in) :: ncol_in
       type(error_collection_t) :: errors
+      type(diag_overrides_t)   :: toml_ov
       integer :: i
       rc = 0
-      call init_logging_from_env(default_embedded_config())
+      call read_logging_overrides_from_file(config_file, toml_ov)
+      call init_logging(default_embedded_config(), toml_ov)
       call set_library_mode(.true.)
       call clear_library_fatal()
       ncol = ncol_in
