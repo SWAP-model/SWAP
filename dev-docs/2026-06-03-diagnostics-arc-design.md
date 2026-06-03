@@ -136,7 +136,13 @@ in the same accumulation.
 | ERROR | no | **yes** | yes |
 | WARN  | no | **yes** | yes |
 | INFO  | CLI only (`to_stdout`) | no | yes |
-| DEBUG | no | no | yes (only when `level<=DEBUG`) |
+| DEBUG | CLI only (`to_stdout`) | no | yes |
+
+(DEBUG follows the same console rule as INFO — stdout only when `to_stdout` is on —
+but is additionally gated by the level threshold, so it appears only when the user has
+opted into `level<=DEBUG`. Phase A implements exactly this in `swap_log%log_destination`:
+`level < WARN` → stdout=`to_stdout`, stderr=`.false.`; `level >= WARN` → stdout=`.false.`,
+stderr=`to_stderr`.)
 
 - **CLI** default: `to_stdout=.true.` for INFO + a one-line start/end banner; WARN+
   ERROR to stderr; full record to `<project>.log`.
@@ -211,7 +217,9 @@ diagnostics-on-state lives in `state/`, the sink stays a `core/` leaf.
 > their own plan when their turn comes, so we stay in the loop and can re-scope as the
 > physics-path work (D) is learned.
 
-- **A — Foundation & wiring.** Add a `diagnostics_mod` config layer
+- **A — Foundation & wiring. ✅ SHIPPED 2026-06-03** (branch `logging-review`,
+  commits `11652fe`..`2583fe6`; 825 pFUnit OK, 4/4 byte-identical, test-xmi stdout
+  clean). Added a `diagnostics_mod` config layer
   (`diagnostics_config_t` + `diag_overrides_t` + `resolve_diagnostics_config` with the
   precedence merge) and the **env + C-API** config surface. Add stderr routing to
   `swap_log` (WARN/ERROR → `error_unit`). Initialise logging in **all** entry points
