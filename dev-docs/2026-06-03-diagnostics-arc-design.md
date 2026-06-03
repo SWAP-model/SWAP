@@ -211,12 +211,17 @@ diagnostics-on-state lives in `state/`, the sink stays a `core/` leaf.
 > their own plan when their turn comes, so we stay in the loop and can re-scope as the
 > physics-path work (D) is learned.
 
-- **A — Foundation & wiring.** Introduce `diagnostics_t` (initially a thin wrapper
-  forwarding to today's global sink). Add `resolve_diagnostics_config` + the config
-  surface (env + `[logging]` TOML + C-API setter). Initialise logging in **all** entry
-  points; default `to_stdout` off when embedded; split WARN+ERROR to stderr. No kernel
-  changes. *(Review items 1, 2, routing part of 3.)*
-- **B — Diagnostic cleanup & record content.** Route the stray writes/`stop`/magic-unit
+- **A — Foundation & wiring.** Add a `diagnostics_mod` config layer
+  (`diagnostics_config_t` + `diag_overrides_t` + `resolve_diagnostics_config` with the
+  precedence merge) and the **env + C-API** config surface. Add stderr routing to
+  `swap_log` (WARN/ERROR → `error_unit`). Initialise logging in **all** entry points
+  (CLI, BMI, C-API, ensemble); default `to_stdout` off when embedded. No kernel
+  changes, no `state` schema change. *(Review items 1, 2, routing part of 3.)*
+  *(Sequencing note 2026-06-03: the `[logging]` TOML block moved to the start of Phase
+  B — it needs new config-schema surface and is lower-value than env/C-API, which
+  already cover ops and pyswap.)*
+- **B — Diagnostic cleanup & record content.** Add the `[logging]` TOML block (level,
+  file, to_stdout, timestamps) feeding the resolver. Route the stray writes/`stop`/magic-unit
   diagnostics through `diag`; delete the `TEMPORARY DELETE` debug; add sim-time +
   instance-id stamping; normalise context strings; drop unused imports.
   *(Items 3, 4.)*
