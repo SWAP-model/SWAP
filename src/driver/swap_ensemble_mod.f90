@@ -112,6 +112,7 @@ contains
             dt_days = columns(i)%timecontrol%dt
             call swap_run_step(columns(i), configs(column_config(i)))
             if (library_fatal_raised()) then; rc = 1; return; end if
+            if (columns(i)%diag%aborted()) then; rc = 1; exit; end if
             qbot_cm_day = qbot_cm_day + columns(i)%soilwater%qbot * dt_days
             if (columns(i)%timecontrol%flDayEnd) exit
             if (columns(i)%timecontrol%flRunEnd) exit

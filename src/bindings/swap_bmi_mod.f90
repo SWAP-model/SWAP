@@ -42,6 +42,10 @@ contains
    function bmi_update() result(rc) bind(C, name='update')
       integer(c_int) :: rc
       call swap_run_step(bmi_state, bmi_config)
+      if (bmi_state%diag%aborted()) then
+         rc = 1
+         return
+      end if
       rc = 0
    end function bmi_update
 

@@ -10,6 +10,7 @@ program swap_main
    use swap_log,         only: log_close
    use diagnostics_mod,  only: diag_overrides_t, default_cli_config, &
                                read_logging_overrides_from_file, init_logging
+   use iso_fortran_env,  only: error_unit
    implicit none
 
    type(swap_state_t)           :: state
@@ -23,6 +24,10 @@ program swap_main
    call swap_init('swap.toml', state, config)
    do while (.not. state%timecontrol%flRunEnd)
       call swap_run_step(state, config)
+      if (state%diag%aborted()) then
+         write(error_unit,'(A)') state%diag%errors%summary()
+         error stop 'fatal error during simulation'
+      end if
    end do
    call swap_close(state, config)
 

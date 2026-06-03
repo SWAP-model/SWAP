@@ -205,8 +205,9 @@ contains
       use irrigation_mod,     only: irrigation_step, ssdi_irrigation_step
       use management_soil_mod, only: SoilManagement
       use drainage_mod,       only: drainage
+      use error_mod,          only: error_collection_t, set_active_error_sink
 
-      type(swap_state_t),  intent(inout) :: state
+      type(swap_state_t),  intent(inout), target :: state
       type(swap_config_t), intent(in)    :: config
       logical :: request_smaller_dt
       logical, external :: dtleap
@@ -222,6 +223,14 @@ contains
 
       call state%diag%set_simtime(state%timecontrol%date, &
                                   state%timecontrol%daynr, state%timecontrol%daycum)
+
+      block
+         type(error_collection_t), pointer :: diag_errors
+         logical,                  pointer :: diag_fatal
+         diag_errors => state%diag%errors
+         diag_fatal  => state%diag%fatal_raised
+         call set_active_error_sink(diag_errors, diag_fatal)
+      end block
 
       associate (time => state%timecontrol, &
                  crop => state%crop)
@@ -282,6 +291,8 @@ contains
 
          ! SoilWater rate/state variables.
          call soilwater_update(state)
+
+         if (state%diag%aborted()) return
 
          if (time%flTemperature) call temperature_step(state, config)
          if (time%flSolute)      call solute_step(state)
