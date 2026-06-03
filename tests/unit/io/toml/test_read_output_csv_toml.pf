@@ -66,3 +66,27 @@ subroutine test_read_output_csv_defaults_when_csv_absent()
    @assertEqual(1, c%enabled)
    @assertEqual(0, c%enabled_tz)
 end subroutine
+
+@test
+subroutine test_read_output_csv_results_in_memory()
+   use funit
+   use tomlf,                    only: toml_table, toml_loads
+   use output_csv_config_mod,    only: output_csv_config_t
+   use read_output_csv_toml_mod, only: read_output_csv_toml
+   use error_mod,                only: error_collection_t
+
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(output_csv_config_t)             :: cfg
+   type(error_collection_t)              :: errors
+   character(len=*), parameter :: nl = new_line('a')
+   character(len=*), parameter :: text = &
+      '[output.csv]' // nl // 'enabled = 1' // nl // 'results_in_memory = 1' // nl
+
+   call toml_loads(doc, text)
+   doc_ptr => doc
+   call read_output_csv_toml(doc_ptr, cfg, errors)
+
+@assertFalse(errors%has_fatals())
+@assertEqual(1, cfg%results_in_memory)
+end subroutine test_read_output_csv_results_in_memory

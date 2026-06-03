@@ -13,6 +13,10 @@ module output_csv_config_mod
       integer :: enabled     = 1
       !> Enable depth-profile CSV output (legacy SWCSV_TZ). Default 0 (off).
       integer :: enabled_tz  = 0
+      !! Build the in-memory results record (state%results) for Python array
+      !! access. Off (0) => no record (standalone / huge runs stream to the CSV
+      !! file instead, keeping memory bounded). On (1) => record is populated.
+      integer :: results_in_memory = 0
       !> Comma-separated column list for daily CSV (legacy INLIST_CSV).
       !! Default: water-balance summary columns matching hupselbrook baseline.
       character(len=:), allocatable :: inlist
