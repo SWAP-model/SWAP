@@ -221,8 +221,9 @@ module timecontrol_state_mod
       character(len=256) :: pathwork       = ''  !! snapshot of config%general%pathwork
       character(len=64)  :: outfil         = ''  !! snapshot of config%general%outfil
       character(len=64)  :: project        = ''  !! snapshot of config%general%project
-      integer :: csv_enabled    = 0  !! snapshot of config%output_csv%enabled
-      integer :: csv_enabled_tz = 0  !! snapshot of config%output_csv%enabled_tz
+      integer :: csv_enabled         = 0  !! snapshot of config%output_csv%enabled
+      integer :: csv_enabled_tz      = 0  !! snapshot of config%output_csv%enabled_tz
+      integer :: results_in_memory   = 0  !! snapshot of config%output_csv%results_in_memory
       character(len=256) :: csv_inlist     = ''  !! snapshot of config%output_csv%inlist
       character(len=256) :: csv_inlist_tz  = ''  !! snapshot of config%output_csv%inlist_tz
       real(real64) :: csv_tz_z1_z2(2) = 0.0_real64  !! snapshot of config%output_csv%tz_z1_z2
@@ -310,8 +311,9 @@ contains
       if (allocated(config_general%pathwork))     self%pathwork      = config_general%pathwork
       if (allocated(config_general%outfil))       self%outfil        = config_general%outfil
       if (allocated(config_general%project))      self%project       = config_general%project
-      self%csv_enabled    = config_output_csv%enabled
-      self%csv_enabled_tz = config_output_csv%enabled_tz
+      self%csv_enabled          = config_output_csv%enabled
+      self%csv_enabled_tz       = config_output_csv%enabled_tz
+      self%results_in_memory    = config_output_csv%results_in_memory
       if (allocated(config_output_csv%inlist))    self%csv_inlist    = config_output_csv%inlist
       if (allocated(config_output_csv%inlist_tz)) self%csv_inlist_tz = config_output_csv%inlist_tz
       self%csv_tz_z1_z2   = config_output_csv%tz_z1_z2
