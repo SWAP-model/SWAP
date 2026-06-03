@@ -72,7 +72,7 @@ contains
       !     only as a parity-test fixture (ADR 0007); not called at runtime.
       !
       use tillage_mod,                only: tillage_seed
-      use swap_log,                   only: log_info
+      use swap_log,                   only: to_str
       use runoff_mod,                 only: cn_init
       use temperature_mod,            only: temperature_seed
       use solute_mod,                 only: solute_seed
@@ -182,7 +182,11 @@ contains
 
       end associate
 
-      call log_info('swap', 'Initialization complete for project: ' // trim(config%general%project))
+      call state%diag%info('swap', 'initialised project ' // trim(config%general%project))
+      call state%diag%info('swap', 'grid: ' // trim(to_str(state%mesh%numnod)) // ' compartments, ' // &
+                                              trim(to_str(state%mesh%numlay)) // ' soil layers')
+      call state%diag%info('swap', 'bottom boundary: swbotb=' // trim(to_str(config%bottom_boundary%swbotb)) // &
+                                   ', solute: swsolu=' // trim(to_str(config%solute%swsolu)))
 
    end subroutine swap_init_body
 
@@ -337,7 +341,6 @@ contains
    end subroutine swap_run_step
 
    subroutine swap_close(state, config)
-      use swap_log,             only: log_info
       use management_soil_mod,  only: SoilManagement
       use timecontrol_mod,      only: itertime_close
       use csv_output,           only: csv_output_finalize
@@ -357,7 +360,7 @@ contains
       ! Okay-file for external runners.
       call WriteSwapOk(config%general%project)
 
-      call log_info('swap', 'Simulation complete for project: ' // trim(config%general%project))
+      call state%diag%info('swap', 'simulation complete for project ' // trim(config%general%project))
 
    end subroutine swap_close
 
