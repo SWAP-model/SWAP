@@ -341,8 +341,14 @@ contains
       use management_soil_mod,  only: SoilManagement
       use timecontrol_mod,      only: itertime_close
       use csv_output,           only: csv_output_finalize
+      use error_mod,            only: clear_active_error_sink
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config  ! unused: kept for parallel signature with swap_init/swap_run_step
+
+      ! Drop the per-instance fatal sink so the module pointer can't dangle to
+      ! this instance after it is closed/deallocated (it is re-registered at the
+      ! top of each swap_run_step, so this is purely defensive).
+      call clear_active_error_sink()
 
       call itertime_close(state)
       call csv_output_finalize(state)
