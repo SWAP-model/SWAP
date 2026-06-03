@@ -228,6 +228,31 @@ diagnostics-on-state lives in `state/`, the sink stays a `core/` leaf.
   *(Sequencing note 2026-06-03: the `[logging]` TOML block moved to the start of Phase
   B — it needs new config-schema surface and is lower-value than env/C-API, which
   already cover ops and pyswap.)*
+> **Phases B–E SHIPPED 2026-06-04** on branch `diagnostics-bcde` (off `development`),
+> byte-identical throughout (check-full 11/0/7). Per-phase plans:
+> `dev-docs/2026-06-04-diagnostics-phase-{b,c,d}-plan.md`.
+> - **B**: `[logging]` TOML block in the precedence chain (all 4 entry points); stray
+>   solver/guard diagnostics (oxygenstress, interception `msw1eic` stop, the
+>   TEMPORARY-DELETE 777/888 debug) routed through the logger / error system; dead
+>   `swap_log` import dropped.
+> - **C**: per-instance `diagnostics_t` on `state%diag` (errors collection + fatal flag +
+>   sim-time + instance-id, leveled emits with stamping); ensemble columns get distinct
+>   ids; sim-time stamped each step. (Scope: log *sink* stays process-global, disambiguated
+>   by instance-id stamping; full per-instance sink isolation deferred as optional.)
+> - **D**: per-instance graceful fatal termination via an **active-error-sink** registered
+>   by the step driver — while stepping, `fatalerr_collected` records into the stepping
+>   instance's `state%diag` and returns (no `error stop`); a boundary check + entry-point
+>   translation (CLI summary+exit / BMI rc / ensemble per-column `exit`, siblings continue)
+>   handle it. Delivers the goal **without** the risky 109-site per-kernel rewrite.
+>   **Documented residual:** the ideal end-state — migrating each kernel `fatalerr` to
+>   `state%diag%fatal` + early-return and retiring `global_errors`/`fatalerr_collected`/
+>   `FatalERR`/`library_mode` — is deferred as a large, delicate physics-path sweep (its
+>   error paths aren't covered by the regression oracle). A second hardening follow-up:
+>   an earlier `aborted()` check inside the substep loop to tighten the genuine-abort
+>   garbage window.
+> - **E**: per-run provenance INFO summary at init (project, grid, key switches) + lifecycle
+>   lines routed through `state%diag` (per-instance attributable).
+
 - **B — Diagnostic cleanup & record content.** Add the `[logging]` TOML block (level,
   file, to_stdout, timestamps) feeding the resolver. Route the stray writes/`stop`/magic-unit
   diagnostics through `diag`; delete the `TEMPORARY DELETE` debug; add sim-time +
