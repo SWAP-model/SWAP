@@ -145,3 +145,27 @@ subroutine test_default_configs_cli_vs_embedded()
    @assertFalse(emb%to_stdout)
    @assertFalse(allocated(emb%log_file))
 end subroutine
+
+@test
+subroutine test_diag_fatal_records_and_aborts()
+   use funit
+   use diagnostics_mod, only: diagnostics_t
+   implicit none
+   type(diagnostics_t) :: d
+   @assertFalse(d%aborted())
+   call d%fatal('mykernel', 'bad thing happened')
+   @assertTrue(d%aborted())
+   @assertEqual(1, d%errors%count())
+end subroutine
+
+@test
+subroutine test_diag_warn_does_not_abort()
+   use funit
+   use diagnostics_mod, only: diagnostics_t
+   implicit none
+   type(diagnostics_t) :: d
+   call d%set_simtime('2002-01-01', 1, 1)
+   call d%warn('ctx', 'just a warning')
+   @assertFalse(d%aborted())
+   @assertEqual(0, d%errors%count())
+end subroutine

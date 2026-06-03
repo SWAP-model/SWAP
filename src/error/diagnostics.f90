@@ -6,16 +6,42 @@
 !! the per-instance state-borne diagnostics record is a later phase.
 module diagnostics_mod
    use swap_log, only: LOGLEVEL_DEBUG, LOGLEVEL_INFO, LOGLEVEL_WARN, &
-                       LOGLEVEL_ERROR, LOGLEVEL_NONE, log_init
+                       LOGLEVEL_ERROR, LOGLEVEL_NONE, log_init, &
+                       log_debug, log_info, log_warn, log_error
+   use error_mod, only: error_collection_t, ERR_LEGACY_FATAL
    implicit none
    private
 
    public :: diagnostics_config_t, diag_overrides_t
+   public :: diagnostics_t
    public :: log_level_from_name
    public :: merge_overrides, resolve_diagnostics_config
    public :: read_env_overrides, default_cli_config, default_embedded_config
    public :: init_logging_from_env, init_logging
    public :: read_logging_overrides_from_file, read_logging_overrides_from_text
+
+   !> Per-instance diagnostics carried on swap_state_t (state%diag). Owns the
+   !! instance's error accumulation + fatal flag + sim-time context; leveled
+   !! emits route through the process-global swap_log sink, stamped with
+   !! instance-id and sim-date so interleaved multi-instance logs are
+   !! attributable.
+   type, public :: diagnostics_t
+      integer                  :: instance_id  = 0
+      character(len=11)        :: sim_date     = ''
+      integer                  :: daynr        = 0
+      integer                  :: daycum       = 0
+      type(error_collection_t) :: errors
+      logical                  :: fatal_raised = .false.
+   contains
+      procedure :: debug       => diag_debug
+      procedure :: info        => diag_info
+      procedure :: warn        => diag_warn
+      procedure :: error       => diag_error
+      procedure :: fatal       => diag_fatal
+      procedure :: aborted     => diag_aborted
+      procedure :: set_simtime => diag_set_simtime
+      procedure, private :: stamp => diag_stamp
+   end type diagnostics_t
 
    !> Fully-resolved logging settings handed to log_init.
    type :: diagnostics_config_t
@@ -244,6 +270,69 @@ contains
       doc_ptr => doc
       call extract_logging_overrides(doc_ptr, ov)
    end subroutine read_logging_overrides_from_text
+
+   !> Prepend "[#id] date " to a message (id omitted when 0, date when empty)
+   !! so single-instance CLI logs stay clean and ensemble logs are attributable.
+   function diag_stamp(self, message) result(s)
+      class(diagnostics_t), intent(in) :: self
+      character(len=*),     intent(in) :: message
+      character(len=:), allocatable    :: s
+      character(len=16) :: idbuf
+      s = message
+      if (len_trim(self%sim_date) > 0) s = trim(self%sim_date)//' '//s
+      if (self%instance_id /= 0) then
+         write(idbuf,'("[#",I0,"] ")') self%instance_id
+         s = trim(idbuf)//s
+      end if
+   end function diag_stamp
+
+   subroutine diag_debug(self, context, message)
+      class(diagnostics_t), intent(in) :: self
+      character(len=*),     intent(in) :: context, message
+      call log_debug(context, self%stamp(message))
+   end subroutine diag_debug
+
+   subroutine diag_info(self, context, message)
+      class(diagnostics_t), intent(in) :: self
+      character(len=*),     intent(in) :: context, message
+      call log_info(context, self%stamp(message))
+   end subroutine diag_info
+
+   subroutine diag_warn(self, context, message)
+      class(diagnostics_t), intent(in) :: self
+      character(len=*),     intent(in) :: context, message
+      call log_warn(context, self%stamp(message))
+   end subroutine diag_warn
+
+   subroutine diag_error(self, context, message)
+      class(diagnostics_t), intent(in) :: self
+      character(len=*),     intent(in) :: context, message
+      call log_error(context, self%stamp(message))
+   end subroutine diag_error
+
+   !> Record a fatal into the per-instance collection (auto-logs via log_error)
+   !! and set the sticky fatal flag. Does NOT abort — the step driver checks
+   !! aborted() at substep boundaries (Phase D).
+   subroutine diag_fatal(self, context, message)
+      class(diagnostics_t), intent(inout) :: self
+      character(len=*),     intent(in)    :: context, message
+      call self%errors%append(ERR_LEGACY_FATAL, self%stamp(message), context)
+      self%fatal_raised = .true.
+   end subroutine diag_fatal
+
+   pure logical function diag_aborted(self)
+      class(diagnostics_t), intent(in) :: self
+      diag_aborted = self%fatal_raised
+   end function diag_aborted
+
+   subroutine diag_set_simtime(self, date, daynr, daycum)
+      class(diagnostics_t), intent(inout) :: self
+      character(len=*),     intent(in)    :: date
+      integer,              intent(in)    :: daynr, daycum
+      self%sim_date = date
+      self%daynr    = daynr
+      self%daycum   = daycum
+   end subroutine diag_set_simtime
 
    !> ASCII upper-case helper (pure, no locale).
    pure function upcase(s) result(u)
