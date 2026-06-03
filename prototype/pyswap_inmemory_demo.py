@@ -159,6 +159,11 @@ def file_worker(lib):
         return {"error": f"output file not found: {path!r}"}
     with open(path, newline="") as fh:
         rows = list(csv.reader(fh))
+    # Demo hygiene: don't leave the streamed file inside the case dir/submodule.
+    try:
+        os.remove(path)
+    except OSError:
+        pass
     # Skip comment lines (starting with '*') and the column-header line
     data_rows = [r for r in rows if r and not r[0].startswith("*") and not r[0].upper().startswith("DATETIME")]
     return {
