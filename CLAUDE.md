@@ -113,6 +113,11 @@ pixi run clean                # rm -rf builddir  (see clean-rebuild rule below)
   **Never push to `origin/main`.**
 - Conventional-commit prefixes (`refactor(state):`, `fix(nutrients):`,
   `docs:`, `chore:`). Explain the *why* in the body.
+- **pyswap submodule (`pyswap/`).** Its `release/v1` branch is the integration
+  baseline — **treat it as `main` for pyswap work.** Every arc / feature lands
+  on a short-lived feature branch *stemming from `release/v1`* and merged back
+  into it; never commit arc changes directly onto `release/v1`, and never push
+  to pyswap's actual `main`.
 
 ## Where to look
 

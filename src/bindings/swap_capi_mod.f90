@@ -343,4 +343,23 @@ contains
       ierr = 0
    end function swap_results_columns
 
+   !> Path of the streaming scalar CSV (_output.csv); written when csv output is
+   !! enabled and not headless. Lets a huge pyswap run read the file instead of
+   !! holding results in RAM.
+   function swap_output_filepath(buf, n) result(ierr) bind(C, name='swap_output_filepath')
+      character(kind=c_char), intent(out) :: buf(*)
+      integer(c_int),  value, intent(in)  :: n
+      integer(c_int)                      :: ierr
+      character(len=512) :: path
+      integer :: i, m
+      path = trim(capi_state%timecontrol%pathwork) // &
+             trim(capi_state%timecontrol%outfil) // '_output.csv'
+      m = len_trim(path)
+      do i = 1, min(m, n - 1)
+         buf(i) = path(i:i)
+      end do
+      buf(min(m, n - 1) + 1) = c_null_char
+      ierr = 0
+   end function swap_output_filepath
+
 end module swap_capi_mod

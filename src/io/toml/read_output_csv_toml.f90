@@ -31,6 +31,8 @@ contains
                                          'output.csv.enabled', errors)
       call get_optional_int_with_default(csv_sec, 'enabled_tz', config%enabled_tz, 0, &
                                          'output.csv.enabled_tz', errors)
+      call get_optional_int_with_default(csv_sec, 'results_in_memory', config%results_in_memory, &
+                                         0, 'output.csv.results_in_memory', errors)
       call get_optional_string_with_default(csv_sec, 'inlist', config%inlist, &
          'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl', &
          'output.csv.inlist', errors)
