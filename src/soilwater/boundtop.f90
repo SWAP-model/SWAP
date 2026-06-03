@@ -9,7 +9,6 @@
 !! infiltration capacity.
 module boundtop_mod
    use swap_state_mod,        only: swap_state_t
-   use swap_log,              only: log_debug, to_str
    use surfacewater_utils,    only: runoff
    implicit none
 
