@@ -84,6 +84,8 @@ module diagnostics_mod
       integer                       :: level          = LOGLEVEL_INFO
       logical                       :: has_stdout     = .false.
       logical                       :: to_stdout      = .true.
+      logical                       :: has_stderr     = .false.
+      logical                       :: to_stderr      = .true.
       logical                       :: has_timestamps = .false.
       logical                       :: timestamps     = .false.
       logical                       :: has_file       = .false.
@@ -287,6 +289,7 @@ In `src/error/diagnostics.f90`, add these procedures inside `contains` (after `l
       cfg = base
       if (ov%has_level)      cfg%level      = ov%level
       if (ov%has_stdout)     cfg%to_stdout  = ov%to_stdout
+      if (ov%has_stderr)     cfg%to_stderr  = ov%to_stderr
       if (ov%has_timestamps) cfg%timestamps = ov%timestamps
       if (ov%has_file)       cfg%log_file   = ov%log_file
    end function merge_overrides
@@ -584,6 +587,11 @@ In `src/error/diagnostics.f90`, add inside `contains`:
       if (st == 0 .and. ln > 0) then
          ov%has_stdout = .true.
          ov%to_stdout  = (buf(1:1) == '1' .or. buf(1:1) == 't' .or. buf(1:1) == 'T')
+      end if
+      call get_environment_variable('SWAP_LOG_STDERR', buf, length=ln, status=st)
+      if (st == 0 .and. ln > 0) then
+         ov%has_stderr = .true.
+         ov%to_stderr  = (buf(1:1) == '1' .or. buf(1:1) == 't' .or. buf(1:1) == 'T')
       end if
    end subroutine read_env_overrides
 ```
