@@ -66,3 +66,32 @@ subroutine test_resolve_precedence_capi_over_env_over_toml_over_base()
    out = resolve_diagnostics_config(base, toml, env, capi)
    @assertEqual(LOGLEVEL_DEBUG, out%level)
 end subroutine
+
+@test
+subroutine test_log_destination_warn_error_go_to_stderr()
+   use funit
+   use swap_log, only: log_destination, LOGLEVEL_DEBUG, LOGLEVEL_INFO, &
+                       LOGLEVEL_WARN, LOGLEVEL_ERROR
+   implicit none
+   logical :: out, err
+   ! WARN with stderr enabled -> stderr only, not stdout
+   call log_destination(LOGLEVEL_WARN, .true., .true., out, err)
+   @assertFalse(out)
+   @assertTrue(err)
+   ! ERROR likewise
+   call log_destination(LOGLEVEL_ERROR, .true., .true., out, err)
+   @assertFalse(out)
+   @assertTrue(err)
+   ! INFO with stdout enabled -> stdout only
+   call log_destination(LOGLEVEL_INFO, .true., .true., out, err)
+   @assertTrue(out)
+   @assertFalse(err)
+   ! INFO with stdout disabled -> neither stream
+   call log_destination(LOGLEVEL_INFO, .false., .true., out, err)
+   @assertFalse(out)
+   @assertFalse(err)
+   ! WARN with stderr disabled -> neither stream
+   call log_destination(LOGLEVEL_WARN, .true., .false., out, err)
+   @assertFalse(out)
+   @assertFalse(err)
+end subroutine

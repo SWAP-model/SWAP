@@ -24,6 +24,7 @@
 ! ==============================================================================
 
 module swap_log
+    use iso_fortran_env, only: output_unit, error_unit
     implicit none
     private
     
@@ -39,6 +40,7 @@ module swap_log
     integer :: log_unit = -1
     logical :: log_to_file = .false.
     logical :: log_to_stdout = .true.
+    logical :: log_to_stderr = .true.
     logical :: log_initialized = .false.
     logical :: include_timestamp = .true.
     
@@ -50,6 +52,8 @@ module swap_log
     public :: log_warn
     public :: log_error
     public :: log_set_level
+    public :: log_set_stdout
+    public :: log_destination
     public :: log_message
     public :: log_unit_handle
     public :: to_str
@@ -144,6 +148,28 @@ contains
         current_level = level
     end subroutine log_set_level
 
+    pure subroutine log_destination(level, to_stdout, to_stderr, write_stdout, write_stderr)
+        !> Decide which console streams a record at `level` goes to.
+        !! WARN/ERROR -> stderr (if enabled); DEBUG/INFO -> stdout (if enabled).
+        integer, intent(in)  :: level
+        logical, intent(in)  :: to_stdout, to_stderr
+        logical, intent(out) :: write_stdout, write_stderr
+        if (level >= LOGLEVEL_WARN) then
+            write_stdout = .false.
+            write_stderr = to_stderr
+        else
+            write_stdout = to_stdout
+            write_stderr = .false.
+        end if
+    end subroutine log_destination
+
+    subroutine log_set_stdout(flag)
+        !> Enable/disable console stdout output at runtime (entry points use
+        !! this to silence stdout when embedded).
+        logical, intent(in) :: flag
+        log_to_stdout = flag
+    end subroutine log_set_stdout
+
     ! ===========================================================================
     ! Logging Functions
     ! ===========================================================================
@@ -202,10 +228,13 @@ contains
                 level_str, trim(context), trim(message)
         end if
         
-        ! Output to stdout
-        if (log_to_stdout) then
-            write(*,'(A)') trim(formatted_msg)
-        end if
+        ! Output to console: WARN/ERROR -> stderr, DEBUG/INFO -> stdout.
+        block
+            logical :: to_out, to_err
+            call log_destination(level, log_to_stdout, log_to_stderr, to_out, to_err)
+            if (to_out) write(output_unit,'(A)') trim(formatted_msg)
+            if (to_err) write(error_unit, '(A)') trim(formatted_msg)
+        end block
         
         ! Output to file
         if (log_to_file .and. log_unit /= -1) then
