@@ -82,6 +82,7 @@ end module O2_pars
 !! explicit interfaces through a dedicated module.
 module oxygenstress_mod
    use error_mod, only: fatalerr_collected
+   use swap_log, only: log_warn
    use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -1376,7 +1377,7 @@ contains
         H(J+1) = 0.25D0*H(J)
 11    CONTINUE
 !      PAUSE 'Too many steps.'
-      write (*,*) 'QROMBD Too many steps.'
+      call log_warn('oxygenstress', 'QROMBD Too many steps.')
       !read (*,*)
    END
 
@@ -1415,8 +1416,7 @@ contains
         H(J+1) = 0.25D0*H(J)
 11    CONTINUE
 !      PAUSE 'Too many steps.'
-      write (*,*) 'QROMBDtab Too many steps.'
-      read (*,*)
+      call log_warn('oxygenstress', 'QROMBDtab Too many steps.')
    END
 
 !-----------------------------------------------------------------------*
@@ -1455,8 +1455,7 @@ contains
           DEN=HO-HP
           IF(DEN.EQ.0.D0) then
 !             PAUSE 'NR_POLINTD: DEN = 0'
-             write (*,*) 'NR_POLINTD: DEN = 0'
-             read (*,*)
+             call log_warn('oxygenstress', 'NR_POLINTD: DEN = 0')
           end if
           DEN=W/DEN
           D(I)=HP*DEN
@@ -1563,8 +1562,7 @@ contains
         FB=FUNC(B)
 11    CONTINUE
 !      PAUSE 'ZBREND exceeding maximum iterations.'
-      write (*,*) 'ZBREND exceeding maximum iterations.'
-      read (*,*)
+      call log_warn('oxygenstress', 'ZBREND exceeding maximum iterations.')
       ZBREND=B
       RETURN
       END

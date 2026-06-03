@@ -414,16 +414,6 @@
 
         end if
 
-        ! TEMPORARY OUTPUT  DELETE
-        do i = 2,202,2
-          write(777,*) trim(time%date), ",", crop%cumdens(i-1), ",", crop%cumdens(i)
-        end do
-
-        do node = 1,crop%noddrz
-          write(888,'(a11,",",i4,3(",",f15.5))') trim(time%date), node, soil%qpotrot_day(node), soil%qredtot_day(node)
-        end do
-        ! TEMPORARY OUTPUT  DELETE
-
 !      end if
 
       end associate  ! crop, soil, mesh, time

@@ -225,6 +225,7 @@ contains
   subroutine msw1eic(nuk,ibd,dc,dtsw,csk,vxick,fecmnk,ETw0,Pgdtsw, &
                      Sic,Sicolddtsw,Picdtsw,Eicdtsw,tcap,beta,zeta, &
                      fricdtsw,ib)
+    use error_mod, only: fatalerr_collected
     implicit none
 
     integer(4), intent(in)    :: nuk
@@ -247,6 +248,7 @@ contains
     integer(4), intent(in)    :: ib
 
     integer(4) :: k
+    character(len=200) :: messag
 
     do k=1,nuk
       if (ibd(k) .ge. 1) then
@@ -254,9 +256,8 @@ contains
         ! Check that non-zero interception capacity has non-zero soil cover
         if (vxick(k) .gt. dc) then
           if (csk(k) .lt. dc) then
-            write(ib,9199) k
-            write(*,9199) k
-            stop
+            write(messag,9199) k
+            call fatalerr_collected('msw1eic', trim(messag))
           endif
         endif
 9199    format(' Interception capacity >0, but soil cover = 0, k =',i10)
