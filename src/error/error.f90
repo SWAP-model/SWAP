@@ -62,9 +62,16 @@ module error_mod
    logical, save, private :: library_mode    = .false.
    logical, save, private :: fatal_was_raised = .false.
 
+   !> Active per-instance error sink. While associated, fatalerr_collected
+   !! records into this collection + sets the fatal flag and returns instead
+   !! of aborting. The stepping driver registers/clears these each step.
+   type(error_collection_t), pointer, private :: active_errors => null()
+   logical,                  pointer, private :: active_fatal  => null()
+
    public :: fatalerr_collected
    public :: warn_deprecated_key
    public :: set_library_mode, library_fatal_raised, clear_library_fatal
+   public :: set_active_error_sink, clear_active_error_sink
 
 contains
 
@@ -89,12 +96,39 @@ contains
    !! physics-path code where threading an explicit `errors` argument
    !! through every caller would be invasive. I/O and configuration
    !! code should still use the threaded-`errors` pattern instead.
+   !!
+   !! When an active per-instance sink is registered via
+   !! set_active_error_sink, the error is recorded there instead and the
+   !! subroutine returns without aborting, so sibling stepping instances
+   !! continue and the host process is not killed.
    subroutine fatalerr_collected(routine, message)
       character(len=*), intent(in) :: routine
       character(len=*), intent(in) :: message
+      if (associated(active_errors)) then
+         call active_errors%append(ERR_LEGACY_FATAL, message, routine)
+         if (associated(active_fatal)) active_fatal = .true.
+         return
+      end if
       call global_errors%append(ERR_LEGACY_FATAL, message, routine)
       call global_errors%abort_if_fatal()
    end subroutine fatalerr_collected
+
+   !> Register a per-instance error sink (a stepping instance's
+   !! state%diag%errors + fatal_raised). While set, fatalerr_collected records
+   !! into it and returns instead of aborting, so an embedded host's sibling
+   !! columns keep running and the host process is not killed. Pointers must
+   !! outlive the step (the driver re-registers each step).
+   subroutine set_active_error_sink(errors, fatal_flag)
+      type(error_collection_t), pointer, intent(in) :: errors
+      logical,                  pointer, intent(in) :: fatal_flag
+      active_errors => errors
+      active_fatal  => fatal_flag
+   end subroutine set_active_error_sink
+
+   subroutine clear_active_error_sink()
+      active_errors => null()
+      active_fatal  => null()
+   end subroutine clear_active_error_sink
 
    !> Append an error to the collection and auto-log through swap_log.
    subroutine error_collection_append(self, code, message, context, is_fatal)

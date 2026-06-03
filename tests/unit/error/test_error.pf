@@ -229,3 +229,25 @@ subroutine test_fatalerr_channel_routes_to_global_errors()
    @assertEqual("boom",     global_errors%items(1)%message)
    call global_errors%clear()
 end subroutine
+
+@test
+subroutine test_active_error_sink_records_and_returns()
+   use error_mod
+   use funit
+   implicit none
+   type(error_collection_t), target  :: sink
+   logical,                  target  :: flag
+   type(error_collection_t), pointer :: ep
+   logical,                  pointer :: fp
+   flag = .false.
+   call sink%clear()
+   ep => sink
+   fp => flag
+   call set_active_error_sink(ep, fp)
+   call fatalerr_collected('TESTK', 'simulated kernel fatal')
+   @assertTrue(flag)
+   @assertEqual(1, sink%count())
+   @assertTrue(sink%has_fatals())
+   call clear_active_error_sink()
+   call sink%clear()
+end subroutine
