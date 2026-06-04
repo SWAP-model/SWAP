@@ -225,7 +225,10 @@ module tillage_mod
 
    select case (tl%iRedist)
    case (0)
-      if (.not.TEST) call fatalerr_collected ('Adapt_WC_H', 'Option iRedist = 0 only allowed in combination with TEST option')
+      if (.not.TEST) then
+         call state%diag%fatal('Adapt_WC_H', 'Option iRedist = 0 only allowed in combination with TEST option')
+         return
+      end if
       continue
 
    case (1)

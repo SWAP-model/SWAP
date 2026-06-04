@@ -234,7 +234,8 @@ subroutine surfacewater_balance(state, request_smaller_dt)
 
             if (imper .gt. surf%nmper) then
                messag = 'error sw-management periods(IMPER), more than defined'
-               call fatalerr_collected('Wlevbal', messag)
+               call state%diag%fatal('Wlevbal', messag)
+               return
             end if
 
             if (time%t1900 - 1.d0 + 0.1d-10 .le. surf%impend(imper)) exit
@@ -381,7 +382,8 @@ subroutine surfacewater_balance(state, request_smaller_dt)
             ! Storage decreases to zero — system falls dry; set supply to max.
             if (swstmax .lt. -0.1d0) then
                messag = 'error algorithm for sw falling dry'
-               call fatalerr_collected('Wlevbal', messag)
+               call state%diag%fatal('Wlevbal', messag)
+               return
             end if
             wsupp    = wsmax
             wdis     = 0.0d0
@@ -448,7 +450,8 @@ subroutine surfacewater_balance(state, request_smaller_dt)
                   swstn = surf%swst + (drai%qdrd + drai%QRapDra - discap)*time%dt + soil%runots
                   if (swstn .gt. surf%sttab(1, 2)) then
                      messag = 'surface water system has overflowed!'
-                     call fatalerr_collected('Wlevbal', messag)
+                     call state%diag%fatal('Wlevbal', messag)
+                     return
                   end if
 
                   ! Bisection iteration for new level, storage and discharge.
@@ -561,7 +564,7 @@ subroutine surfacewater_balance(state, request_smaller_dt)
                      messag = ' sw-level oscillation at '//datetime//       &
        &                      '       advise: reduction of dtmax !'
                      call log_warn('Wlevbal', messag)
-                     call fatalerr_collected('Wlevbal', messag)
+                     call state%diag%fatal('Wlevbal', messag)
                   end if
                end if
             end if

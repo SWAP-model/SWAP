@@ -150,7 +150,8 @@ contains
 !## MH : some initial calculations
       if (state%crop%oxygen%ini_stress) then
          if (state%soilwater%iHWCKmodel(state%mesh%layer(node)) == 3) then
-            call fatalerr_collected ('OxygenStress', 'Combination of OxygenStress and bi-modal MvG (iHWCKmodel=3) is not (yet) possible!')
+            call state%diag%fatal('OxygenStress', 'Combination of OxygenStress and bi-modal MvG (iHWCKmodel=3) is not (yet) possible!')
+            return
          end if
          call calc_ini_pars (state%mesh%numnod)
          ! [GR-CROP 2026-05-25] persist per-node tables on state%crop%oxygen
@@ -282,8 +283,9 @@ contains
 !     See src/soil/dormant/sptabulated.f90 for the original tabular load logic;
 !     reactivation requires numtablay/sptab config wiring + restoring state fields.
         if (state%soilwater%swsophy.eq.1) then
-           call fatalerr_collected('OxygenStress', &
+           call state%diag%fatal('OxygenStress', &
               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
+           return
         end if
 
 ! --- atmosphere oxygen concentration [kg/m3] according to general gas law
@@ -814,6 +816,7 @@ contains
      &         soilphystab,diff_water_cap_actual,numrec_tab,swsophy_arg)
 ! --- calculate water film thickness. method according to simojoki 2000
       use swap_array_dimensions, only: matab
+      use O2_pars, only: current_state
       implicit none
       integer, intent(in) :: swsophy_arg
       
@@ -883,7 +886,7 @@ contains
       ! the TOML pipeline. Body preserved in git history; reactivation requires
       ! the whole sptabulated/swsophy=1 plumbing.
       if (swsophy_arg.eq.1) then
-         call fatalerr_collected('waterfilmthickness', &
+         call current_state%diag%fatal('waterfilmthickness', &
             'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
       end if
       !ResultsOxStr(7,node) = waterfilm_thickness !RB20140115
@@ -1046,6 +1049,7 @@ contains
 ! --- to the soil surface. diffusion from atmosphere into soil is considered,
 ! --- including microbial and root respiration.
 
+      use O2_pars, only: current_state
       implicit none
       real(8) c_macro, depth, resp_factor
       real(8) c_mroot,w_root_z0,f_senes,q10_root,soil_temp,ctop
@@ -1123,8 +1127,9 @@ contains
               error_messag = '1 Too much iterations for macroscopic '   &
      &               //' oxygen diffusion.'
 !D              call warn ('rootextraction',error_messag,logf,swscre)
-              call fatalerr_collected ('rootextraction',error_messag)
-            endif            
+              call current_state%diag%fatal('rootextraction', error_messag)
+              return
+            endif
          enddo
         
          if (depth .lt. l) then
@@ -1314,9 +1319,9 @@ contains
      &            //' stress reached.'
             xx = xi
            SOLVE = xx
-           call fatalerr_collected ('rootextraction',error_messag)
-           return          
-        endif            
+           call current_state%diag%fatal('rootextraction', error_messag)
+           return
+        endif
       enddo
       xx = xi
       SOLVE = xx

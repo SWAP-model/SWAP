@@ -240,7 +240,7 @@
       return
 
       case default
-         call fatalerr_collected ('CropFixed', 'Illegal value for TASK')
+         call state%diag%fatal('CropFixed', 'Illegal value for TASK')
       end select
 
       end associate

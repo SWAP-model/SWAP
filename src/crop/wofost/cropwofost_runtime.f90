@@ -1195,7 +1195,7 @@
       wrtt0 = crop%wofost%wrt
 
       case default
-         call fatalerr_collected ('Wofost', 'Illegal value for TASK')
+         call state%diag%fatal('Wofost', 'Illegal value for TASK')
       end select
 
       end associate  ! time%t1900, time%t, time%daynr, time%daycum, time%date => state%timecontrol [TC-10]

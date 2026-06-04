@@ -263,7 +263,7 @@ contains
             call tridag(mesh%numnod, thoma, thomb, thomc, thomf, heat%tsoil, ierror)
             if (ierror .ne. 0) then
                messag = 'During a call from Temperature an error occured in TriDag'
-               call fatalerr_collected('Temperature', messag)
+               call state%diag%fatal('Temperature', messag)
             end if
          else
             ! Analytical solution profile.

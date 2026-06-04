@@ -564,7 +564,7 @@ contains
          return
 
       case default
-         call fatalerr_collected ('SoilManagement', 'Illegal value for TASK')
+         call state%diag%fatal('SoilManagement', 'Illegal value for TASK')
       end select
 
       end associate

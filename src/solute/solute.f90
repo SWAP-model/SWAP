@@ -55,10 +55,11 @@ contains
          ! soil-node array element) and validating against the SWAP theory manual is
          ! required before SWBR=1 can be re-enabled.
          if (sol%swbr .eq. 1) then
-            call fatalerr_collected('solute_step',                                   &
+            call state%diag%fatal('solute_step',                                     &
                'SWBR=1 (mixed-reservoir aquifer breakthrough) is not supported: '//  &
                'broken in SWAP 4.2.0 (out-of-range bdenskfsatporos read -> division '// &
                'by zero -> NaN concentrations). See FIXME in solute_step.')
+            return
          end if
 
          ! Cohort resets (ADR 0033).

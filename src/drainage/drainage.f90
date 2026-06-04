@@ -170,7 +170,8 @@ contains
             dbot = (drai%zbotdr(1) - zimp)
             if (dbot .lt. 0.0d0) then
                messag = imp_above_drain_msg
-               call fatalerr_collected('Bocodrb', messag)
+               call state%diag%fatal('Bocodrb', messag)
+               return
             end if
 
             ! --- no infiltration allowed
@@ -201,7 +202,8 @@ contains
             elseif (drai%ipos .eq. 4) then
                if (drai%zbotdr(1) .gt. drai%zintf) then
                   messag = imp_above_drain_msg
-                  call fatalerr_collected('bocodrb', messag)
+                  call state%diag%fatal('bocodrb', messag)
+                  return
                end if
                rver = max(gwldra - drai%zintf, 0.0d0)/drai%kvtop +                   &
         &             (min(drai%zintf, gwldra) - drai%zbotdr(1))/drai%kvbot
@@ -214,7 +216,8 @@ contains
             elseif (drai%ipos .eq. 5) then
                if (drai%zbotdr(1) .lt. drai%zintf) then
                   messag = imp_above_drain_msg
-                  call fatalerr_collected('bocodrb', messag)
+                  call state%diag%fatal('bocodrb', messag)
+                  return
                end if
                rver = (gwldra - drai%zbotdr(1))/drai%kvtop
                rhor = drai%l(1)*drai%l(1)/(8*drai%khtop*(drai%zbotdr(1) - drai%zintf) +    &
@@ -666,7 +669,8 @@ contains
             imper = imper + 1
             if (imper .gt. surf%nmper) then
                messag = 'sw-management periods(IMPER), more than defined'
-               call fatalerr_collected('Bocodre', messag)
+               call state%diag%fatal('Bocodre', messag)
+               return
             end if
             if (time%t1900 - 1.d0 + 0.1d-10 .le. surf%impend(imper)) exit
          end do
@@ -683,7 +687,8 @@ contains
 
             if (qdratio .gt. 1.0d0 .or. qdratio .lt. 0.0d0) then
                messag = 'sw-management error with storage (qdratio)'
-               call fatalerr_collected('Bocodre', messag)
+               call state%diag%fatal('Bocodre', messag)
+               return
             end if
 
             do level = 1 + surf%nrpri, drai%nrlevs

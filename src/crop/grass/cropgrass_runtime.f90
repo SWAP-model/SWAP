@@ -404,7 +404,8 @@
           Messag ='The sum of partitioning factors for leaves, stems'// &
      &    ' and storage organs is not equal to one at time '            &
      &    //trim(tmp)//'.'
-          call fatalerr_collected ('grass_pot',messag)
+          call state%diag%fatal('grass_pot', messag)
+          return
         endif
 
 ! ---   dry matter increase
@@ -416,7 +417,8 @@
      &         /max(0.0001d0,gasspot)
         if (dabs(ccheck).gt.0.0001d0) then
           Messag ='The carbon balance is not correct'
-          call fatalerr_collected ('grass_pot',messag)
+          call state%diag%fatal('grass_pot', messag)
+          return
         endif
 
 
@@ -878,7 +880,8 @@
      &         /max(0.0001d0,gass)      
         if (dabs(ccheck).gt.0.0001d0) then
           Messag ='The carbon balance is not correct'
-          call fatalerr_collected ('grass_act',messag)
+          call state%diag%fatal('grass_act', messag)
+          return
         endif
 
 ! ===   growth rate by plant organ ===
@@ -1307,7 +1310,7 @@
       return
 
       case default
-         call fatalerr_collected ('Grass', 'Illegal value for TASK')
+         call state%diag%fatal('Grass', 'Illegal value for TASK')
       end select
 
       end associate

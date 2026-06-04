@@ -532,7 +532,7 @@
       return
       
       case default
-         call fatalerr_collected ('CropGrowth', 'Illegal value for TASK')
+         call state%diag%fatal('CropGrowth', 'Illegal value for TASK')
       end select
 
       end associate  ! tc => state%timecontrol, atmo => state%atmosphere

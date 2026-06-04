@@ -606,7 +606,7 @@ contains
             call boesten_stroosnijder_reduction(nrai, atmo%nird, atmo%peva, atmo%cofred, &
                                                 atmo%spev, atmo%saev, atmo%empreva, timestep)
         case default
-            call fatalerr_collected('reduceva_apply', 'Unknown reduction method SWREDU')
+            call state%diag%fatal('reduceva_apply', 'Unknown reduction method SWREDU')
         end select
 
         end associate

@@ -267,7 +267,7 @@
         return
 
       case default
-        call fatalerr_collected ('ArableLandGerm', 'Illegal value for TASK')
+        call state%diag%fatal('ArableLandGerm', 'Illegal value for TASK')
       end select
 
       end associate  ! crop, soil, mesh, atmo
@@ -303,7 +303,7 @@
       ! [GR-CROP 2026-05-25] flco2 is dormant — stub-error if it ever gets enabled
       ! without rewiring the lookup against state%cfg%crop%wofost%co2 tables.
       if (state%atmosphere%flco2) then
-        call fatalerr_collected('FacCO2', &
+        call state%diag%fatal('FacCO2', &
           'flco2=.true. encountered but CO2-correction lookup retired in 2026-05-25 ' // &
           'arc (co2year/co2ppm/co2*tb bare globals removed). Re-wire against ' // &
           'crop_config_global%rotation_wofost(icrop)%co2 before re-enabling.')

@@ -158,7 +158,8 @@ contains
           messag = 'The groundwater level descends below the lower' &
      &     //' boundary. This conflicts with bottom boundary' &
      &     //' condition 3 and 4. Extend soil profile!'
-         call fatalerr_collected ('calcgwl',messag)
+         call state%diag%fatal('calcgwl', messag)
+         return
       endif
 
       ! warning error if there is inconsistency between defined gwl and soil physics

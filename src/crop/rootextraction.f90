@@ -109,9 +109,10 @@ module rootextraction_mod
       ! [GR-CROP 2026-05-25] swdrought=2 (de Jong van Lier microscopic uptake) is retired.
       ! See git history for the legacy implementation.
       if (crop%common%swdrought .eq. 2) then
-        call fatalerr_collected('RootExtraction', &
+        call state%diag%fatal('RootExtraction', &
           'swdrought=2 (Jong van Lier microscopic uptake) is retired. ' // &
           'See git history for the legacy implementation.')
+        return
       endif
 
 ! === COMBINATION OF OXYGEN, DROUGHT, SALT AND FROST STRESS ====
@@ -155,7 +156,8 @@ module rootextraction_mod
               ! [GR-CROP 2026-05-25] swoxygen=2/swoxygentype=2 (OxygenReproFunction)
               ! is dormant — Task 4 (oxygenstress.f90 sub-arc) will fully migrate
               ! the OxygenReproFunction body + oxygenintercept/oxygenslope globals.
-              call fatalerr_collected('RootExtraction', 'swoxygen=2/swoxygentype=2 (OxygenReproFunction) is dormant — see src/crop/oxygenstress.f90 (Task 4 will fully migrate)')
+              call state%diag%fatal('RootExtraction', 'swoxygen=2/swoxygentype=2 (OxygenReproFunction) is dormant — see src/crop/oxygenstress.f90 (Task 4 will fully migrate)')
+              return
             endif
 
           endif
