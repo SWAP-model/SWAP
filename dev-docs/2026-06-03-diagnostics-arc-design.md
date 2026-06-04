@@ -244,12 +244,25 @@ diagnostics-on-state lives in `state/`, the sink stays a `core/` leaf.
 >   instance's `state%diag` and returns (no `error stop`); a boundary check + entry-point
 >   translation (CLI summary+exit / BMI rc / ensemble per-column `exit`, siblings continue)
 >   handle it. Delivers the goal **without** the risky 109-site per-kernel rewrite.
->   **Documented residual:** the ideal end-state — migrating each kernel `fatalerr` to
->   `state%diag%fatal` + early-return and retiring `global_errors`/`fatalerr_collected`/
->   `FatalERR`/`library_mode` — is deferred as a large, delicate physics-path sweep (its
->   error paths aren't covered by the regression oracle). A second hardening follow-up:
->   an earlier `aborted()` check inside the substep loop to tighten the genuine-abort
->   garbage window.
+>   **Post-D follow-up DONE 2026-06-04 (commit `09a7eb3`):** the **26 stepping-compute**
+>   guard sites were migrated to `state%diag%fatal(...) + return`. This was a real
+>   correctness fix, not just purity: post-D, a stepping guard recorded via the active
+>   sink but the kernel then *continued past the guard* with the bad condition (the
+>   `error stop` that used to halt it was gone); the restored `return` makes the guard
+>   protect its downstream code again. Byte-identical (check-full 11/0/7; guards don't
+>   fire in the valid cases); function-result safety reviewed.
+>   **Deliberately NOT migrated (and that's correct):** ~50 sites stay on
+>   `fatalerr_collected` — init/seed/config **backstops** (mostly "validator should have
+>   rejected this" can't-happen assertions, fire before stepping, already handled by the
+>   global+`library_mode` path; fail-loud is the right behavior for a bug), the
+>   **function-result hot-path kernels** (`watcon`/`moiscap`/`hconduc`/`prhead`/`wlevst`)
+>   and the **state-less leaves** (`WC_K_models`, `bandec`/`banbks`, `msw1eic`). Deleting
+>   the bridge for these would require status-return/`diag`-threading through the hot
+>   Richards/solver path (FP-sensitive, byte-identical-critical) plus a load-phase
+>   threaded-`errors` refactor — high risk, low marginal value, since the active sink
+>   already makes them per-instance during stepping and fail-loud is appropriate at init.
+>   So `global_errors`/`fatalerr_collected`/`library_mode` are **retained by design**, not
+>   debt; full deletion is a "only if a concrete need arises" item, not a TODO.
 > - **E**: per-run provenance INFO summary at init (project, grid, key switches) + lifecycle
 >   lines routed through `state%diag` (per-instance attributable).
 
