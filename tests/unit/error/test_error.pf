@@ -251,3 +251,61 @@ subroutine test_active_error_sink_records_and_returns()
    call clear_active_error_sink()
    call sink%clear()
 end subroutine
+
+! End-to-end (unit-level) proof of the Phase D per-instance fatal mechanism:
+! a deep kernel guard firing via fatalerr_collected, with the stepping
+! instance's state%diag registered as the active sink (as the step driver
+! does), must make THAT instance report a graceful abort carrying the located
+! error -- without aborting the process. This is control-flow logic with no
+! physics, so it belongs in a unit test (the regression suite proves the
+! byte-identical happy path and must never trigger an error to exercise this).
+@test
+subroutine test_kernel_fatal_routes_to_instance_diag()
+   use funit
+   use error_mod,       only: error_collection_t, fatalerr_collected, &
+                              set_active_error_sink, clear_active_error_sink
+   use diagnostics_mod, only: diagnostics_t
+   implicit none
+   type(diagnostics_t),      target  :: diag
+   type(error_collection_t), pointer :: ep
+   logical,                  pointer :: fp
+
+   ep => diag%errors
+   fp => diag%fatal_raised
+   call set_active_error_sink(ep, fp)
+
+   call fatalerr_collected('WC_K_models', 'illegal iType')
+
+   @assertTrue(diag%aborted())
+   @assertEqual(1, diag%errors%count())
+   @assertTrue(diag%errors%has_fatals())
+   @assertEqual('WC_K_models', diag%errors%items(1)%context)
+
+   call clear_active_error_sink()
+end subroutine
+
+! Per-instance isolation: a fatal in the actively-stepping column must NOT
+! mark a sibling column as aborted -- the host keeps stepping the others.
+@test
+subroutine test_fatal_isolates_to_active_instance_only()
+   use funit
+   use error_mod,       only: error_collection_t, fatalerr_collected, &
+                              set_active_error_sink, clear_active_error_sink
+   use diagnostics_mod, only: diagnostics_t
+   implicit none
+   type(diagnostics_t),      target  :: col_a, col_b
+   type(error_collection_t), pointer :: ep
+   logical,                  pointer :: fp
+
+   ep => col_a%errors
+   fp => col_a%fatal_raised
+   call set_active_error_sink(ep, fp)
+
+   call fatalerr_collected('Headcalc', 'mass balance violated')
+
+   @assertTrue(col_a%aborted())
+   @assertFalse(col_b%aborted())
+   @assertEqual(0, col_b%errors%count())
+
+   call clear_active_error_sink()
+end subroutine
