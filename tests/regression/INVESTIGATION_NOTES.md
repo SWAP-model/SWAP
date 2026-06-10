@@ -485,3 +485,21 @@ no-drainage cases are untouched.
   xpass, but could not be re-run here (private `tests/swap-cases` submodule
   unavailable). Re-run `check-full` with swap-cases present and remove their
   `known_divergence` flags once confirmed.
+
+### 2026-06-11 follow-up — swdrought2 perf wall is very likely now unblocked
+
+The 2026-06-01 swdrought2 investigation concluded its ~1000x perf collapse was
+the SAME adaptive-dt / Richards-convergence sensitivity behind the other
+known-divergences, amplified through the solute stability clamp, and that the
+fix was "the core soil-water parity work (make modern q/theta match 4.2.0)."
+
+The drainage first-step fix above IS that parity fix — it makes the modern dt
+sequence (and therefore q/theta) match 4.2.0 from step 1. So the solute
+sub-stepping should no longer collapse `dtsolu` to dtmin under swdrought=2.
+**Recommend re-attempting the swdrought2 restoration in a dedicated session**
+now that the root cause is fixed. NB: dev-docs/wip/swdrought2-jvl-restoration.patch
+no longer applies cleanly (rootextraction.f90 moved in the ADR-0048 feature-first
+reorg, `src/crop/rootextraction.f90`); recover jongvanlier.f90 from 5c82f0a^ and
+re-port against the current tree rather than `git apply`. The wiltpoint fix
+(use state%crop%common%wiltpoint, not hlim4, at the three swdrought=2 matric-flux
+sites) is the key correctness fix from that patch to carry forward.
