@@ -368,6 +368,25 @@ contains
          end if
 
          ! Macropore initialisation: drainage basis for rapid drainage.
+         ! [FIX-ADAPTIVEDT 2026-06-11] One-time ZDraBas setup. In legacy SWAP
+         ! 4.2.0 this was a separate init-phase call (Drainage task=1) made
+         ! BEFORE the time loop; the first per-step call (task=2) then computed
+         ! drainage. The strangler refactor collapsed both into this per-step
+         ! routine but made the init and the rate computation mutually exclusive
+         ! (init in the `if`, rates in the `else`). For basic-drainage cases
+         ! (swdra=1) flInitDraBas is never cleared during init (the heavy
+         ! surfacewater init that clears it is gated on swsec==2), so the FIRST
+         ! timestep took the init-only branch and computed ZERO drainage — a
+         ! wasted "no-op" step. With adaptive dt that no-op solve returns
+         ! numbit=1, the controller doubles dt prematurely, and the modern run
+         ! desyncs from 4.2.0 for the rest of the simulation (root cause of the
+         ! hysteresis/winter/swinter3 known-divergences and the swdrought2 perf
+         ! collapse). Fix: do the one-time init, then FALL THROUGH to compute
+         ! drainage on the same call — matching legacy's init-then-step order.
+         ! At this first call time%t1900 == tstart (timecontrol advances after
+         ! drainage), identical to legacy's init-time value, so ZDraBas is
+         ! computed bit-identically; for basic drainage ZDraBas is dead anyway
+         ! (only macropore rapid drainage reads it, retired by ADR 0040).
          if (surf%flInitDraBas) then
             if (drai%NumLevRapDra .gt. drai%nrlevs) then
                messag = ' NUMLEVRAPDRA greater then NRLEVS'
@@ -387,7 +406,9 @@ contains
 
             surf%flInitDraBas = .false.
 
-         else  ! .not. flInitDraBas — normal timestep path
+         end if
+
+         block  ! normal timestep path — runs on EVERY call, including the first
 
             ! Reset intermediate surface-water and drainage fluxes.
             if (time%flZeroIntr) call surf%reset_intermediate()
@@ -433,7 +454,7 @@ contains
 
             end if  ! gwl > 998 skip
 
-         end if  ! flInitDraBas vs. normal timestep
+         end block  ! normal timestep path
 
       end associate
     end subroutine drainage

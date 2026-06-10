@@ -410,3 +410,78 @@ are clean and identical to legacy). The fix is the core soil-water parity work
 (make modern q/theta match 4.2.0) — high risk to the 5 passing cases, out of scope.
 swdrought=2 stays restored-but-perf-blocked; patch at
 dev-docs/wip/swdrought2-jvl-restoration.patch.
+
+---
+
+## 2026-06-11 — ROOT CAUSE FOUND & FIXED: adaptive-dt desync = drainage first-step no-op
+
+The "adaptive-dt threshold desync" behind the hysteresis / winter / swinter3 /
+swcf3_maize known-divergences (and the swdrought2 perf collapse) is **NOT** an
+irreducible sub-1e-6 convergence-threshold sensitivity. It is a concrete
+**ordering bug in `src/drainage/drainage.f90`**, now fixed.
+
+### Mechanism
+
+`drainage()` is called once per timestep from `swap_run_step`. It contained:
+
+```
+if (surf%flInitDraBas) then      ! one-time macropore ZDraBas setup
+   ... set ZDraBas ; flInitDraBas = .false.
+else                              ! normal path: bocodrb/divdra -> qdra
+   ... compute drainage ...
+end if
+```
+
+`flInitDraBas` defaults `.true.` and is only cleared inside the **heavy
+surfacewater init**, which is gated on `swsec==2` (i.e. swdra=2 surface-water
+cases). For **basic-drainage cases (swdra=1 — the entire hupselbrook family)**
+the heavy init never runs, so `flInitDraBas` is still `.true.` at the first
+timestep. The first `drainage()` call therefore took the **init-only** branch
+and computed **zero `qdra`**. With no drainage sink, the first Richards solve
+sees a residual of 0 (the profile is at hydrostatic equilibrium) → converges in
+`numbit=1` with the groundwater level unchanged.
+
+The adaptive-dt controller doubles `dt` whenever `numbit ≤ 3`. So the wasted
+no-op first step (numbit=1) **doubled `dt` prematurely**, and every subsequent
+step ran on a `dt` sequence offset from 4.2.0 → the pervasive ~1e-5/day drift,
+amplified to ~1.9 cm GWL under hysteresis, ~0.04 cm under frost, and into a
+~1000× performance spiral under swdrought=2 (via the solute stability clamp).
+
+Legacy SWAP 4.2.0 did the `ZDraBas` setup in a **separate init-phase call**
+(`Drainage(task=1)`) *before* the time loop; its first per-step call
+(`task=2`) computed real drainage. The strangler refactor collapsed both into
+the per-step routine but made them mutually exclusive.
+
+### Proof (instrumented trace, swcf3 case, first timestep)
+
+| build | step-1 `qdra` | step-1 `numbit` | step-1 GWL |
+|-------|--------------|-----------------|------------|
+| before fix | 0.0 | 1 | −75.000000 (no move) |
+| after fix  | 0.0715 | 4 | **−75.055108** |
+
+`swap420gf` solves the first step in `numbit=4`, GWL −75.0 → **−75.055** (this
+exact value was already documented in the 2026-05-27 trace, point 5). The fixed
+modern build reproduces −75.055108 — i.e. it now matches 4.2.0's first step.
+
+### Fix
+
+Make the `flInitDraBas` block a standalone one-time init that **falls through**
+to the (now unconditional) drainage computation on the same call, so the first
+stepping call does init **and** computes `qdra`, matching legacy's
+init-then-step order. At the first call `time%t1900 == tstart` (timecontrol
+advances after drainage), identical to legacy's init-time value, so `ZDraBas` is
+bit-identical; for basic drainage `ZDraBas` is dead anyway (macropore-only,
+retired by ADR 0040). Surgical: only the first `drainage()` call of swdra=1
+cases changes behaviour; swdra=2 cases (flInitDraBas already cleared) and
+no-drainage cases are untouched.
+
+### Verified
+
+- `swinter3`: xfail → **xpass** (was the adaptive-dt amplifier case).
+- `swcf3_maize`: xfail → **xpass** (the "0.01 cm GWL FP artifact" was this desync,
+  not floating-point rounding).
+- All 6 byte-identical local switch cases still pass (fix preserves byte-identity).
+- `soilhysteresis` + `winter` share the identical root cause and are expected to
+  xpass, but could not be re-run here (private `tests/swap-cases` submodule
+  unavailable). Re-run `check-full` with swap-cases present and remove their
+  `known_divergence` flags once confirmed.

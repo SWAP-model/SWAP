@@ -118,9 +118,16 @@ CASES = {
         flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
+        # [FIX-ADAPTIVEDT 2026-06-11] Root cause (drainage first-step no-op) is
+        # fixed; swinter3 + swcf3_maize (same desync) now match 4.2.0. This case
+        # shares the identical root cause and is expected to xpass, but could not
+        # be re-run locally (private tests/swap-cases submodule unavailable).
+        # Re-run check-full with swap-cases present and REMOVE this flag once it
+        # reports xpass. See INVESTIGATION_NOTES.md 2026-06-11.
         known_divergence="adaptive-dt threshold desync vs 4.2.0 (~1.9cm GWL, "
-                         "amplified by hysteresis); physics faithful / bit-identical "
-                         "under fixed dt; see INVESTIGATION_NOTES.md",
+                         "amplified by hysteresis) — root cause FIXED 2026-06-11; "
+                         "pending xpass re-confirmation with swap-cases; "
+                         "see INVESTIGATION_NOTES.md",
     ),
     # Winter cluster: snow accumulation/melt (SWSNOW=1) + frost-reduced soil
     # water flow (SWFROST=1) + snow sublimation (SWSUBLIM=1). Clone of
@@ -135,9 +142,15 @@ CASES = {
         state_vars=["GWL", "SNOW"],  # SSNOW is identically 0 here — not asserted
         # Snow path reproduces 4.2.0 exactly (SNOW max 0.574 both); residual
         # ~0.04cm DRAINAGE/RUNOFF drift is the shared adaptive-dt desync (below).
+        # [FIX-ADAPTIVEDT 2026-06-11] Same root cause as soilhysteresis/swinter3
+        # (drainage first-step no-op) — now FIXED. Expected to xpass; could not be
+        # re-run locally (private tests/swap-cases submodule unavailable). Re-run
+        # check-full with swap-cases present and REMOVE this flag once it reports
+        # xpass. See INVESTIGATION_NOTES.md 2026-06-11.
         known_divergence="adaptive-dt threshold desync vs 4.2.0 (~0.04cm "
-                         "DRAINAGE/RUNOFF); snow path matches exactly; physics "
-                         "faithful; see INVESTIGATION_NOTES.md",
+                         "DRAINAGE/RUNOFF); snow path matches exactly — root cause "
+                         "FIXED 2026-06-11; pending xpass re-confirmation with "
+                         "swap-cases; see INVESTIGATION_NOTES.md",
     ),
 }
 
@@ -161,10 +174,11 @@ CASES.update({
     "swcompensate2": _switch_case("swcompensate2"),
     "swinter2":      _switch_case("swinter2"),
     "swcf3":         _switch_case("swcf3"),
-    "swcf3_maize":   _switch_case("swcf3_maize",
-                                  known_divergence="maize swcf=3 crop-factor + Penman-Monteith "
-                                  "0.01cm GWL FP artifact (pre-existing; swcf=1 identical); "
-                                  "see INVESTIGATION_NOTES.md"),
+    # [FIX-ADAPTIVEDT 2026-06-11] Previously xfail ("0.01cm GWL FP artifact").
+    # Root cause was the drainage first-step no-op (see INVESTIGATION_NOTES.md
+    # 2026-06-11), not FP rounding: the wasted first step doubled dt prematurely
+    # and the 0.01cm GWL was the residual desync. Now byte-identical to 4.2.0.
+    "swcf3_maize":   _switch_case("swcf3_maize"),
     # gated / divergent -> pending restoration target (modern errors -> xfail)
     "swsalinity1":   _switch_case("swsalinity1",
                                   pending_restore="cropfixed swsalinity=1 gated "
@@ -173,11 +187,10 @@ CASES.update({
                                   pending_restore="wofost swoxygen=2 gated (type-2 "
                                   "oxygen-stress 0.01cm TACT divergence); see INVESTIGATION_NOTES.md"),
     # deleted/dormant compute, restoration targets (modern fatal-errors -> xfail)
-    "swinter3":      _switch_case("swinter3",
-                                  known_divergence="swinter=3 (adapted-Rutter) RESTORED & faithful — "
-                                  "bit-identical to 4.2.0 under fixed dt; the adaptive-dt run diverges "
-                                  "because msw1eic integrates over dt directly (amplifies the known "
-                                  "adaptive-dt desync); see INVESTIGATION_NOTES.md"),
+    # [FIX-ADAPTIVEDT 2026-06-11] Previously xfail (adaptive-dt desync). The
+    # drainage first-step no-op fix removed the premature dt-doubling, so the
+    # adapted-Rutter run now matches 4.2.0 byte-for-byte under adaptive dt too.
+    "swinter3":      _switch_case("swinter3"),
     "swdrought2":    _switch_case("swdrought2",
                                   pending_restore="swdrought=2 (De Jong van Lier) compute deleted; "
                                   "recover jongvanlier.f90 from 5c82f0a^"),
