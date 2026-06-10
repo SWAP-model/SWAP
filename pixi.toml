@@ -11,6 +11,8 @@ env = { PFUNIT_ROOT = "$PIXI_PROJECT_ROOT/tests/pFUnit/build/install_gfortran/PF
 [dependencies]
 python = "3.11.*"
 meson = "==1.7"
+gfortran = ">=15.2.0,<15.3"
+cmake = ">=4.3.3,<5"
 
 [pypi-dependencies]
 fprettify = ">=0.3.7, <0.4"
@@ -34,6 +36,7 @@ xmipy = ">=1.3"
 [feature.test.pypi-dependencies]
 pyswap = ">=0.3.9"
 cffi = ">=1.16"
+tomlkit = ">=0.15.0, <0.16"
 
 [feature.test.tasks]
 # Main regression task with optional arguments
@@ -74,6 +77,10 @@ test-cffi-demo = { cmd = "meson test -C builddir --suite cffi-demo --verbose", d
 test-xmi       = { cmd = "python tests/coupling/test_swap_xmi_smoke.py", depends-on = ["build-linux"] }
 test-coupling  = { cmd = "python tests/coupling/test_coupled_smoke.py", depends-on = ["build-linux"] }
 test-all       = { cmd = "python tests/regression/test_output_regression.py hupselbrook surfacewater salinitystress grassgrowth", depends-on = ["build-linux", "test-pfunit", "test-bmi", "test-cffi-demo", "test-xmi", "test-coupling"] }
+
+[feature.test.target.linux-64.dependencies]
+xarray = ">=2026.4.0,<2027"
+netcdf4 = ">=1.7.4,<2"
 
 # ---- Documentation Feature ----
 [feature.docs.dependencies]
@@ -163,3 +170,6 @@ lint-check = { cmd = "fprettify --config-file .fprettify.rc -d -r src tests/unit
 # (that is the baseline state; Phase 4 re-populates as state modules return).
 #============================================================================
 test-pfunit = { cmd = "meson test -C builddir --suite unit-pfunit --verbose", depends-on = ["build-linux"] }
+
+[target.linux-64.dependencies]
+m4 = ">=1.4.21,<2"
