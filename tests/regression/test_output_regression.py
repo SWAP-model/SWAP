@@ -114,12 +114,13 @@ CASES = {
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET", "TREDSOL", "CPWSO", "CWSO",
                     "CONC[-5.0]", "CONC[-25.0]", "CONC[-55.0]"],
-        known_divergence="solute concentrations (CWSO/CPWSO ~3%) diverge vs 4.2.0 "
-                         "from year 1; NOT salinity (saltslope=0 identical), NOT "
-                         "warm-restart incompleteness (numnod=195 seeded per-node), "
-                         "NOT the general solute code (hupselbrook CWSO byte-identical) "
-                         "— specific to this case's swinco=3 + swbotb=3 + irrigation-"
-                         "solute mix; see INVESTIGATION_NOTES.md",
+        known_divergence="solute conc (CWSO/CPWSO ~3%) diverges vs 4.2.0, downstream "
+                         "of a slow GWL drift (~3cm/4yr). Root-caused by legacy diff: "
+                         "init byte-identical + numbit matches every step, but the "
+                         "adaptive-dt sequence desyncs at step ~3 (dt-controller event "
+                         "timing), specific to the swinco=3 warm-restart path; NOT "
+                         "salinity (saltslope=0 identical), NOT rain, NOT init. Same "
+                         "hard adaptive-dt class as winter. See INVESTIGATION_NOTES.md",
     ),
     # surfacewater: RECONSTRUCTED, byte-identical — swbotb=3 (Cauchy, explicit,
     # haquif.csv), swdra=2 surface-water management (2 subsurface levels +

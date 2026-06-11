@@ -126,8 +126,15 @@ contains
           len_trim(config%soil%initial%h_file) > 0) then
          state%soilwater%pondini = config%soil%initial%pond
          state%soilwater%pond    = config%soil%initial%pond
-         ! soil.initial.dt supersedes simulation%numerical%dt for swinco=3
-         state%timecontrol%dt = config%soil%initial%dt
+         ! soil.initial.dt supersedes simulation%numerical%dt for swinco=3, but
+         ! must be clamped to [dtmin, dtmax] — legacy SWAP clamps the first step
+         ! to dtmin (its per-step `dt = max(dt, dtmin)`), so a sub-dtmin restart
+         ! dt (e.g. 1e-7 < dtmin 1e-6) becomes dtmin on step 1. Without this clamp
+         ! the modern first step ran 10x smaller, desyncing the adaptive-dt
+         ! sequence from 4.2.0 and drifting solute concentrations ~3% over the run.
+         state%timecontrol%dt = max(min(config%soil%initial%dt, &
+                                        state%timecontrol%dtmax), &
+                                    state%timecontrol%dtmin)
          ! [W4 fix 2026-05-28] No duplicate CSV read: h_profile already loaded into
          ! state%soilwater%h_init by soilwater_state_init (Piece B). Copy h values here.
          block

@@ -601,3 +601,47 @@ Diagnosis of the residual (CWSO/CPWSO ~3%, CONC ~0.1, from year 1):
 **Net: all 4 lost base cases reconstructed & in the regression — grassgrowth,
 oxygenstress, surfacewater byte-identical; salinitystress runs with a documented
 ~3% solute residual.**
+
+---
+
+## 2026-06-11 — salinitystress deep dive (legacy-vs-modern instrumented diff)
+
+Built a logging copy of the legacy SWAP 4.2.0 (worktree from the `v4.2.0` tag +
+TTUTIL source from github SWAP-model/ttutil, compiled with the swap420gf flags).
+Verified byte-identical to the swap420gf oracle on salinitystress (only the
+timestamp comment differs), then added matching per-node / per-step logging to
+both the legacy and modern solute paths to locate the ~3% divergence.
+
+Findings (in order):
+1. **Initial profiles byte-identical.** Dumped z/h/theta/cml per node right after
+   solute init: max|diff| = 0.0 across all 195 nodes. The swinco=3 warm restart
+   (h_init/cml_init per-node, tsoil via the table) is exact.
+2. **The water diverges too, slowly.** GWL drifts from ~0 to ~3 cm over 4 years;
+   DRAINAGE/QBOTTOM ~0.07/0.03 cm. RAIN/IRRIG identical. So the solute ~3% is
+   DOWNSTREAM of a slow water (GWL) drift, not a solute-transport bug per se
+   (confirmed: hupselbrook's CWSO/CPWSO are byte-identical when asserted).
+3. **The drift is an adaptive-dt sequence desync.** Per-step dump of (t, dt,
+   numbit, gwl): steps 0-2 byte-identical; at step ~3 the modern dt DOUBLES
+   (1e-6 -> 2e-6) while legacy holds 1e-6 one step longer — even though **numbit
+   is identical (2) on both**. So it is the dt-controller's event timing
+   (tEvent/dtEvent/flprevious evolution), not a convergence/numbit difference.
+   Day-1 step counts: legacy 62, modern 58.
+4. **Ruled out:** salinity (saltslope=0 gives the identical divergence), rain
+   intensity (swrain=0 still diverges), init, and a numbit difference. The
+   timecontrol dt/event code itself diffs as a faithful transcription.
+5. **swinco=3-specific.** The other reconstructed cases (grassgrowth/oxygenstress/
+   surfacewater) share swrain=2 but are swinco=2 and are byte-identical.
+
+**Real bug fixed along the way:** the swinco=3 initial timestep. Legacy clamps
+the restart dt to dtmin (its per-step `dt = max(dt, dtmin)`), so a sub-dtmin
+swap.ini dt (1e-7 < dtmin 1e-6) becomes dtmin on step 1. The modern set
+`time%dt = config%soil%initial%dt` unclamped, running the first step 10x too
+small. Fixed in swap_mod.f90 (clamp to [dtmin, dtmax]) — steps 0-2 now match
+4.2.0 exactly. It does not by itself close the aggregate gap (the step-~3 event-
+timing desync dominates), but it removes a genuine discrepancy.
+
+**Status:** the residual is a sub-threshold dt-controller event-timing sensitivity
+in the swinco=3 path — the same hard adaptive-dt class as the winter/frost
+divergence. Not a pinpointable transcription bug (init + numbit + controller code
+all match). Closing it needs instrumenting tEvent/dtEvent/flprevious *inside* both
+timecontrol modules step-by-step to find the first variable that diverges.
