@@ -645,3 +645,35 @@ in the swinco=3 path — the same hard adaptive-dt class as the winter/frost
 divergence. Not a pinpointable transcription bug (init + numbit + controller code
 all match). Closing it needs instrumenting tEvent/dtEvent/flprevious *inside* both
 timecontrol modules step-by-step to find the first variable that diverges.
+
+### 2026-06-11 (cont.) — salinitystress: 2nd bug fixed (dtprevious), residual is FP
+
+Continued the legacy-vs-modern dt-controller trace by logging tEvent/dtEvent/
+flprevious/dtprevious/numbit/gwl inside BOTH timecontrol modules:
+
+**2nd control-flow bug FIXED — swinco=3 dtprevious.** Entry-state trace showed
+step-0 `dtprevious`: legacy 1e-6 vs modern 2e-4. Legacy clamps the sub-dtmin
+restart dt to dtmin and carries that as dtprevious; modern's timecontrol_init
+took the `dt<dtmin -> sqrt(dtmin*dtmax)` branch leaving dtprevious=2e-4. On step 0
+the event-limit branch sets `dt = dtprevious`, so modern's 2e-4 spuriously
+triggered an event-limit -> different flprevious/flTnext -> the dt sequence
+desynced from step 1. Fix: in swap_mod.f90 set BOTH time%dt and time%dtprevious
+to the clamped restart dt. After this, the dt sequence AND numbit are
+byte-for-byte identical to 4.2.0 for ~50 days (GWL firstdiff moved from row 1 to
+row ~51).
+
+**Residual = floating-point ordering.** At ~day 50 the GWL diverges by <1e-7 with
+**identical dt, numbit, AND flprevious** on both builds. Same control flow + same
+inputs + different output = a pure FP operation-ordering difference in the solve
+(the modernization changed FP order via state-record indirection / associate /
+loop restructuring). On this sensitive config (195 nodes, 1cm top compartments,
+4-year run, swbotb=3 Cauchy, numerical heat) it accumulates to ~2.9 cm GWL and
+~3% solute by year 3-4. The simpler byte-identical cases don't accumulate past
+the 2-decimal tolerance.
+
+**Conclusion:** the two control-flow bugs are fixed (genuine faithfulness gains);
+the remaining ~3% is the irreducible FP-ordering limit, not a transcription bug.
+Closing it would require matching the exact FP operation order of 4.2.0 in the
+refactored solve — out of scope and high-risk. salinitystress stays a documented
+known_divergence. Both byte-identical 4.2.0 control-flow bugs were found only by
+the instrumented legacy build (worktree from v4.2.0 + TTUTIL source).

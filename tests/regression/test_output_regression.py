@@ -116,11 +116,12 @@ CASES = {
                     "CONC[-5.0]", "CONC[-25.0]", "CONC[-55.0]"],
         known_divergence="solute conc (CWSO/CPWSO ~3%) diverges vs 4.2.0, downstream "
                          "of a slow GWL drift (~3cm/4yr). Root-caused by legacy diff: "
-                         "init byte-identical + numbit matches every step, but the "
-                         "adaptive-dt sequence desyncs at step ~3 (dt-controller event "
-                         "timing), specific to the swinco=3 warm-restart path; NOT "
-                         "salinity (saltslope=0 identical), NOT rain, NOT init. Same "
-                         "hard adaptive-dt class as winter. See INVESTIGATION_NOTES.md",
+                         "two control-flow bugs FIXED (swinco=3 initial dt + dtprevious "
+                         "clamp) sync the dt sequence AND numbit byte-for-byte for ~50 "
+                         "days; the residual is a sub-1e-7 FP-ordering difference in the "
+                         "195-node solve (identical dt/numbit/flprevious) that "
+                         "accumulates. NOT salinity/rain/init/dt-sequence — irreducible "
+                         "FP limit for this sensitive config. See INVESTIGATION_NOTES.md",
     ),
     # surfacewater: RECONSTRUCTED, byte-identical — swbotb=3 (Cauchy, explicit,
     # haquif.csv), swdra=2 surface-water management (2 subsurface levels +
