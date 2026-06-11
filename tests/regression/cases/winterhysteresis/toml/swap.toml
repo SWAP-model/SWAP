@@ -54,7 +54,8 @@ teprsnow = -2.0
 
 [soil]
 swsophy = 0
-swhyst  = 0
+swhyst  = 1
+tau     = 0.2
 swinco  = 2
 swmacro = 0
 

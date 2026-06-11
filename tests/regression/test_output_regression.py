@@ -119,6 +119,21 @@ CASES = {
         flux_vars=["RAIN", "INTERC", "RUNOFF", "DRAINAGE", "QBOTTOM", "DSTOR", "EACT"],
         state_vars=["GWL"],
     ),
+    # [2026-06-11] Combined high-coverage case: SWHYST=1 (tau=0.2) + SWSNOW=1
+    # (SNOWINCO=0) on base hupselbrook, exercising in one run: numerical heat
+    # (swhea=1/swcalt=2), solute transport (swsolu=1), basic drainage (swdra=2),
+    # retention hysteresis, snow accumulation/melt, and the maize/potato/grass
+    # rotation (swcf=2, Feddes drought, oxygen, Von Hoyningen-Hune interception).
+    # Byte-identical to swap420gf — confirms the two features compose cleanly.
+    "winterhysteresis": CaseConfig(
+        name="winterhysteresis",
+        case_dir="winterhysteresis",
+        local=True,
+        fixture="winterhysteresis_reference_gf.json",
+        flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
+                   "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
+        state_vars=["GWL"],
+    ),
     # [2026-06-11] Winter cluster: snow (SWSNOW=1) + frost-reduced soil water flow
     # (SWFROST=1). Reconstructed LOCAL case (base hupselbrook, SNOWINCO=0,
     # swsublim=0 — SWAP 4.2.0 has no sublimation switch). The SNOW path is
