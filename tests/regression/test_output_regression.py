@@ -76,17 +76,31 @@ CASES = {
     # still exists in the tests/swap-cases submodule for archival. A future
     # macropore feature arc will re-introduce this entry.
     # [2026-06-11] RETIRED: grassgrowth (2), oxygenstress (4), salinitystress (5),
-    # surfacewater (6). Their modern TOML inputs lived only in the swap-cases
-    # `toml/` tree, which is LOST from the remote (the submodule pinned a commit
-    # the upstream repo no longer contains; current main has legacy ASCII only).
-    # They are genuinely different scenarios from hupselbrook (legacy .met meteo,
-    # swbotb=3 Cauchy, swdra=2 surface water, swinco=3 warm restart, solute) so
-    # each needs a from-scratch modern-TOML conversion, not a hupselbrook patch.
-    # Their legacy ASCII (tests/swap-cases/<N>.<case>/) and committed reference
-    # fixtures (*_reference_gf.json) are preserved for reconstruction. The options
-    # they covered are being re-covered by new self-contained hupselbrook-based
-    # cases (Cauchy bottom, solute, scheduled irrigation, …). See
-    # INVESTIGATION_NOTES.md 2026-06-11.
+    # surfacewater (6). Their modern TOML inputs were LOST from the swap-cases
+    # remote and are being reconstructed as self-contained LOCAL cases (legacy
+    # ASCII converted to modern TOML; .met meteo converted to CSV via met_to_csv.py;
+    # swbotb=1 GWL tables -> gwl_file CSV). See INVESTIGATION_NOTES.md 2026-06-11.
+    #
+    # grassgrowth (ruurlo): RECONSTRUCTED — swbotb=1 (prescribed GWL), basic
+    # drainage, numerical heat, grass (type 3, swrd=2, swharv=2 fixed-date mowing),
+    # 1980-1984. Inputs verified faithful: year 1980 byte-identical and PMOWDM
+    # (potential mown DM) byte-identical ALL years. Residual: actual growth
+    # (MOWDM/GRASSDM) drifts ~1% in years 2-5 — a small accumulating actual-
+    # growth/water-stress divergence in the swbotb=1 path (same hard class as the
+    # other residuals; not an input error). Registered known_divergence.
+    "grassgrowth": CaseConfig(
+        name="grassgrowth",
+        case_dir="grassgrowth",
+        local=True,
+        fixture="grassgrowth_reference_gf.json",
+        flux_vars=[],
+        state_vars=[],
+        cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
+        known_divergence="actual grass growth (MOWDM/GRASSDM) drifts ~1% vs 4.2.0 "
+                         "in years 2-5; year 1 + potential growth (PMOWDM) "
+                         "byte-identical; residual in the swbotb=1 actual-growth "
+                         "path; see INVESTIGATION_NOTES.md",
+    ),
     # Clone of hupselbrook with hysteresis active (SWHYST=1). Exercises the
     # soil-water-retention hysteresis path, dormant in all 6 base cases.
     # Hysteresis shifts GWL/DRAINAGE/storage vs the base, so the standard
