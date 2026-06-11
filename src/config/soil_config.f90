@@ -198,6 +198,16 @@ contains
 
       call check_int_enum(self%swsophy, [0, 1],       "soil.swsophy", errors)
       call check_int_enum(self%swhyst,  [0, 1, 2],    "soil.swhyst",  errors)
+      ! Hysteresis (swhyst/=0) needs a positive reversal threshold tau. The
+      ! legacy .swp requires TAU when SWHYST=1/2; the TOML reader defaults tau to
+      ! 0.0, which is degenerate (flips the wetting/drying scanning curve on any
+      ! head change, every step) and silently diverges from 4.2.0. Require tau>0.
+      if (self%swhyst /= 0 .and. self%tau <= 0.0_real64) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            "soil.tau must be > 0 when soil.swhyst /= 0 (hysteresis reversal " // &
+            "threshold; legacy default 0.2). tau=0 flips the scanning curve " // &
+            "every step and diverges from SWAP 4.2.0.", "soil.tau")
+      end if
       call check_int_enum(self%swinco,  [1, 2, 3],    "soil.swinco",  errors)
       call check_int_enum(self%swmacro, [0, 1],       "soil.swmacro", errors)
       call check_int_enum(self%swscal,  [0, 1],       "soil.swscal",  errors)
