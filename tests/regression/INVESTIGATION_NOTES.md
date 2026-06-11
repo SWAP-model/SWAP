@@ -549,3 +549,19 @@ threshold → different rfcp) amplifying a sub-threshold difference — same CLA
 the salinity/oxygen feedback divergences, not the (fixed) drainage first-step bug.
 Registered `winter` as a known_divergence for a dedicated session. Needs legacy-
 vs-modern tsoil/rfcp per-node instrumentation to confirm.
+
+### 2026-06-11 — NEW BUG surfaced: swbotb=7 (free drainage) blows up in some years
+
+While adding bottom-boundary coverage, a hupselbrook + SWBOTB=7 (free drainage)
+case revealed a modern-only bug: 2002/2003 match swap420gf to ~0.18 cm, but 2004
+(the grass year, deep/dry GWL) EXPLODES — QBOTTOM 1099 vs 13.9, RUNOFF 999.62 vs
+0.0 (999 is a SWAP below-profile sentinel), DRAINAGE 109 vs 26. The legacy oracle
+is well-behaved; only modern diverges. Signature: with free drainage the column
+drains until GWL drops below the profile and the modern code appears to feed the
+999 sentinel into runoff/qbottom arithmetic instead of clamping as 4.2.0 does.
+NOT investigated/fixed (distinct from the drainage first-step bug). The case was
+dropped (not registered). Reproduce: hupselbrook with `swbotb = 7` in swap.toml
+and `SWBOTB = 7` in the .swp. Likely in the swbotb=7 branch of headcalc_residual
+(src/soilwater/soilhydraulics.f90:702) or calcgwl's below-profile handling.
+A dedicated-session item; bottom-boundary cases (swbotb 1/2/3/5/7/8) remain
+uncovered by the regression suite.
