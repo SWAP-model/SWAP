@@ -1,0 +1,32 @@
+# surfacewater (swdra=2 surface-water management) drainage.
+[drainage]
+swdra    = 2
+swdivd   = 1
+swdislay = 0
+altcu    = 0.0
+nrlevs   = 2
+cofani   = [10.0, 10.0, 10.0]
+
+[[drainage.levels]]
+swdtyp = 0
+L      = 390.0
+zbotdr = -115.0
+gwlinf = -1000.0
+rdrain = 461.0
+rinfi  = 1000.0
+rentry = 1.0
+rexit  = 5.0
+widthr = 100.0
+taludr = 0.66
+
+[[drainage.levels]]
+swdtyp = 0
+L      = 170.0
+zbotdr = -60.0
+gwlinf = -1000.0
+rdrain = 296.0
+rinfi  = 500.0
+rentry = 1.0
+rexit  = 5.0
+widthr = 50.0
+taludr = 1.00

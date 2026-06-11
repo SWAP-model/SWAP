@@ -1,0 +1,52 @@
+# surfacewater type-1 (cropfixed) grass — port of 6.surfacewater/grass.crp.
+[preparation]
+swprep = 0
+swsow  = 0
+swgerm = 0
+
+[harvest]
+dvsend = 2.0
+swharv = 0
+
+[phenology]
+idev = 1
+lcc  = 366
+
+[light]
+kdif = 0.75
+kdir = 0.75
+
+[lai]
+swgc = 1
+gctb = [0.0, 3.0, 2.0, 3.0]
+
+[crop_factor]
+swcf = 1
+cftb = [0.0, 1.0, 2.0, 1.0]
+
+[root]
+swrd  = 1
+rdtb  = [0.0, 30.0, 2.0, 30.0]
+rdctb = [0.0, 1.0, 1.0, 1.0]
+
+[oxygen_stress]
+swoxygen   = 0
+swwrtnonox = 0
+
+[drought_stress]
+swdrought = 1
+hlim3h    = -200.0
+hlim3l    = -800.0
+hlim4     = -8000.0
+adcrh     = 0.5
+adcrl     = 0.1
+
+[salinity]
+swsalinity = 0
+
+[compensation]
+swcompensate = 0
+
+[interception]
+swinter = 1
+cofab   = 0.25

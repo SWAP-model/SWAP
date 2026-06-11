@@ -1,0 +1,148 @@
+# SWAP surfacewater — reconstructed modern TOML port of tests/swap-cases/
+# 6.surfacewater. swbotb=3 (Cauchy, explicit, haquif.csv), swdra=2 surface-water
+# management (2 subsurface levels + simulated surface-water level + 28 management/
+# weir periods), no heat, no solute, type-1 grass crop, 1997-1999.
+
+[general]
+project = "surfacewater"
+swscre  = 0
+swerror = 0
+
+[simulation]
+start_date = 1997-01-01
+end_date   = 1999-12-31
+nprintday  = 1
+
+[simulation.output]
+swmonth = 0
+period  = 1
+swres   = 0
+swodat  = 0
+swyrvar = 0
+
+[simulation.numerical]
+dt    = 0.04
+dtmin = 1.0e-6
+dtmax = 0.04
+
+[meteorology]
+file = "290.csv"
+lat  = 52.274
+alt  = 34.8
+altw = 10.0
+
+[meteorology.evapotranspiration]
+swetr      = 0
+swdivide   = 1
+angstrom_a = 0.25
+angstrom_b = 0.50
+
+[meteorology.rain]
+swrain   = 2
+swetsine = 0
+
+[meteorology.interception]
+swinter = 0
+
+[meteorology.evaporation]
+swcfbs     = 0
+swredu     = 1
+cofredbl   = 0.35
+rsigni     = 0.5
+cfevappond = 1.25
+
+[drainage]
+file = "swap.dra.toml"
+
+[soil]
+swsophy = 0
+swhyst  = 0
+swinco  = 2
+swmacro = 0
+rsoil   = 600.0
+rsro    = 0.5
+rsroexp = 1.0
+
+# 8 sub-layers spanning 3 soil-physical layers.
+sublay   = [1, 2, 3, 4, 5, 6, 7, 8]
+isoillay = [1, 1, 2, 2, 3, 3, 3, 3]
+hsublay  = [10.0, 15.0, 35.0, 20.0, 80.0, 120.0, 90.0, 35.0]
+ncomp    = [10, 3, 7, 2, 8, 6, 3, 1]
+
+[soil.initial]
+gwli    = -68.0
+pondini = 0.0
+pondmx  = 0.2
+
+[soil.hydraulics]
+ores    = [0.02,   0.01,   0.01]
+osat    = [0.43,   0.36,   0.36]
+alfa    = [0.0234, 0.0224, 0.0224]
+npar    = [1.801,  2.286,  2.286]
+ksatfit = [23.41,  15.22,  15.22]
+lexp    = [0.0,    0.0,    0.0]
+alfaw   = [0.0234, 0.0224, 0.0224]
+h_enpr  = [0.0,    0.0,    0.0]
+ksatexm = [23.41,  15.22,  15.22]
+bdens   = [1300.0, 1300.0, 1300.0]
+
+[crop]
+swcrop = 1
+
+[[crop.rotation]]
+start = 1997-01-01
+end   = 1997-12-31
+file  = "grass.crp.toml"
+type  = 1
+
+[[crop.rotation]]
+start = 1998-01-01
+end   = 1998-12-31
+file  = "grass.crp.toml"
+type  = 1
+
+[[crop.rotation]]
+start = 1999-01-01
+end   = 1999-12-31
+file  = "grass.crp.toml"
+type  = 1
+
+[bottom_boundary]
+swbotb         = 3
+swbotb3resvert = 0
+swbotb3impl    = 0
+shape          = 1.0
+hdrain         = -400.0
+rimlay         = 10.0
+sw3            = 2
+haquif_file    = "haquif.csv"
+
+[heat]
+swhea = 0
+
+[solute]
+swsolu = 0
+
+[output.csv]
+inlist = "gwl,pond"
+
+[surface_water]
+swsrf  = 2
+swsec  = 2
+wlact  = -77.0
+osswlm = 2.5
+swqhr  = 1
+sofcu  = 100.0
+nmper  = 28
+
+[surface_water.management]
+impend = [1997-01-01, 1997-01-15, 1997-02-27, 1997-03-19, 1997-06-03, 1997-06-18, 1997-07-03, 1997-08-21, 1997-10-07, 1997-10-30, 1998-02-05, 1998-02-11, 1998-02-26, 1998-03-12, 1998-03-19, 1998-03-30, 1998-04-10, 1998-04-18, 1998-05-04, 1998-05-27, 1998-08-14, 1998-09-15, 1998-12-16, 1999-01-18, 1999-01-26, 1999-06-24, 1999-12-10, 1999-12-31]
+swman  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+wscap  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+wldip  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+intwl  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+
+[surface_water.weir]
+hbweir = [-96.0, -45.0, -96.0, -46.5, -96.0, -56.2, -96.0, -67.0, -46.5, -68.0, -46.5, -38.8, -34.0, -58.0, -68.0, -51.0, -66.0, -63.0, -73.0, -51.0, -61.0, -63.3, -71.0, -46.0, -46.0, -66.0, -61.0, -46.6]
+alphaw = [1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7, 1.7]
+betaw  = [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5]

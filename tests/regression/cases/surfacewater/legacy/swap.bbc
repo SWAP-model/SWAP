@@ -1,0 +1,132 @@
+**********************************************************************************
+* Filename: swap.bbc
+* Contents: SWAP 4 - Main input data
+**********************************************************************************
+* Comment area:
+* Testbank of SWAP: build with template of bbc-file
+*
+**********************************************************************************
+
+*** BOTTOM BOUNDARY SECTION ***
+
+**********************************************************************************
+* Bottom boundary condition
+
+* Select one of the following options:
+  SWBOTB = 3                 ! 1  Prescribe groundwater level
+                             ! 2  Prescribe bottom flux
+                             ! 3  Calculate bottom flux from hydraulic head of deep aquifer
+                             ! 4  Calculate bottom flux as function of groundwater level
+                             ! 5  Prescribe soil water pressure head of bottom compartment
+                             ! 6  Bottom flux equals zero
+                             ! 7  Free drainage of soil profile
+                             ! 8  Free outflow at soil-air interface
+
+* Options 1-5 require additional bottom boundary data below
+
+**********************************************************************************
+
+**********************************************************************************
+* In case of SWBOTB = 3, calculate bottom flux from hydraulic head in deep aquifer
+
+* Switch for vertical hydraulic resistance between bottom boundary and groundwater level
+  SWBOTB3RESVERT = 0         ! 0 = Include vertical hydraulic resistance
+                             ! 1 = Suppress vertical hydraulic resistance
+
+* Switch for numerical solution of bottom flux: 0 = explicit, 1 = implicit
+  SWBOTB3IMPL = 0            ! 0 = explicit solution (choose always when SHAPE < 1.0)
+                             ! 1 = implicit solution
+
+* Specify:
+  SHAPE = 1.0                ! Shape factor to derive average groundwater level [0..1 -, R]
+  HDRAIN = -400.0            ! Mean drain base to correct for average groundwater level [-10000..0 cm, R]
+  RIMLAY = 10.0              ! Vertical resistance of aquitard [0..100000 d, R]
+
+* Specify whether a sinus function or a table are used for the hydraulic head in the deep aquifer:
+  SW3 = 2                    ! 1 = sinus function  
+                             ! 2 = table 
+
+* In case of table (SW3 = 2), specify date DATE3 [YYYY-MM-DD] and average pressure head in underlaying aquifer HAQUIF [-10000..1000 cm, R]:
+
+      DATE3  HAQUIF
+ 1996-12-28   -63.0
+ 1997-01-14   -84.0
+ 1997-01-28   -78.0
+ 1997-02-14   -12.0
+ 1997-02-28   -17.0
+ 1997-03-14   -56.0
+ 1997-03-28   -65.0
+ 1997-04-14   -73.0
+ 1997-04-28   -82.0
+ 1997-05-14   -63.0
+ 1997-05-28   -87.0
+ 1997-06-14   -90.0
+ 1997-06-28   -20.0
+ 1997-07-14   -73.0
+ 1997-07-28   -58.0
+ 1997-08-14  -102.0
+ 1997-08-28  -111.0
+ 1997-09-14  -113.0
+ 1997-09-28  -123.0
+ 1997-10-14   -64.0
+ 1997-10-28   -95.0
+ 1997-11-14   -98.0
+ 1997-11-28   -98.0
+ 1997-12-14   -64.0
+ 1997-12-28   -49.0
+ 1998-01-14   -45.0
+ 1998-01-28   -64.0
+ 1998-02-13   -71.0
+ 1998-02-27   -74.0
+ 1998-03-14   -27.0
+ 1998-03-28   -52.0
+ 1998-04-14   -34.0
+ 1998-04-28   -48.0
+ 1998-05-15   -71.0
+ 1998-05-29   -85.0
+ 1998-06-14   -32.0
+ 1998-06-28   -67.0
+ 1998-07-14   -64.0
+ 1998-07-28   -80.0
+ 1998-08-14  -104.0
+ 1998-08-28   -95.0
+ 1998-09-14   -31.0
+ 1998-09-28   -47.0
+ 1998-10-14   -33.0
+ 1998-10-28    18.0
+ 1998-11-12    -2.0
+ 1998-11-25   -22.0
+ 1998-12-14   -12.0
+ 1998-12-28    -3.0
+ 1999-01-14    -9.0
+ 1999-01-28    -5.0
+ 1999-02-14   -25.0
+ 1999-02-28     4.0
+ 1999-03-14   -28.0
+ 1999-03-28   -31.0
+ 1999-04-14   -22.0
+ 1999-04-28   -48.0
+ 1999-05-14   -46.0
+ 1999-05-28   -67.0
+ 1999-06-14   -71.0
+ 1999-06-28   -79.0
+ 1999-07-14   -83.0
+ 1999-07-28  -101.0
+ 1999-08-14  -107.0
+ 1999-08-28  -105.0
+ 1999-09-14  -131.0
+ 1999-09-28  -123.0
+ 1999-10-14  -120.0
+ 1999-10-28  -122.0
+ 1999-11-14  -108.0
+ 1999-11-28   -97.0
+ 2000-01-14   -52.0
+* End of table
+
+* An extra groundwater flux can be specified which is added to above specified flux
+  SW4 = 0                    ! 0 = no extra flux 
+                             ! 1 = include extra flux
+
+**********************************************************************************
+
+* End of input file .BBC     !

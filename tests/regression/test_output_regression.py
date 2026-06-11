@@ -94,6 +94,18 @@ CASES = {
         state_vars=[],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
     ),
+    # surfacewater: RECONSTRUCTED, byte-identical — swbotb=3 (Cauchy, explicit,
+    # haquif.csv), swdra=2 surface-water management (2 subsurface levels +
+    # simulated surface-water level, [surface_water] + .management + .weir with
+    # 28 periods), no heat, no solute, type-1 grass crop, 1997-1999, 290.met.
+    "surfacewater": CaseConfig(
+        name="surfacewater",
+        case_dir="surfacewater",
+        local=True,
+        fixture="surfacewater_reference_gf.json",
+        flux_vars=[],
+        state_vars=["GWL", "POND"],
+    ),
     # oxygenstress (zegveld): RECONSTRUCTED, byte-identical — swbotb=3 (Cauchy
     # from deep aquifer, implicit, haquif.csv), dramet=3 2-level resistance
     # drainage, numerical heat (peat profile), grass (type 3) with Bartholomeus

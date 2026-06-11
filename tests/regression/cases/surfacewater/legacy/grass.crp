@@ -1,0 +1,202 @@
+**********************************************************************************
+* Contents: SWAP 4 - Crop data (fixed crop)
+**********************************************************************************
+* Comment area:
+* Testbank of SWAP: build with template of crp-file
+*
+**********************************************************************************
+
+*** PLANT GROWTH SECTION ***
+
+**********************************************************************************
+* Part 0: Preparation, Sowing, Germination and Harvest
+
+* Part 0a: Preparation before crop growth
+
+* Switch for preparation:
+  SWPREP = 0                 ! 0 = No preparation
+                             ! 1 = Preparation before start of crop growth
+
+* Part 0b: Sowing
+* Switch for sowing:
+  SWSOW = 0                  ! 0 = No sowing
+                             ! 1 = Sowing before start of crop growth
+
+* Part 0c: Germination
+  
+* Switch for germination:
+  SWGERM = 0                 ! 0 = No germination
+                             ! 1 = Simulate germination depending on temperature
+                             ! 2 = Simulate germination depending on temperature and hydrological conditions
+
+
+* Part 0d: Harvest
+
+  DVSEND = 2.0               ! Development stage at harvest [0..3 -, R]
+  
+* Switch for timing of harvest:
+  SWHARV = 0                 ! 0 = Timing of harvest depends on end of growing period (CROPEND)
+                             ! 1 = Timing of harvest depends on development stage (DVSEND)
+
+**********************************************************************************
+
+**********************************************************************************
+* Part 1: Crop development
+
+* Duration of crop growing period:
+  IDEV = 1                   ! 1 = Duration is fixed
+                             ! 2 = Duration is variable
+
+* If duration is fixed (IDEV = 1), specify:                                                
+  LCC = 366                  ! Duration of the crop growing period [1..366 days, I]
+
+**********************************************************************************
+
+**********************************************************************************
+* Part 2: Light extinction
+
+  KDIF = 0.75                ! Extinction coefficient for diffuse visible light [0..2 -, R]
+  KDIR = 0.75                ! Extinction coefficient for direct visible light [0..2 -, R]
+
+**********************************************************************************
+
+**********************************************************************************
+* Part 3: Leaf area index or soil cover fraction
+
+* Choose between LAI or SCF:
+  SWGC = 1                   ! 1 = Leaf Area Index
+                             ! 2 = Soil Cover Fraction
+
+* If SWGC = 1, list Leaf Area Index [0..12 (m2 leaf)/(m2 soil), R], as function of development stage [0..2 -, R]:
+
+* DVS   LAI
+  GCTB =                
+0.0 3.0
+2.0 3.0
+* End of table
+
+**********************************************************************************
+
+**********************************************************************************
+* Part 4: crop factor or crop height
+
+* Choose between crop factor and crop height
+* Choose crop factor if ETref is used, either from meteo input file (SWETR = 1) or with Penman-Monteith
+* Choose crop height if Penman-Monteith should be used with actual crop height, albedo and canopy resistance
+  SWCF = 1                   ! 1 = Crop factor 
+                             ! 2 = Crop height
+
+* If SWCF = 1, list Crop Factor [0..2 -, R],   as function of dev. stage [0..2 -, R]:
+
+ DVS   CF
+ 0.0  1.0
+ 2.0  1.0
+* End of table
+
+**********************************************************************************
+
+**********************************************************************************
+* Part 10: Root density profile
+
+* Switch development of root depth
+  SWRD = 1                   ! 1 = Root depth depends on development stage
+                             ! 2 = Root depth depends on maximum daily increase
+                             ! 3 = Root depth depends on available root biomass
+
+* If case of dependency development stage (SWRD = 1), specify:
+* List Rooting Depth [0..1000 cm, R], as a function of development stage [0..2 -, R]:
+
+*  DVS   RD
+  RDTB =
+0.0 30.0
+2.0 30.0
+* End of table
+
+* Always specify:
+* List root density [0..100 cm/cm3, R] as function of relative rooting depth [0..1 -, R]:
+* In case of drought stress according to Feddes et al. (1978) (SWDROUGHT = 1), relative root density (-) is sufficient
+
+*   RRD    RDENS
+  RDCTB =
+0.0 1.0
+1.0 1.0
+* End of table
+
+**********************************************************************************
+
+**********************************************************************************
+* Part 11: Oxygen stress
+
+* Switch for oxygen stress:
+  SWOXYGEN = 0               ! 0 = No oxygen stress
+                             ! 1 = Oxygen stress according to Feddes et al. (1978)
+                             ! 2 = Oxygen stress according to Bartholomeus et al. (2008)
+
+* Switch for checking aerobic conditions in root zone to stop root(zone) development
+  SWWRTNONOX = 0             ! 0 = Do not check for aerobic conditions
+                             ! 1 = Check for aerobic conditions
+
+
+**********************************************************************************
+
+**********************************************************************************
+* Part 12: Drought stress
+  
+* Switch for drought stress:
+  SWDROUGHT = 1              ! 1 = Drought stress according to Feddes et al. (1978)
+                             ! 2 = Drought stress according to De Jong van Lier et al. (2008)
+
+* If SWDROUGHT=1, or in case of irrigation scheduling (SCHEDULE = 1), specify:
+  HLIM3H = -200.0            ! Pressure head below which water uptake reduction starts at high Tpot [-1d4..100 cm, R]
+  HLIM3L = -800.0            ! Pressure head below which water uptake reduction starts at low Tpot  [-1d4..100 cm, R]
+  HLIM4 = -8000.0            ! No water extraction at lower soil water pressure heads [-1.6d4..100 cm, R]
+  ADCRH = 0.5                ! Level of high atmospheric demand, corresponding to HLIM3H [0..5 cm/d, R]     
+  ADCRL = 0.1                ! Level of low atmospheric demand, corresponding to HLIM3L [0..5 cm/d, R]     
+
+**********************************************************************************
+
+**********************************************************************************
+* Part 13: salt stress
+
+* Switch salinity stress
+  SWSALINITY = 0             ! 0 = No salinity stress
+                             ! 1 = Maas and Hoffman reduction function
+                             ! 2 = Use osmotic head
+
+
+**********************************************************************************
+
+**********************************************************************************
+* Part xx: compensation of root water uptake stress
+
+* Switch for compensation root water uptake stress
+  SWCOMPENSATE = 0           ! 0 = No compensation
+                             ! 1 = Compensation according to Jarvis (1989)
+                             ! 2 = Compensation according to Walsum (2019)
+
+**********************************************************************************
+
+**********************************************************************************
+* Part 14: interception                                            
+
+* For agricultural crops apply interception concept of Von Hoyningen-Hune and Braden
+* Switch for rainfall interception method:
+  SWINTER = 1                ! 0 = No interception calculated
+                             ! 1 = Agricultural crops (Von Hoyningen-Hune and Braden)
+                             ! 2 = Trees and forests (Gash)
+
+* In case of agricultural crops (SWINTER = 1) specify:
+  COFAB = 0.25               ! Interception coefficient, corresponding to maximum interception amount [0..1 cm, R]
+
+**********************************************************************************
+
+*** IRRIGATION SCHEDULING SECTION ***
+
+**********************************************************************************
+* Part 1: General
+
+  SCHEDULE = 0               ! Switch for application irrigation scheduling [Y=1, N=0] 
+
+**********************************************************************************
+
+* End of .crp file           !
