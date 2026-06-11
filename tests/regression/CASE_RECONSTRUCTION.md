@@ -12,8 +12,8 @@ legacy ASCII (`tests/swap-cases/<N>.<case>/`, still present) to modern TOML.
 | hupselbrook | swbotb=6 | maize/potato/grass | solute, irrig | ✅ byte-identical |
 | grassgrowth | swbotb=1 (gwl_file) | grass | dramet=3 drainage | ✅ byte-identical |
 | oxygenstress | swbotb=3 Cauchy (haquif_file) | grass + Bartholomeus O2 | dramet=3 2-level | ✅ byte-identical |
-| salinitystress | swbotb=3 | wofost potato + salinity | swsolu=1, swinco=3, swap.irg | ⏳ TODO |
-| surfacewater | swbotb=3 | grass | **swdra=2 surface water** | ⏳ TODO |
+| surfacewater | swbotb=3 Cauchy | type-1 grass | **swdra=2 surface water** (28 periods) | ✅ byte-identical |
+| salinitystress | swbotb=3 | wofost potato + salinity | swsolu=1, swinco=3 warm-restart, swap.irg | ⏳ TODO (hardest) |
 | macroporeflow | — | — | macropore | retired (ADR 0040, physics deleted) |
 
 ## Conversion recipe (proven on grassgrowth + oxygenstress)
