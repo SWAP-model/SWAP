@@ -1,0 +1,183 @@
+# SWAP oxygenstress (zegveld) — reconstructed modern TOML port of
+# tests/swap-cases/4.oxygenstress. swbotb=3 (Cauchy from deep aquifer, implicit,
+# haquif.csv), dramet=3 2-level resistance drainage, numerical heat, grass
+# (type 3) with Bartholomeus oxygen stress (swoxygen=2), 1993-2002, no solute.
+
+[general]
+project = "zegveld"
+swscre  = 0
+swerror = 0
+
+[simulation]
+start_date = 1993-01-01
+end_date   = 2002-12-31
+nprintday  = 1
+
+[simulation.output]
+swmonth = 0
+period  = 1
+swres   = 0
+swodat  = 0
+swyrvar = 0
+
+[simulation.numerical]
+dt    = 0.04
+dtmin = 1.0e-6
+dtmax = 0.04
+
+[meteorology]
+file = "260.csv"
+lat  = 52.1
+alt  = 1.9
+altw = 10.0
+
+[meteorology.evapotranspiration]
+swetr      = 0
+swdivide   = 1
+angstrom_a = 0.25
+angstrom_b = 0.50
+
+[meteorology.rain]
+swrain   = 2
+swetsine = 0
+
+[meteorology.interception]
+swinter = 0
+
+[meteorology.evaporation]
+swcfbs     = 0
+swredu     = 1
+cofredbl   = 0.35
+rsigni     = 0.5
+cfevappond = 1.25
+
+[drainage]
+file = "swap.dra.toml"
+
+[soil]
+swsophy = 0
+swhyst  = 0
+swinco  = 2
+swmacro = 0
+rsoil   = 600.0
+rsro    = 0.5
+rsroexp = 1.0
+
+# 8 sub-layers spanning 4 soil-physical layers. depth = 400 cm; comps = 45.
+sublay   = [1, 2, 3, 4, 5, 6, 7, 8]
+isoillay = [1, 1, 2, 3, 4, 4, 4, 4]
+hsublay  = [5.0, 20.0, 15.0, 35.0, 15.0, 110.0, 100.0, 100.0]
+ncomp    = [5, 8, 3, 7, 2, 11, 5, 4]
+
+[soil.initial]
+gwli    = -15.0
+pondini = 0.0
+pondmx  = 0.2
+
+# Mualem-van Genuchten per soil-physical layer (4 peat layers). alfaw mirrors
+# alfa (unused, swhyst=0).
+[soil.hydraulics]
+ores    = [0.10,   0.00,   0.00,   0.00]
+osat    = [0.722,  0.830,  0.902,  0.900]
+alfa    = [0.0305, 0.0121, 0.0177, 0.0158]
+npar    = [1.124,  1.108,  1.349,  1.361]
+ksatfit = [5.8,    1.7,    1.7,    2.4]
+lexp    = [0.000,  -4.884, -3.410, -2.861]
+alfaw   = [0.0305, 0.0121, 0.0177, 0.0158]
+h_enpr  = [0.0,    0.0,    0.0,    0.0]
+ksatexm = [5.8,    1.7,    1.7,    2.4]
+bdens   = [557.0,  222.0,  194.0,  137.0]
+
+[crop]
+swcrop = 1
+
+[[crop.rotation]]
+start = 1993-01-01
+end   = 1993-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[[crop.rotation]]
+start = 1994-01-01
+end   = 1994-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[[crop.rotation]]
+start = 1995-01-01
+end   = 1995-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[[crop.rotation]]
+start = 1996-01-01
+end   = 1996-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[[crop.rotation]]
+start = 1997-01-01
+end   = 1997-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[[crop.rotation]]
+start = 1998-01-01
+end   = 1998-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[[crop.rotation]]
+start = 1999-01-01
+end   = 1999-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[[crop.rotation]]
+start = 2000-01-01
+end   = 2000-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[[crop.rotation]]
+start = 2001-01-01
+end   = 2001-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[[crop.rotation]]
+start = 2002-01-01
+end   = 2002-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+[bottom_boundary]
+swbotb         = 3
+swbotb3resvert = 0
+swbotb3impl    = 1
+shape          = 1.0
+hdrain         = -25.0
+rimlay         = 500.0
+sw3            = 2
+haquif_file    = "haquif.csv"
+
+[heat]
+swhea     = 1
+swcalt    = 2
+swtopbhea = 1
+swbotbhea = 1
+psand = [0.699, 0.658, 0.217, 0.000]
+psilt = [0.108, 0.138, 0.528, 0.373]
+pclay = [0.193, 0.204, 0.254, 0.627]
+porg  = [0.192, 0.181, 0.341, 0.777]
+tsoil_init = [
+  [  0.0,  7.0],
+  [-30.0, 10.0],
+  [-298.0, 10.0],
+]
+
+[solute]
+swsolu = 0
+
+[output.csv]
+inlist = "pgrassdm,grassdm,pmowdm,mowdm,treddry,tredwet"

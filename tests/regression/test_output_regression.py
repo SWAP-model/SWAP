@@ -94,6 +94,19 @@ CASES = {
         state_vars=[],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
     ),
+    # oxygenstress (zegveld): RECONSTRUCTED, byte-identical — swbotb=3 (Cauchy
+    # from deep aquifer, implicit, haquif.csv), dramet=3 2-level resistance
+    # drainage, numerical heat (peat profile), grass (type 3) with Bartholomeus
+    # oxygen stress (swoxygen=2), 1993-2002.
+    "oxygenstress": CaseConfig(
+        name="oxygenstress",
+        case_dir="oxygenstress",
+        local=True,
+        fixture="oxygenstress_reference_gf.json",
+        flux_vars=[],
+        state_vars=["TREDDRY", "TREDWET"],
+        cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
+    ),
     # Clone of hupselbrook with hysteresis active (SWHYST=1). Exercises the
     # soil-water-retention hysteresis path, dormant in all 6 base cases.
     # Hysteresis shifts GWL/DRAINAGE/storage vs the base, so the standard
