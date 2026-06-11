@@ -503,3 +503,49 @@ reorg, `src/crop/rootextraction.f90`); recover jongvanlier.f90 from 5c82f0a^ and
 re-port against the current tree rather than `git apply`. The wiltpoint fix
 (use state%crop%common%wiltpoint, not hlim4, at the three swdrought=2 matric-flux
 sites) is the key correctness fix from that patch to carry forward.
+
+---
+
+## 2026-06-11 — regression suite made self-contained; hysteresis/snow confirmed; frost isolated
+
+**swap-cases toml/ tree is lost.** The `tests/swap-cases` submodule pinned a
+commit the upstream remote no longer contains; current `main` has only legacy
+ASCII cases (1-6), no `toml/`. The modern TOML base cases were generated locally
+and never pushed. Reconstructed base **hupselbrook** TOML from the local switch-
+case clones (each patches only specific `.crp` files): swap.toml/dra/csv/template
++ maizes (from swcf3, unpatched) + potatod/grassd (from swrd2, unpatched). Modern
+on the reconstruction matches the committed `hupselbrook_reference_gf.json`
+byte-for-byte → reconstruction validated.
+
+**Suite is now self-contained.** Promoted hupselbrook + the reconstructed cases
+to LOCAL cases under `tests/regression/cases/` so the whole suite no longer
+depends on the (private, history-rewritten) submodule. `gen_switch_cases.py` now
+sources the local hupselbrook. Retired the 4 orphaned base cases
+(grassgrowth/oxygenstress/salinitystress/surfacewater) whose modern TOML is lost
+and which need from-scratch conversion (legacy .met meteo, swbotb=3, swdra=2,
+swinco=3); legacy ASCII + fixtures preserved.
+
+**soilhysteresis (SWHYST=1) — now byte-identical.** Confirmed the drainage
+first-step fix resolves the hysteresis adaptive-dt divergence. The residual that
+remained in the first reconstruction was a missing `tau = 0.2` in the modern TOML
+(legacy `.swp` has `TAU = 0.2`; modern silently defaults `tau` to 0.0 when
+swhyst≠0 — a degenerate value that flips the wetting/drying scanning curve every
+step). With `tau = 0.2` the case passes. The hysteresis kernel is faithful.
+NB robustness gap: modern should validate/require `tau>0` when `swhyst≠0`.
+
+**snow (SWSNOW=1) — byte-identical.** Snow accumulation/melt path reproduces
+4.2.0 exactly (new local `snow` case, SNOWINCO=0).
+
+**winter / frost (SWFROST=1) — genuine divergence, NOT the drainage bug.**
+Isolation: snow-only passes byte-identical; frost-only fails (DRAINAGE/RUNOFF/GWL
+diverge ~0.5-0.8 cm in the cold grass year, and the magnitude GROWS with frost
+intensity — SNOWINCO=0 frost-only shows ~0.8 cm vs the ~0.04 cm the old snow+
+frost case showed, because snow insulates the soil and limits frost). The frost
+reduction code (FrozenCond/FrozenBounds, src/heat/frozencond.f90) reads faithful.
+Since base hupselbrook (swhea=1/swcalt=2 numerical heat) is byte-identical, the
+most likely cause is a heat<->frost feedback (frost reduces flow → different
+theta → different thermal conductivity → different tsoil near the freezing
+threshold → different rfcp) amplifying a sub-threshold difference — same CLASS as
+the salinity/oxygen feedback divergences, not the (fixed) drainage first-step bug.
+Registered `winter` as a known_divergence for a dedicated session. Needs legacy-
+vs-modern tsoil/rfcp per-node instrumentation to confirm.

@@ -57,100 +57,87 @@ class CaseConfig(NamedTuple):
 
 # Registered test cases
 CASES = {
+    # [2026-06-11] Promoted to a self-contained LOCAL case (legacy + toml under
+    # tests/regression/cases/hupselbrook/) after the swap-cases toml/ tree was
+    # found lost from the remote. The whole regression suite is now independent
+    # of the (private, history-rewritten) swap-cases submodule.
     "hupselbrook": CaseConfig(
         name="hupselbrook",
-        case_dir="1.hupselbrook",
+        case_dir="hupselbrook",
+        local=True,
         fixture="hupselbrook_reference_gf.json",
         flux_vars=["RAIN", "IRRIG", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
-        input_files={
-                "swp": "swap_linux.swp.template",
-                "metfile": "283.csv",
-                "cropfiles": ["grassd.crp", "maizes.crp", "potatod.crp"],
-                "drafile": "swap.dra"
-        }
     ),
     # [MACRO-RETIRE 2026-05-12] Case 3 (macroporeflow) retired per ADR 0040.
     # Macropore physics deleted from rescue branch; legacy SWAP 4.2.0
     # implementation preserved on branch legacy/swap-4.2.0. The case dir
     # still exists in the tests/swap-cases submodule for archival. A future
     # macropore feature arc will re-introduce this entry.
-    "grassgrowth": CaseConfig(
-        name="grassgrowth",
-        case_dir="2.grassgrowth",
-        fixture="grassgrowth_reference_gf.json",
-        flux_vars=[],
-        state_vars=[],
-        cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
-    ),
-    "oxygenstress": CaseConfig(
-        name="oxygenstress",
-        case_dir="4.oxygenstress",
-        fixture="oxygenstress_reference_gf.json",
-        flux_vars=[],
-        state_vars=["TREDDRY", "TREDWET"],
-        cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
-    ),
-    "salinitystress": CaseConfig(
-        name="salinitystress",
-        case_dir="5.salinitystress",
-        fixture="salinitystress_reference_gf.json",
-        flux_vars=[],
-        state_vars=["TREDDRY", "TREDWET", "TREDSOL", "CPWSO", "CWSO",
-                    "CONC[-5.0]", "CONC[-25.0]", "CONC[-55.0]"],
-    ),
-    "surfacewater": CaseConfig(
-        name="surfacewater",
-        case_dir="6.surfacewater",
-        fixture="surfacewater_reference_gf.json",
-        flux_vars=[],
-        state_vars=["GWL", "POND"],
-    ),
+    # [2026-06-11] RETIRED: grassgrowth (2), oxygenstress (4), salinitystress (5),
+    # surfacewater (6). Their modern TOML inputs lived only in the swap-cases
+    # `toml/` tree, which is LOST from the remote (the submodule pinned a commit
+    # the upstream repo no longer contains; current main has legacy ASCII only).
+    # They are genuinely different scenarios from hupselbrook (legacy .met meteo,
+    # swbotb=3 Cauchy, swdra=2 surface water, swinco=3 warm restart, solute) so
+    # each needs a from-scratch modern-TOML conversion, not a hupselbrook patch.
+    # Their legacy ASCII (tests/swap-cases/<N>.<case>/) and committed reference
+    # fixtures (*_reference_gf.json) are preserved for reconstruction. The options
+    # they covered are being re-covered by new self-contained hupselbrook-based
+    # cases (Cauchy bottom, solute, scheduled irrigation, …). See
+    # INVESTIGATION_NOTES.md 2026-06-11.
     # Clone of hupselbrook with hysteresis active (SWHYST=1). Exercises the
     # soil-water-retention hysteresis path, dormant in all 6 base cases.
     # Hysteresis shifts GWL/DRAINAGE/storage vs the base, so the standard
     # water-balance columns assert the feature (see option-triage 2026-05-27).
+    # [FIX-ADAPTIVEDT 2026-06-11] Reconstructed as a LOCAL case (base hupselbrook
+    # + SWHYST=1) after the swap-cases toml/ tree was found lost from the remote.
+    # The drainage first-step fix makes it byte-identical to swap420gf again, so
+    # the former known_divergence is removed.
     "soilhysteresis": CaseConfig(
         name="soilhysteresis",
-        case_dir="7.soilhysteresis",
+        case_dir="soilhysteresis",
+        local=True,
         fixture="soilhysteresis_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
-        # [FIX-ADAPTIVEDT 2026-06-11] Root cause (drainage first-step no-op) is
-        # fixed; swinter3 + swcf3_maize (same desync) now match 4.2.0. This case
-        # shares the identical root cause and is expected to xpass, but could not
-        # be re-run locally (private tests/swap-cases submodule unavailable).
-        # Re-run check-full with swap-cases present and REMOVE this flag once it
-        # reports xpass. See INVESTIGATION_NOTES.md 2026-06-11.
-        known_divergence="adaptive-dt threshold desync vs 4.2.0 (~1.9cm GWL, "
-                         "amplified by hysteresis) — root cause FIXED 2026-06-11; "
-                         "pending xpass re-confirmation with swap-cases; "
-                         "see INVESTIGATION_NOTES.md",
     ),
     # Winter cluster: snow accumulation/melt (SWSNOW=1) + frost-reduced soil
     # water flow (SWFROST=1) + snow sublimation (SWSUBLIM=1). Clone of
     # hupselbrook; SNOWINCO=0 so snow accumulates from sub-zero precip days.
     # Asserts SNOW/SSNOW (snow storage) alongside the water balance.
+    # [2026-06-11] Snow accumulation/melt (SWSNOW=1), reconstructed LOCAL case
+    # (base hupselbrook + SWSNOW=1, SNOWINCO=0) after the swap-cases toml/ tree
+    # was lost from the remote. The snow path is byte-identical to swap420gf.
+    "snow": CaseConfig(
+        name="snow",
+        case_dir="snow",
+        local=True,
+        fixture="snow_reference_gf.json",
+        flux_vars=["RAIN", "INTERC", "RUNOFF", "DRAINAGE", "QBOTTOM", "DSTOR", "EACT"],
+        state_vars=["GWL"],
+    ),
+    # [2026-06-11] Winter cluster: snow (SWSNOW=1) + frost-reduced soil water flow
+    # (SWFROST=1). Reconstructed LOCAL case (base hupselbrook, SNOWINCO=0,
+    # swsublim=0 — SWAP 4.2.0 has no sublimation switch). The SNOW path is
+    # byte-identical (see the `snow` case); the FROST path diverges ~0.5-0.8 cm
+    # DRAINAGE/RUNOFF in the cold grass year. Isolation (snow-only passes,
+    # frost-only fails, magnitude grows with frost intensity) points to a heat↔
+    # frost feedback amplifying a sub-threshold tsoil difference rather than the
+    # drainage first-step bug (which is fixed) — a separate dedicated-session item.
     "winter": CaseConfig(
         name="winter",
-        case_dir="8.winter",
+        case_dir="winter",
+        local=True,
         fixture="winter_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
-        state_vars=["GWL", "SNOW"],  # SSNOW is identically 0 here — not asserted
-        # Snow path reproduces 4.2.0 exactly (SNOW max 0.574 both); residual
-        # ~0.04cm DRAINAGE/RUNOFF drift is the shared adaptive-dt desync (below).
-        # [FIX-ADAPTIVEDT 2026-06-11] Same root cause as soilhysteresis/swinter3
-        # (drainage first-step no-op) — now FIXED. Expected to xpass; could not be
-        # re-run locally (private tests/swap-cases submodule unavailable). Re-run
-        # check-full with swap-cases present and REMOVE this flag once it reports
-        # xpass. See INVESTIGATION_NOTES.md 2026-06-11.
-        known_divergence="adaptive-dt threshold desync vs 4.2.0 (~0.04cm "
-                         "DRAINAGE/RUNOFF); snow path matches exactly — root cause "
-                         "FIXED 2026-06-11; pending xpass re-confirmation with "
-                         "swap-cases; see INVESTIGATION_NOTES.md",
+        state_vars=["GWL"],
+        known_divergence="frost-path drift vs 4.2.0 (~0.5-0.8 cm DRAINAGE/RUNOFF "
+                         "in the cold grass year); snow path byte-identical; "
+                         "suspected heat<->frost feedback; see INVESTIGATION_NOTES.md",
     ),
 }
 

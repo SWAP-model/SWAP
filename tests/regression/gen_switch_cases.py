@@ -15,8 +15,10 @@ import sys
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parent.parent
-HUP_LEGACY = TESTS / "swap-cases" / "1.hupselbrook"
-HUP_TOML = TESTS / "swap-cases" / "toml" / "1.hupselbrook"
+# [2026-06-11] Source from the self-contained LOCAL hupselbrook case (no longer
+# the swap-cases submodule, whose toml/ tree was lost from the remote).
+HUP_LEGACY = TESTS / "regression" / "cases" / "hupselbrook" / "legacy"
+HUP_TOML = TESTS / "regression" / "cases" / "hupselbrook" / "toml"
 OUT = TESTS / "regression" / "cases"
 
 _COFAB = r"^cofab\s+=\s+0\.25"

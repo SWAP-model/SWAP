@@ -1,0 +1,160 @@
+# SWAP hupselbrook project — Phase 4a TOML port.
+# Hand-translated from ../1.hupselbrook/swap_linux.swp.template + swap.dra.
+
+[general]
+project = "hupsel"
+swscre  = 0
+swerror = 0
+
+[simulation]
+start_date = 2002-01-01
+end_date   = 2004-12-31
+nprintday  = 1
+
+[simulation.output]
+swmonth = 1
+period  = 1
+swres   = 0
+swodat  = 0
+swyrvar = 0
+
+# Phase 4f-prep Task D4: [simulation.numerical] block
+[simulation.numerical]
+dt    = 0.04
+dtmin = 1.0e-6
+dtmax = 0.04
+
+[meteorology]
+file = "283.csv"
+lat  = 52.0
+alt  = 10.0
+altw = 10.0
+
+[meteorology.evapotranspiration]
+swetr      = 0
+swdivide   = 1
+angstrom_a = 0.25
+angstrom_b = 0.50
+
+[meteorology.rain]
+swrain   = 0
+swetsine = 0
+
+[meteorology.interception]
+swinter = 0
+
+[drainage]
+file = "swap.dra.toml"
+
+[soil]
+swsophy = 0
+swhyst  = 1
+tau     = 0.2
+swinco  = 2
+swmacro = 0
+
+# Minimum soil resistance for PM-direct evaporation (legacy RSOIL, only
+# used when meteorology.swdivide = 1). Initialize zeroes the global,
+# which would feed the PM-direct rss=0 path; legacy .swp authors 30.
+rsoil = 30.0
+
+# Surface-runoff drainage resistance (legacy RSRO, d) and exponent
+# (legacy RSROEXP, -). Without these, Initialize leaves rsro=0 which
+# triggers the instantaneous-runoff branch in surfacewaterutils.f90.
+rsro    = 0.5
+rsroexp = 1.0
+
+# Vertical sub-layer discretization (legacy .swp Part 4): four sub-layers
+# spanning two soil-physical layers (isoillay 1..2). Total profile depth
+# = sum(hsublay) = 200 cm; total compartments = sum(ncomp) = 34.
+sublay   = [1, 2, 3, 4]
+isoillay = [1, 1, 2, 2]
+hsublay  = [10.0, 20.0, 30.0, 140.0]
+ncomp    = [10, 4, 6, 14]
+
+[soil.initial]
+gwli    = -75.0
+pondini = 0.0
+pondmx  = 0.2
+
+# Mualem-van Genuchten parameters per soil-physical layer (legacy .swp
+# Part 5, swsophy=0 branch). Two rows, one per soil-physical layer.
+[soil.hydraulics]
+ores    = [0.01,   0.02]
+osat    = [0.42,   0.38]
+alfa    = [0.0276, 0.0213]
+npar    = [1.491,  1.951]
+ksatfit = [12.52,  12.68]
+lexp    = [-1.060, 0.168]
+alfaw   = [0.0542, 0.0426]
+h_enpr  = [0.0,    0.0]
+ksatexm = [12.52,  12.68]
+bdens   = [1315.0, 1315.0]
+
+[crop]
+swcrop = 1
+
+[[crop.rotation]]
+start = 2002-05-01
+end   = 2002-10-15
+file  = "maizes.crp.toml"
+type  = 1
+
+[[crop.rotation]]
+start = 2003-05-10
+end   = 2003-09-29
+file  = "potatod.crp.toml"
+type  = 2
+
+[[crop.rotation]]
+start = 2004-01-01
+end   = 2004-12-31
+file  = "grassd.crp.toml"
+type  = 3
+
+# --- Phase 4d additions (Task 17) ---
+
+[bottom_boundary]
+swbotb = 6   # Free outflow at depth = unsaturated zone bottom
+
+[heat]
+swhea     = 1
+swcalt    = 2
+swtopbhea = 1
+swbotbhea = 1
+# Per-soil-physical-layer texture (legacy .swp Part 12, 2 rows for
+# hupselbrook). Without psilt the heat module's fquartz drops by
+# ~half (psilt=0 instead of 0.15), shifting soil thermal conductivity
+# and feeding back into the temperature-dependent K(theta) at startup.
+psand = [0.8,  0.8]
+psilt = [0.15, 0.15]
+pclay = [0.05, 0.05]
+porg  = [0.1,  0.1]
+tsoil_init = [
+  [-10.0, 15.0],
+  [-40.0, 12.0],
+  [-70.0, 10.0],
+  [-95.0,  9.0],
+]
+
+[irrigation]
+swirfix = 1
+
+# Inline fixed event from .swp: IRDATE=2002-01-05, IRDEPTH=5.0, IRCONC=1000.0,
+# IRTYPE=1 (surface). The reader converts `date` to days-since-1900 (the
+# legacy time axis used by IrrigationFixed) on load.
+[[irrigation.fixed_events]]
+date  = 2002-01-05
+depth = 5.0
+conc  = 1000.0
+type  = 1
+
+[solute]
+swsolu  = 1
+swbotbc = 0
+cdrain  = 0.1
+cseep   = 0.1
+tscf    = 0.0
+ldis    = 5.0
+swdc    = 0
+swsoltyp = 0

@@ -1,0 +1,53 @@
+{
+  "mean": {
+    "DRAINAGE": 24.6,
+    "DSTOR": 0.49,
+    "EACT": 17.19,
+    "GWL": -91.5,
+    "INTERC": 3.46,
+    "QBOTTOM": 0.0,
+    "RAIN": 77.99,
+    "RUNOFF": 0.0
+  },
+  "total": {
+    "DRAINAGE": 73.79,
+    "DSTOR": 1.47,
+    "EACT": 51.57,
+    "INTERC": 10.39,
+    "QBOTTOM": 0.0,
+    "RAIN": 233.98,
+    "RUNOFF": 0.0
+  },
+  "years": {
+    "2002": {
+      "DRAINAGE": 22.12,
+      "DSTOR": 3.96,
+      "EACT": 16.68,
+      "GWL": -92.3,
+      "INTERC": 3.74,
+      "QBOTTOM": 0.0,
+      "RAIN": 84.08,
+      "RUNOFF": 0.0
+    },
+    "2003": {
+      "DRAINAGE": 26.65,
+      "DSTOR": -2.81,
+      "EACT": 17.11,
+      "GWL": -95.83,
+      "INTERC": 1.99,
+      "QBOTTOM": 0.0,
+      "RAIN": 70.62,
+      "RUNOFF": 0.0
+    },
+    "2004": {
+      "DRAINAGE": 25.02,
+      "DSTOR": 0.32,
+      "EACT": 17.78,
+      "GWL": -86.37,
+      "INTERC": 4.66,
+      "QBOTTOM": 0.0,
+      "RAIN": 79.28,
+      "RUNOFF": 0.0
+    }
+  }
+}
