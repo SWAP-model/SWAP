@@ -110,13 +110,21 @@ contains
                   'swap_config')
             end if
             if (self%heat%swhea == 1 .and. self%heat%swcalt == 2) then
+               ! swinco=3 numerical-heat warm restart needs an initial soil-temp
+               ! profile. Accept either a tsoil_file CSV or an inline
+               ! [heat].tsoil_init table (temperature_seed afgen-seeds it onto
+               ! the nodes; a full per-node table reproduces the legacy swap.ini
+               ! warm-restart exactly). [2026-06-11: tsoil_file had no loader, so
+               ! the table is the working path.]
                have_tsoil = .false.
                if (allocated(self%soil%initial%tsoil_file)) &
                   have_tsoil = len_trim(self%soil%initial%tsoil_file) > 0
+               if (.not. have_tsoil .and. allocated(self%heat%tsoil_init)) &
+                  have_tsoil = size(self%heat%tsoil_init, 1) > 0
                if (.not. have_tsoil) then
                   call errors%append(ERR_VALIDATION_REQUIRED, &
-                     'soil.initial.tsoil_file required when soil.swinco=3 and ' // &
-                     'heat.swhea=1 and heat.swcalt=2', 'swap_config')
+                     'soil.initial.tsoil_file or heat.tsoil_init required when ' // &
+                     'soil.swinco=3 and heat.swhea=1 and heat.swcalt=2', 'swap_config')
                end if
             end if
             if (self%solute%swsolu == 1) then

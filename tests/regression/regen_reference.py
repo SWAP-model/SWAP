@@ -28,7 +28,7 @@ from test_output_regression import CASES, aggregate, TESTS_DIR
 REF_BIN = TESTS_DIR / "reference" / "swap420gf"
 # Committed legacy inputs per case; everything else in the dir is generated output.
 LEGACY_INPUTS = ("*.swp.template", "*.crp", "*.dra", "*.met", "*.csv", "*.ini",
-                 "*.bbc", "*.dat")
+                 "*.bbc", "*.dat", "*.irg")
 
 
 def _run_reference_and_aggregate(case):

@@ -13,7 +13,7 @@ legacy ASCII (`tests/swap-cases/<N>.<case>/`, still present) to modern TOML.
 | grassgrowth | swbotb=1 (gwl_file) | grass | dramet=3 drainage | ✅ byte-identical |
 | oxygenstress | swbotb=3 Cauchy (haquif_file) | grass + Bartholomeus O2 | dramet=3 2-level | ✅ byte-identical |
 | surfacewater | swbotb=3 Cauchy | type-1 grass | **swdra=2 surface water** (28 periods) | ✅ byte-identical |
-| salinitystress | swbotb=3 | wofost potato + salinity | swsolu=1, swinco=3 warm-restart, swap.irg | ⏳ TODO (hardest) |
+| salinitystress | swbotb=3 | wofost potato + salinity | swsolu=1, swinco=3 warm-restart, swap.irg | ⚠️ reconstructed, ~3% solute residual (xfail) |
 | macroporeflow | — | — | macropore | retired (ADR 0040, physics deleted) |
 
 ## Conversion recipe (proven on grassgrowth + oxygenstress)
@@ -63,7 +63,14 @@ legacy ASCII (`tests/swap-cases/<N>.<case>/`, still present) to modern TOML.
 6. **Fixture + verify:** `python regen_reference.py <name>` (swap420gf on the
    legacy dir), then run the case; iterate until byte-identical.
 
-## Remaining work
+## Remaining work (all 4 cases now reconstructed & registered)
+
+All four lost cases are rebuilt. grassgrowth/oxygenstress/surfacewater are
+byte-identical; salinitystress runs with a documented ~3% solute-concentration
+residual (see below). Engine fix landed: swinco=3 + numerical heat now seeds
+tsoil from `[heat].tsoil_init` (the tsoil_file validator had no loader).
+
+### Former remaining work (now done)
 
 - **salinitystress**: swinco=3 (convert swap.ini h-profile -> `h_file` CSV),
   swap.irg (many fixed IRDATE/IRDEPTH/IRCONC/IRTYPE -> `[[irrigation.fixed_events]]`),

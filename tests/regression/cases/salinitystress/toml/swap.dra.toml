@@ -1,0 +1,25 @@
+[drainage]
+swdra    = 1
+dramet   = 3
+swdivd   = 1
+swdislay = 0
+nrlevs   = 2
+cofani   = [1.0, 1.0]
+
+[[drainage.levels]]
+swdtyp      = 1
+swallo      = 3
+zbotdr      = -60.0
+drares      = 10.0
+infres      = 10.0
+L           = 5.0
+owltab_file = "owltab1.csv"
+
+[[drainage.levels]]
+swdtyp      = 2
+swallo      = 1
+zbotdr      = -120.0
+drares      = 50.0
+infres      = 150.0
+L           = 50.0
+owltab_file = "owltab2.csv"

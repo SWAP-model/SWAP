@@ -94,6 +94,33 @@ CASES = {
         state_vars=[],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
     ),
+    # salinitystress (saltfarmtexel): RECONSTRUCTED — swinco=3 full warm-restart
+    # (h_init.csv + cml_init.csv per-node + atmosphere ldwet/atmin7 + tsoil via the
+    # 195-row [heat].tsoil_init profile), swbotb=3 (sinus aquifer head), dramet=3
+    # 2-level drainage, numerical heat, solute (swsolu=1) + Maas-Hoffman salinity,
+    # wofost potato, fixed irrigation (irrig.csv), 2012-2015. Warm-restart verified
+    # complete (numnod=195, all profiles seeded per-node). Residual: solute
+    # concentrations (CWSO/CPWSO ~3%, CONC ~0.1) diverge from 4.2.0 from year 1.
+    # NOT the salinity feedback (saltslope=0 gives the identical divergence) and
+    # NOT an input/warm-restart error — it is a solute-transport numerical
+    # divergence (same hard class as the other numerical residuals), exposed here
+    # because this is the only case asserting concentrations directly. Registered
+    # known_divergence. See INVESTIGATION_NOTES.md / CASE_RECONSTRUCTION.md.
+    "salinitystress": CaseConfig(
+        name="salinitystress",
+        case_dir="salinitystress",
+        local=True,
+        fixture="salinitystress_reference_gf.json",
+        flux_vars=[],
+        state_vars=["TREDDRY", "TREDWET", "TREDSOL", "CPWSO", "CWSO",
+                    "CONC[-5.0]", "CONC[-25.0]", "CONC[-55.0]"],
+        known_divergence="solute concentrations (CWSO/CPWSO ~3%) diverge vs 4.2.0 "
+                         "from year 1; NOT salinity (saltslope=0 identical), NOT "
+                         "warm-restart incompleteness (numnod=195 seeded per-node), "
+                         "NOT the general solute code (hupselbrook CWSO byte-identical) "
+                         "— specific to this case's swinco=3 + swbotb=3 + irrigation-"
+                         "solute mix; see INVESTIGATION_NOTES.md",
+    ),
     # surfacewater: RECONSTRUCTED, byte-identical — swbotb=3 (Cauchy, explicit,
     # haquif.csv), swdra=2 surface-water management (2 subsurface levels +
     # simulated surface-water level, [surface_water] + .management + .weir with

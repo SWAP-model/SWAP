@@ -565,3 +565,39 @@ and `SWBOTB = 7` in the .swp. Likely in the swbotb=7 branch of headcalc_residual
 (src/soilwater/soilhydraulics.f90:702) or calcgwl's below-profile handling.
 A dedicated-session item; bottom-boundary cases (swbotb 1/2/3/5/7/8) remain
 uncovered by the regression suite.
+
+---
+
+## 2026-06-11 — 4th lost case (salinitystress) reconstructed; tsoil_file gap fixed
+
+**ENGINE BUG FIXED — swinco=3 + numerical heat was broken.** The validator
+required `soil.initial.tsoil_file` for swinco=3 + swhea=1 + swcalt=2, but NO code
+ever loaded it into `heat%tsoil` (temperature_seed's tsoil-init branch is guarded
+`swinco .ne. 3`). So swinco=3 numerical-heat runs left tsoil unseeded. Fix: let
+the existing `[heat].tsoil_init` table seed tsoil for swinco=3 too (afgen at each
+node; a full per-node table reproduces the legacy swap.ini warm-restart exactly,
+since the table depths equal the node centres), and relax the validator to accept
+`tsoil_file` OR `tsoil_init`. Also added `*.irg` to regen_reference's
+LEGACY_INPUTS (was missing → swap420gf couldn't run swirgfil=1 cases).
+
+**salinitystress reconstructed, runs, ~3% residual (NOT byte-identical).**
+Full swinco=3 warm-restart: h_init.csv + cml_init.csv seeded per-node (numnod=195),
+atmosphere ldwet/atmin7 in [soil.initial], tsoil via the 195-row tsoil_init table.
+swbotb=3 sinus aquifer head, dramet=3 2-level drainage, wofost potato (= hupselbrook
+potatod + dvsend=3/swgerm=0/salinity-on/relmf=0.8/one extra frtb row), 585 fixed
+irrigation events (irrig.csv), Maas-Hoffman salinity.
+
+Diagnosis of the residual (CWSO/CPWSO ~3%, CONC ~0.1, from year 1):
+- **NOT salinity.** saltslope=0 gives the IDENTICAL divergence (CPWSO is potential,
+  salinity-independent). So this is not the salinity→cml feedback class.
+- **NOT warm-restart incompleteness.** numnod=195; h/cml seeded per-node directly,
+  tsoil afgen-exact.
+- **NOT the general solute code.** Adding CONC/CWSO assertions to hupselbrook shows
+  CWSO/CPWSO byte-identical (0.0); CONC diverges only transiently (final matches).
+- **Specific to this case's feature mix** (swinco=3 warm-restart + swbotb=3 Cauchy
+  + 585 irrigation-solute events). Needs targeted instrumentation (compare modern
+  vs swap420gf cml per node over the first days). Registered known_divergence.
+
+**Net: all 4 lost base cases reconstructed & in the regression — grassgrowth,
+oxygenstress, surfacewater byte-identical; salinitystress runs with a documented
+~3% solute residual.**

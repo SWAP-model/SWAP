@@ -85,8 +85,11 @@ contains
             ! Analytical solution.
             call heat_analytical_profile(state, config)
          else
-            ! Numerical solution: use specified initial soil temperatures.
-            if (config%soil%swinco .ne. 3 .and. allocated(heat_cfg%tsoil_init)) then
+            ! Numerical solution: use specified initial soil temperatures. For
+            ! swinco=3 the tsoil_init table holds the full per-node warm-restart
+            ! profile (legacy swap.ini); afgen at each node returns the exact
+            ! value when the table depths match the node centres.
+            if (allocated(heat_cfg%tsoil_init)) then
                nheat_loc = size(heat_cfg%tsoil_init, 1)
                do i = 1, nheat_loc
                   tab(i*2)     = heat_cfg%tsoil_init(i, 2)         ! temp — col 2
