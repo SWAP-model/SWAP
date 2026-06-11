@@ -81,13 +81,10 @@ CASES = {
     # ASCII converted to modern TOML; .met meteo converted to CSV via met_to_csv.py;
     # swbotb=1 GWL tables -> gwl_file CSV). See INVESTIGATION_NOTES.md 2026-06-11.
     #
-    # grassgrowth (ruurlo): RECONSTRUCTED — swbotb=1 (prescribed GWL), basic
-    # drainage, numerical heat, grass (type 3, swrd=2, swharv=2 fixed-date mowing),
-    # 1980-1984. Inputs verified faithful: year 1980 byte-identical and PMOWDM
-    # (potential mown DM) byte-identical ALL years. Residual: actual growth
-    # (MOWDM/GRASSDM) drifts ~1% in years 2-5 — a small accumulating actual-
-    # growth/water-stress divergence in the swbotb=1 path (same hard class as the
-    # other residuals; not an input error). Registered known_divergence.
+    # grassgrowth (ruurlo): RECONSTRUCTED, byte-identical — swbotb=1 (prescribed
+    # GWL via gwlevel.csv), dramet=3 resistance drainage (open channel + owltab
+    # CSV), numerical heat, grass (type 3, swrd=2, swharv=2 fixed-date mowing via
+    # mowing_dates DOY), 1980-1984, 260.met->260.csv.
     "grassgrowth": CaseConfig(
         name="grassgrowth",
         case_dir="grassgrowth",
@@ -96,10 +93,6 @@ CASES = {
         flux_vars=[],
         state_vars=[],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
-        known_divergence="actual grass growth (MOWDM/GRASSDM) drifts ~1% vs 4.2.0 "
-                         "in years 2-5; year 1 + potential growth (PMOWDM) "
-                         "byte-identical; residual in the swbotb=1 actual-growth "
-                         "path; see INVESTIGATION_NOTES.md",
     ),
     # Clone of hupselbrook with hysteresis active (SWHYST=1). Exercises the
     # soil-water-retention hysteresis path, dormant in all 6 base cases.
