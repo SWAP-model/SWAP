@@ -1,6 +1,7 @@
 ---
 title: Branch convention
 date: 2026-05-05
+updated: 2026-06-26
 ---
 
 # Branch convention
@@ -44,6 +45,15 @@ to the `v4.2.0` tag for legacy artifacts.
 Going forward, `main` is reserved for releases. `development` carries
 the in-progress work and is the default push target.
 
+A short-lived `origin/modern` branch once existed to hold the
+modernization line separately from a legacy `main`, on the assumption
+that pushing to `main` would trigger executable rebuilds. That premise
+no longer holds: CI (`.github/workflows/ci.yaml`) fires **only on
+`v*` version-tag pushes**, never on branch pushes. `origin/modern` had
+also drifted into an exact duplicate of `origin/main`, so it was
+deleted on 2026-06-26. The active branch set is simply `main` +
+`development`, with the `v4.2.0` tag as the legacy anchor.
+
 ## Tags
 
 The `rescue/*` and `docs/*` tags annotate the modernization journey.
@@ -53,18 +63,18 @@ lists each tag with its scope. The `v4.2.0` tag points at the
 pre-modernization legacy SHA (`7587ca3`) and is the canonical anchor
 for downstream consumers that need the legacy reference.
 
-## Future plan: fork into a separate repository
+## On forking into a separate repository (deferred)
 
-Once the modernization is independently consumable (Python bindings,
-release artifacts, documentation site), the `main` branch will be
-forked into a new repository — a "modern SWAP" repo separate from
-this one (which becomes a legacy/archive holding pen). At that point:
+An earlier plan proposed eventually forking the modernization into a
+new "modern SWAP" repository and leaving this one as a legacy/archive
+holding pen for the 4.2.0 reference. As of 2026-06-26 that split is
+**not planned**: this repository *is* the modern SWAP repo. The whole
+tree is the modernization line; the only legacy artifact retained here
+is the frozen `v4.2.0` tag, which downstream consumers (pyswap, etc.)
+pin to directly. No separate legacy repo is maintained.
 
-- New repo: hosts modernization as its `main`.
-- This repo: continues hosting the legacy 4.2.0 reference (via the
-  `v4.2.0` tag) for archival / pyswap-style consumers.
-
-Until then, both histories live here.
+If a fork is ever revisited, it would be a deliberate future decision
+recorded in a new ADR — not an assumed end-state of this convention.
 
 ## Local convention
 
