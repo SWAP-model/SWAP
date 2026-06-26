@@ -6,6 +6,7 @@ site/
 *.egg-info
 # Meson build artifacts
 build/
+builddir/
 meson-logs/
 meson-private/
 meson-info/
@@ -26,3 +27,11 @@ swap.swp
 *.zip
 api/
 api/src/scripts/__pycache__/
+
+# Python bytecode caches
+__pycache__/
+*.pyc
+
+# Meson wrap-managed subprojects (downloaded, not tracked)
+/subprojects/test-drive/
+/subprojects/toml-f/
