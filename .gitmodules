@@ -1,7 +1,3 @@
-[submodule "tests/swap-cases"]
-	path = tests/swap-cases
-	url = https://github.com/SWAP-model/swap-cases.git
-	branch = main
 [submodule "pyswap"]
 	path = pyswap
 	url = https://github.com/zawadzkim/pySWAP.git
