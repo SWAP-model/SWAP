@@ -1,4 +1,0 @@
-[submodule "pyswap"]
-	path = pyswap
-	url = https://github.com/zawadzkim/pySWAP.git
-	branch = release/v1
