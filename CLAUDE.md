@@ -113,11 +113,13 @@ pixi run clean                # rm -rf builddir  (see clean-rebuild rule below)
   **Never push to `origin/main`.**
 - Conventional-commit prefixes (`refactor(state):`, `fix(nutrients):`,
   `docs:`, `chore:`). Explain the *why* in the body.
-- **pyswap submodule (`pyswap/`).** Its `release/v1` branch is the integration
-  baseline — **treat it as `main` for pyswap work.** Every arc / feature lands
-  on a short-lived feature branch *stemming from `release/v1`* and merged back
-  into it; never commit arc changes directly onto `release/v1`, and never push
-  to pyswap's actual `main`.
+- **pyswap is a separate repository, not a submodule.** It lives standalone at
+  `~/code/pyswap` (`github.com/zawadzkim/pySWAP`); SWAP depends on it only as the
+  PyPI package (`pyswap = ">=0.3.9"` in `pixi.toml`). The former `pyswap/`
+  submodule and its redundant `release/v1` branch (identical to `main`, frozen at
+  the v0.3.9 release) were removed 2026-06-27 — nothing in SWAP's build or tests
+  consumed the checkout. Do pyswap work in its own repo off `main`; never push to
+  a branch you weren't asked to.
 
 ## Where to look
 
