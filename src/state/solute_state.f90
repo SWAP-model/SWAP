@@ -225,7 +225,11 @@ contains
       ! Per-layer arrays (MAHO-sized):
       ! ------------------------------------------------------------------
       ! Dispersion length: element-wise copy when array; otherwise broadcast
-      ! scalar to layer(1) (legacy rdsdor 'ldis' single-value behaviour).
+      ! the scalar to ALL layers (the reader documents the scalar form as a
+      ! broadcast — legacy .swp LDIS is a per-layer table column, so a scalar
+      ! shorthand must apply profile-wide. Assigning only layer(1) left every
+      ! deeper layer with ldis=0, i.e. zero dispersion below the first soil
+      ! layer; found via the salinitystress day-1 solute divergence).
       if (.not. allocated(self%ldis)) then
          allocate(self%ldis(MAHO)); self%ldis = 0.0_real64
       end if
@@ -234,7 +238,7 @@ contains
             self%ldis(i) = config_solute%ldis_array(i)
          end do
       else if (config_solute%ldis > 0.0_real64) then
-         self%ldis(1) = config_solute%ldis
+         self%ldis(:) = config_solute%ldis
       end if
 
       if (.not. allocated(self%kf)) then
