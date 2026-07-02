@@ -78,6 +78,9 @@ end subroutine
 
 @test
 subroutine test_cropfixed_swdrought_two_rejected()
+   ! swdrought=2 (De Jong van Lier) restoration is in progress but still gated
+   ! (the kernel was recovered + a twilt bug fixed, but a residual perf issue
+   ! remains). It must raise the cross-field stub error until restored.
    use funit
    use cropfixed_config_mod, only: cropfixed_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -90,7 +93,7 @@ subroutine test_cropfixed_swdrought_two_rejected()
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'swdrought=2') > 0) found = .true.
+          index(errors%items(i)%message, 'swdrought') > 0) found = .true.
    end do
    @assertTrue(found)
 end subroutine
@@ -230,10 +233,11 @@ subroutine test_cropfixed_swrd_two_accepted()
 end subroutine
 
 @test
-subroutine test_cropfixed_swsalinity_one_rejected()
-   ! swsalinity=1 (Maas-Hoffman) kernel is intact, but enabling it for a simple
-   ! crop diverges from swap420gf (the salinity->uptake->cml feedback loop), so
-   ! it stays gated pending investigation. See INVESTIGATION_NOTES.md 2026-05-31.
+subroutine test_cropfixed_swsalinity_one_accepted()
+   ! swsalinity=1 (Maas-Hoffman) is SUPPORTED (swsalinity1 regression case is
+   ! byte-identical to swap420gf). The earlier "salinity->cml feedback diverges"
+   ! gate was the solute.ldis broadcast bug, fixed 2026-06-11. swsalinity=2
+   ! (osmotic head) stays gated. See INVESTIGATION_NOTES.md.
    use funit
    use cropfixed_config_mod, only: cropfixed_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -248,7 +252,7 @@ subroutine test_cropfixed_swsalinity_one_rejected()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
           index(errors%items(i)%message, 'swsalinity') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test

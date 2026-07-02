@@ -39,8 +39,10 @@ contains
       real(real64) :: depth, rootdis(202), sum
 
       ! ---- Defense-in-depth: stub-error gates mirror cropfixed_config_validate.
+      ! swsalinity=1 (Maas-Hoffman) is supported (see cropfixed_config_validate);
+      ! only swsalinity=2 (osmotic head) and swdrought=2 (JvL, perf-blocked) remain gated.
       if (cfg%swdrought == 2 .or. cfg%swoxygen == 2 .or.                    &
-          cfg%swrd == 3     .or. cfg%swsalinity /= 0 .or. cfg%schedule_switch == 1) then
+          cfg%swrd == 3     .or. cfg%swsalinity == 2 .or. cfg%schedule_switch == 1) then
          call fatalerr_collected('cropfixed_init_from_config', &
             'Unsupported runtime branch reached on the TOML path. The validator ' // &
             'should have caught this earlier.')

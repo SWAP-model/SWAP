@@ -122,9 +122,6 @@ contains
       if (cfg%drought_stress%swdrought == 2) &
          call fatalerr_collected('cropwofost_init', &
             'swdrought=2 not supported on TOML path; validator should have rejected.')
-      if (cfg%oxygen_stress%swoxygen == 2) &
-         call fatalerr_collected('cropwofost_init', &
-            'swoxygen=2 not supported on TOML path; validator should have rejected.')
       if (cfg%salinity%swsalinity == 2) &
          call fatalerr_collected('cropwofost_init', &
             'swsalinity=2 not supported on TOML path; validator should have rejected.')
@@ -401,6 +398,25 @@ contains
          state%crop%common%hlim1  = cfg%oxygen_stress%hlim1
          state%crop%common%hlim2u = cfg%oxygen_stress%hlim2u
          state%crop%common%hlim2l = cfg%oxygen_stress%hlim2l
+      else if (state%crop%common%swoxygen == 2) then
+         ! Bartholomeus physical sub-model (mirrors cropgrass_init; the shared
+         ! oxygenstress.f90 kernel reads these state fields). WOFOST has no
+         ! swoxygentype field in its crp — legacy readwofost defaults it to 1
+         ! (physical OxygenStress); swoxygentype=2 (reproduction functions) is the
+         ! grass-only alternative and is dormant in rootextraction.f90 anyway.
+         state%crop%common%swoxygentype        = 1
+         state%crop%oxygen%q10_microbial       = cfg%oxygen_stress%q10_microbial
+         state%crop%oxygen%specific_resp_humus = cfg%oxygen_stress%specific_resp_humus
+         state%crop%common%srl                 = cfg%oxygen_stress%srl
+         state%crop%common%swrootradius        = cfg%oxygen_stress%swrootradius
+         if (cfg%oxygen_stress%swrootradius == 1) then
+            state%crop%common%dry_mat_cont_roots      = cfg%oxygen_stress%dry_mat_cont_roots
+            state%crop%common%air_filled_root_por     = cfg%oxygen_stress%air_filled_root_por
+            state%crop%common%spec_weight_root_tissue = cfg%oxygen_stress%spec_weight_root_tissue
+            state%crop%common%var_a                   = cfg%oxygen_stress%var_a
+         else
+            state%crop%common%root_radiusO2 = cfg%oxygen_stress%root_radiusO2
+         end if
       end if
 
       ! Part 12: drought stress (readwofost lines 2870-2881)

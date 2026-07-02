@@ -235,6 +235,12 @@ contains
       end if
       ! swcompensate=1 (Jarvis) and =2 (Walsum) are both supported; the kernel
       ! is shared with cropfixed (rootextraction.f90).
+      ! NOTE: grass swsalinity stays gated only for want of a regression case —
+      ! the former "salinity->cml feedback divergence" was the solute.ldis
+      ! broadcast bug (fixed 2026-06-11), and cropfixed/wofost swsalinity=1 are now
+      ! byte-identical via the SAME rootextraction.f90 kernel. Grass swsalinity=1
+      ! is very likely correct too; lift this gate once a grass-salinity case
+      ! exists to prove it. swsalinity=2 (osmotic head) needs swdrought=2.
       if (self%swsalinity /= 0) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropgrass.swsalinity /= 0 not yet supported in the TOML ' // &

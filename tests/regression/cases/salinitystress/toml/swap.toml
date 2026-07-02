@@ -47,9 +47,8 @@ swinter = 0
 
 [meteorology.evaporation]
 swcfbs     = 0
-swredu     = 1
-cofredbl   = 0.35
-rsigni     = 0.5
+swredu     = 2
+cofredbo   = 0.54
 cfevappond = 1.25
 
 [drainage]

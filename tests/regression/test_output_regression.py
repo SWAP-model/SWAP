@@ -94,18 +94,23 @@ CASES = {
         state_vars=[],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
     ),
-    # salinitystress (saltfarmtexel): RECONSTRUCTED — swinco=3 full warm-restart
-    # (h_init.csv + cml_init.csv per-node + atmosphere ldwet/atmin7 + tsoil via the
-    # 195-row [heat].tsoil_init profile), swbotb=3 (sinus aquifer head), dramet=3
-    # 2-level drainage, numerical heat, solute (swsolu=1) + Maas-Hoffman salinity,
-    # wofost potato, fixed irrigation (irrig.csv), 2012-2015. Warm-restart verified
-    # complete (numnod=195, all profiles seeded per-node). Residual: solute
-    # concentrations (CWSO/CPWSO ~3%, CONC ~0.1) diverge from 4.2.0 from year 1.
-    # NOT the salinity feedback (saltslope=0 gives the identical divergence) and
-    # NOT an input/warm-restart error — it is a solute-transport numerical
-    # divergence (same hard class as the other numerical residuals), exposed here
-    # because this is the only case asserting concentrations directly. Registered
-    # known_divergence. See INVESTIGATION_NOTES.md / CASE_RECONSTRUCTION.md.
+    # salinitystress (saltfarmtexel): RECONSTRUCTED, byte-identical — swinco=3 full
+    # warm-restart (h_init.csv + cml_init.csv per-node + atmosphere ldwet/atmin7 +
+    # tsoil via the 195-row [heat].tsoil_init profile), swbotb=3 (sinus aquifer
+    # head), dramet=3 2-level drainage, numerical heat, solute (swsolu=1) +
+    # Maas-Hoffman salinity, wofost potato, fixed irrigation (irrig.csv), 2012-2015.
+    # The former "~3% solute residual / irreducible FP" known_divergence was WRONG:
+    # the residual was three input-transcription bugs in the reconstructed TOML, all
+    # now fixed (case byte-identical to swap420gf across all 8 columns x 1461 days):
+    #   1. solute.ldis scalar broadcast only seeded layer(1) — every deeper layer
+    #      ran with zero dispersion. Fixed in src/state/solute_state.f90 (broadcast
+    #      to all layers, matching the legacy per-layer LDIS column).
+    #   2. meteorology.evaporation authored swredu=1 (Black) but the legacy .swp is
+    #      SWREDU=2 (Boesten-Stroosnijder, COFREDBO=0.54) — wrong soil-evaporation
+    #      reduction model, diverging EACT from day 49.
+    #   3. potatod.crp.toml FRTB dropped the DVS=1.27 row, slowing the root-fraction
+    #      decline and starving storage organs — the CPWSO/CWSO crop divergence.
+    # See INVESTIGATION_NOTES.md / CASE_RECONSTRUCTION.md.
     "salinitystress": CaseConfig(
         name="salinitystress",
         case_dir="salinitystress",
@@ -114,14 +119,6 @@ CASES = {
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET", "TREDSOL", "CPWSO", "CWSO",
                     "CONC[-5.0]", "CONC[-25.0]", "CONC[-55.0]"],
-        known_divergence="solute conc (CWSO/CPWSO ~3%) diverges vs 4.2.0, downstream "
-                         "of a slow GWL drift (~3cm/4yr). Root-caused by legacy diff: "
-                         "two control-flow bugs FIXED (swinco=3 initial dt + dtprevious "
-                         "clamp) sync the dt sequence AND numbit byte-for-byte for ~50 "
-                         "days; the residual is a sub-1e-7 FP-ordering difference in the "
-                         "195-node solve (identical dt/numbit/flprevious) that "
-                         "accumulates. NOT salinity/rain/init/dt-sequence — irreducible "
-                         "FP limit for this sensitive config. See INVESTIGATION_NOTES.md",
     ),
     # surfacewater: RECONSTRUCTED, byte-identical — swbotb=3 (Cauchy, explicit,
     # haquif.csv), swdra=2 surface-water management (2 subsurface levels +
@@ -242,21 +239,42 @@ CASES.update({
     # 2026-06-11), not FP rounding: the wasted first step doubled dt prematurely
     # and the 0.01cm GWL was the residual desync. Now byte-identical to 4.2.0.
     "swcf3_maize":   _switch_case("swcf3_maize"),
-    # gated / divergent -> pending restoration target (modern errors -> xfail)
-    "swsalinity1":   _switch_case("swsalinity1",
-                                  pending_restore="cropfixed swsalinity=1 gated "
-                                  "(salinity->cml feedback divergence); see INVESTIGATION_NOTES.md"),
-    "swoxygen2":     _switch_case("swoxygen2",
-                                  pending_restore="wofost swoxygen=2 gated (type-2 "
-                                  "oxygen-stress 0.01cm TACT divergence); see INVESTIGATION_NOTES.md"),
+    # [2026-06-11] swsalinity1 RESTORED, byte-identical. The former "cropfixed
+    # swsalinity=1 salinity->cml feedback divergence" was the solute.ldis
+    # scalar-broadcast bug (only layer(1) seeded -> zero dispersion below the top
+    # layer -> wrong cml -> wrong Maas-Hoffman reduction, since salinity is the
+    # only stress reading sol%cml). Fixed in src/state/solute_state.f90; gate
+    # lifted in cropfixed_config + cropfixed_init. See INVESTIGATION_NOTES.md.
+    "swsalinity1":   _switch_case("swsalinity1"),
+    # [2026-06-11] swoxygen2 RESTORED, byte-identical. The wofost swoxygen=2
+    # (Bartholomeus) path was only ever stub-errored, never wired: cropwofost_init
+    # now copies the Bartholomeus fields to state%crop%oxygen / %common (mirroring
+    # cropgrass_init) and sets swoxygentype=1 (legacy readwofost's default; the
+    # crp has no swoxygentype field), reusing the shared oxygenstress.f90 kernel.
+    # Gate lifted in cropwofost_config + cropwofost_init. See INVESTIGATION_NOTES.md.
+    "swoxygen2":     _switch_case("swoxygen2"),
     # deleted/dormant compute, restoration targets (modern fatal-errors -> xfail)
     # [FIX-ADAPTIVEDT 2026-06-11] Previously xfail (adaptive-dt desync). The
     # drainage first-step no-op fix removed the premature dt-doubling, so the
     # adapted-Rutter run now matches 4.2.0 byte-for-byte under adaptive dt too.
     "swinter3":      _switch_case("swinter3"),
+    # swdrought=2 (De Jong van Lier microscopic uptake): the ONLY genuinely
+    # unimplemented case — the compute was DELETED (recover jongvanlier.f90 from
+    # 5c82f0a^). A full restoration was attempted (2026-06-11): the kernel re-ports
+    # cleanly into rootextraction_mod and runs the physics, and a REAL bug was found
+    # — cropfixed/grass/wofost runtime compute twilt = watcon(hlim4,...) but legacy
+    # is watcon(wiltpoint,...); the wrong (too-wet) twilt starved the JvL qmax and
+    # INFINITELY spiralled the Richards dt-reduction loop (the documented "hang").
+    # Fixing twilt removed the spiral (cumretry=0), but a RESIDUAL perf issue
+    # remains: dt stays tiny during crop transpiration (controller picks small dt,
+    # not forced reductions), so it still won't finish. Reverted to keep the tree
+    # clean; stays gated. NEXT SESSION: re-apply (recipe in INVESTIGATION_NOTES.md
+    # 2026-06-11) + twilt fix, then instrument modern-vs-legacy qrot/dt/numbit per
+    # step to close the residual. swsalinity=2 (osmotic head) also needs this path.
     "swdrought2":    _switch_case("swdrought2",
                                   pending_restore="swdrought=2 (De Jong van Lier) compute deleted; "
-                                  "recover jongvanlier.f90 from 5c82f0a^"),
+                                  "restoration attempted — twilt spiral-bug fixed, perf residual remains; "
+                                  "see INVESTIGATION_NOTES.md 2026-06-11"),
     # NOTE: swsalinity=2 (osmotic head) is intentionally NOT a case — swap420gf
     # itself SIGSEGVs on it (matricflux) in the hupselbrook config, so no oracle
     # fixture can be produced. See INVESTIGATION_NOTES.md.

@@ -778,12 +778,9 @@ contains
             'supported in the TOML pipeline; use the legacy executable.', &
             'cropwofost.drought_stress')
       end if
-      if (self%oxygen_stress%swoxygen == 2) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropwofost.oxygen_stress.swoxygen=2 (Bartholomeus) not yet ' // &
-            'supported in the TOML pipeline; use the legacy executable.', &
-            'cropwofost.oxygen_stress')
-      end if
+      ! swoxygen=2 (Bartholomeus) is SUPPORTED: the shared oxygenstress.f90 kernel
+      ! (already used by the grass path / oxygenstress case) reads the state fields
+      ! wired in cropwofost_init. Validated byte-identical via the swoxygen2 case.
       if (self%co2%swco2 == 1) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropwofost.co2.swco2=1 (CO2 assimilation correction) not yet ' // &

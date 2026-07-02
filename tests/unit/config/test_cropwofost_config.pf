@@ -701,7 +701,11 @@ subroutine test_cropwofost_swdrought_two_rejected()
 end subroutine
 
 @test
-subroutine test_cropwofost_swoxygen_two_rejected()
+subroutine test_cropwofost_swoxygen_two_accepted()
+   ! swoxygen=2 (Bartholomeus) is now supported on the TOML path — the shared
+   ! oxygenstress.f90 kernel reads the state fields wired in cropwofost_init.
+   ! Validated byte-identical via the swoxygen2 regression case (2026-06-11).
+   ! No "swoxygen=2 not yet supported" gate error is produced.
    use funit
    use cropwofost_config_mod, only: cropwofost_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
@@ -716,7 +720,7 @@ subroutine test_cropwofost_swoxygen_two_rejected()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
           index(errors%items(i)%message, 'swoxygen=2') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test

@@ -159,6 +159,12 @@ contains
       ! ADR 0015: schema accepts the value 1:1 with legacy; runtime
       ! plumbing for these branches has not been ported. Cases that
       ! need them must run via the legacy executable.
+      ! swdrought=2 (De Jong van Lier microscopic uptake) — RESTORATION IN PROGRESS,
+      ! still gated. The deleted kernel was recovered + re-integrated + a real bug
+      ! fixed (twilt computed at hlim4 instead of the JvL wiltpoint, which had
+      ! spiralled the Richards dt-reduction loop) — but a residual perf issue (tiny
+      ! dt during crop transpiration) remains, so swdrought=2 stays rejected pending
+      ! a dedicated session. See INVESTIGATION_NOTES.md 2026-06-11.
       if (self%swdrought == 2) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropfixed.swdrought=2 (De Jong van Lier) not yet supported in ' // &
@@ -188,14 +194,17 @@ contains
             'biomass) is not possible with the simple crop module.', &
             'cropfixed')
       end if
-      ! swsalinity=1 (Maas-Hoffman) and swsalinity=2 (osmotic head) both stay
-      ! rejected: the Maas-Hoffman kernel is intact, but enabling it for a
-      ! simple crop fails byte-identical regression against swap420gf — the
-      ! salinity→uptake→solute-concentration feedback loop diverges (the only
-      ! stress whose magnitude reads sol%cml). See INVESTIGATION_NOTES.md 2026-05-31.
-      if (self%swsalinity == 1 .or. self%swsalinity == 2) then
+      ! swsalinity=1 (Maas-Hoffman) is SUPPORTED (swsalinity1 regression case is
+      ! byte-identical to swap420gf). The earlier "salinity→cml feedback diverges,
+      ! irreducible" conclusion (2026-05-31) was WRONG: the divergence was the
+      ! solute.ldis scalar-broadcast bug (only layer(1) seeded → zero dispersion
+      ! below the top layer → wrong cml → wrong salinity reduction, since salinity
+      ! is the only stress reading sol%cml). Fixed in src/state/solute_state.f90
+      ! (2026-06-11); see INVESTIGATION_NOTES.md. swsalinity=2 (osmotic head) stays
+      ! gated — it needs the De Jong van Lier (swdrought=2) compute, still absent.
+      if (self%swsalinity == 2) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropfixed.swsalinity != 0 (Maas-Hoffman / osmotic head) not ' // &
+            'cropfixed.swsalinity=2 (osmotic head) not ' // &
             'yet supported in the TOML pipeline; use the legacy executable.', &
             'cropfixed')
       end if
