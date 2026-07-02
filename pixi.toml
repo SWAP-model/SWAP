@@ -6,7 +6,11 @@ platforms = ["linux-64", "win-64"]
 version = "4.2.0"
 
 [activation]
-env = { PFUNIT_ROOT = "$PIXI_PROJECT_ROOT/tests/pFUnit/build/install_gfortran/PFUNIT-4.15" }
+# PFUNIT_ROOT: where tests/unit/meson.build finds funitproc + driver.F90.
+# CMAKE_PREFIX_PATH: the parent install dir, so find_package(PFUNIT) also
+# resolves pFUnit's GFE sub-deps (GFTL/GFTL_SHARED/FARGPARSE), which install as
+# sibling versioned dirs. Both trees are produced by `pixi run setup-pfunit`.
+env = { PFUNIT_ROOT = "$PIXI_PROJECT_ROOT/tests/pFUnit/build/install_gfortran/PFUNIT-4.15", CMAKE_PREFIX_PATH = "$PIXI_PROJECT_ROOT/tests/pFUnit/build/install_gfortran" }
 
 [dependencies]
 python = "3.11.*"
@@ -143,7 +147,12 @@ coverage = { features = ["coverage"], solve-group = "coverage" }
 # _reconfigure: forced setup --reconfigure. Use after changing build
 #               configuration (e.g. `pixi run _reconfigure`).
 #============================================================================
-_configure = { cmd = "test -f builddir/build.ninja || FC=gfortran meson setup builddir" }
+# setup-pfunit: build + install pFUnit v4.15.0 from source (not on conda/PyPI)
+#               into tests/pFUnit/. Idempotent — no-op once installed. A
+#               configure dependency so a fresh clone self-provisions before
+#               meson's pFUnit discovery runs.
+setup-pfunit = { cmd = "bash scripts/setup_pfunit.sh" }
+_configure = { cmd = "test -f builddir/build.ninja || FC=gfortran meson setup builddir", depends-on = ["setup-pfunit"] }
 _reconfigure = { cmd = "FC=gfortran meson setup builddir --reconfigure" }
 build-linux = { cmd = "meson compile -C builddir", depends-on = ["_configure"] }
 

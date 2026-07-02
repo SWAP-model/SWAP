@@ -50,6 +50,10 @@ if get_option('enable_pfunit')
 
     message('Using pFUnit from: ' + pfunit_root)
 
+    # find_package(PFUNIT) also resolves pFUnit's GFE sub-dependencies (GFTL,
+    # GFTL_SHARED, FARGPARSE), which install as sibling versioned dirs under the
+    # prefix. Discovery is driven by CMAKE_PREFIX_PATH (set to that parent dir in
+    # pixi.toml's [activation] env), which CMake globs as <prefix>/<NAME>*/cmake.
     pfunit_dep = dependency('PFUNIT',
         method: 'cmake',
         required: true,

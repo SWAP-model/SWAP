@@ -21,6 +21,7 @@ result*
 !tests/unit/state/test_results_state.pf
 !tests/unit/io/test_results_wiring.pf
 swap.ok
+Swap.ok
 *swap.log
 reruns.log
 swap.swp
@@ -35,3 +36,6 @@ __pycache__/
 # Meson wrap-managed subprojects (downloaded, not tracked)
 /subprojects/test-drive/
 /subprojects/toml-f/
+
+# pFUnit: built from source by scripts/setup_pfunit.sh (not on conda/PyPI)
+/tests/pFUnit/
