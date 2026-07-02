@@ -677,3 +677,138 @@ Closing it would require matching the exact FP operation order of 4.2.0 in the
 refactored solve — out of scope and high-risk. salinitystress stays a documented
 known_divergence. Both byte-identical 4.2.0 control-flow bugs were found only by
 the instrumented legacy build (worktree from v4.2.0 + TTUTIL source).
+
+### 2026-06-11 (cont.) — salinitystress RESOLVED: byte-identical, NOT FP-irreducible
+
+The "irreducible FP-ordering" conclusion above was WRONG. Re-instrumented the
+legacy-vs-modern diff (rebuilt the v4.2.0+TTUTIL gfortran oracle, verified
+byte-identical to swap420gf, added per-column daily diffs + tz-profile + reduceva
+traces). The ~3% residual was THREE input-transcription bugs in the reconstructed
+TOML/state mapping, all now fixed. The case is byte-identical to swap420gf across
+all 8 asserted columns × 1461 days (and the full 195-node H/WC/CONC tz-profile).
+
+1. **solute.ldis scalar broadcast bug (src/state/solute_state.f90).** The scalar
+   `ldis = 5.0` shorthand only seeded `self%ldis(1)`; every deeper soil layer ran
+   with ldis=0 (zero mechanical dispersion below layer 1). The legacy .swp LDIS is
+   a per-layer column (`LDIS = 5.0 5.0`), and read_solute_toml.f90's own comment
+   already says the scalar form "broadcasts to all layers" — the adapter just
+   wasn't doing it. Fixed: `self%ldis(:) = config_solute%ldis`. This was masked in
+   every other case because only salinitystress asserts CONC directly. Surfaced as
+   a day-1 solute-profile divergence growing to −75% at mid-profile.
+
+2. **swredu wrong model (cases/salinitystress/toml/swap.toml).** Authored
+   `swredu = 1` (Black) + cofredbl/rsigni; the legacy .swp is `SWREDU = 2`
+   (Boesten–Stroosnijder, `COFREDBO = 0.54`). Wrong soil-evaporation reduction
+   model → EACT diverged from day 49 (first dry-down after the wet start).
+   Confirmed via matched reduceva(task=1) traces: ldwet/dt path identical, only
+   the model branch differed. Fixed to swredu=2 + cofredbo=0.54.
+
+3. **FRTB dropped row (cases/salinitystress/toml/potatod.crp.toml).** The legacy
+   potato FRTB has 5 rows incl. `1.27 0.0`; the TOML kept only 4
+   (`0.00 0.2 / 1.00 0.2 / 1.36 0.0 / 2.00 0.0`), so the root fraction declined
+   over [1.00,1.36] instead of [1.00,1.27], leaving FR≈0.05 at DVS 1.27 (legacy 0).
+   More dry matter to roots, less to storage organs → CPWSO/CWSO (POTENTIAL, hence
+   salinity/water-independent) ran ~2–4% low from tuber initiation. Restored the
+   `1.27 0.0` row → CPWSO/CWSO byte-identical.
+
+The two earlier swinco=3 control-flow fixes (initial dt + dtprevious clamp) remain
+correct and load-bearing for the dt/numbit sync; they were necessary but not
+sufficient. Lesson: a "few-percent residual that grows from year 1" on a
+reconstructed case is far more likely a transcription bug than FP ordering —
+diff EVERY asserted column against the oracle (not just the aggregate) and split
+soil/crop/solute before reaching for "irreducible." known_divergence removed;
+case registered as a normal pass.
+
+## 2026-06-11 (cont.) — swsalinity1 + swoxygen2 RESTORED (byte-identical)
+
+Reviewing the three "extremely fast" (0.02-0.03s) xfail cases: all three were
+honest input-validation gates (the binary fatal-errors at swap_init with an
+explicit "not yet supported in the TOML pipeline" message), NOT silent passes.
+Two of the three turned out to be cheap, real recoveries:
+
+**swsalinity1 (cropfixed maize, swsalinity=1 Maas-Hoffman) — RESTORED.** The
+2026-05-31 "salinity→cml feedback divergence, irreducible" diagnosis was WRONG.
+It rested on "salinitystress passes" as evidence the feedback was fine — but
+salinitystress only "passed" because it was flagged known_divergence. Once
+salinitystress was fixed to genuinely byte-identical (incl. TREDSOL, the salinity
+reduction), it PROVED the salinity→cml path is exact. The cropfixed divergence was
+the SAME solute.ldis broadcast bug: salinity is the only stress reading sol%cml,
+so zero dispersion below layer 1 → wrong cml → wrong Maas-Hoffman reduction →
+TACT drift (~3.4 cm/yr). The ldis fix corrects cml → byte-identical. Lifted the
+two gates (cropfixed_config_validate + cropfixed_init runtime guard); state
+plumbing (saltmax/saltslope/salthead) was already wired. swsalinity=2 stays gated.
+
+**swoxygen2 (wofost potato, swoxygen=2 Bartholomeus) — RESTORED.** Never wired,
+only stub-errored. The Bartholomeus kernel (oxygenstress.f90) was already live for
+the grass path (oxygenstress case). cropwofost_init now copies the Bartholomeus
+fields to state%crop%oxygen / %common (mirroring cropgrass_init) and sets
+swoxygentype=1 — legacy readwofost's default; WOFOST crps have no SWOXYGENTYPE
+field, and swoxygentype=2 (reproduction functions) is the grass-only alternative,
+still dormant in rootextraction.f90. Lifted the config + init gates. Byte-identical
+to swap420gf (TACT carries the oxygen-stress signal). Updated the two now-stale
+"rejected" config unit tests to "accepted" (assertTrue→assertFalse on the gate
+message).
+
+**Grass swsalinity left gated** (no grass-salinity regression case to prove it),
+but its comment is corrected: it is very likely fixed by the same ldis change,
+since it uses the identical rootextraction.f90 kernel. Lift once a case exists.
+
+**swdrought2 (De Jong van Lier) — still the ONE genuine port.** Compute deleted
+(5c82f0a). The preserved restoration patch (dev-docs/wip/swdrought2-jvl-
+restoration.patch) no longer applies — it predates the crop feature-folder reorg.
+Its documented perf-block (Richards/adaptive-dt convergence spiral, 2026-06-01)
+predates the drainage first-step no-op fix (2026-06-11) that cleared the SAME
+adaptive-dt class for hysteresis/winter/swinter3, so the wall is very likely now
+gone. Prime candidate for a dedicated session: re-port the 579-line kernel against
+the current layout, then re-check perf. Left as pending_restore.
+
+Suite: 18 passed / 0 failed / 2 xfail (winter frost-feedback, swdrought2). The
+winter case genuinely runs (~2.3s) and diverges in the frost path — a separate
+real heat↔frost numerical item, not a gate.
+
+## 2026-06-11 (cont.) — swdrought=2 (De Jong van Lier) restoration: spiral bug found, perf residual
+
+Attempted the full JvL restoration (the deleted compute, not just a gate). The
+preserved WIP patch (dev-docs/wip/swdrought2-jvl-restoration.patch) no longer
+applies, but re-applying it against the current layout was mostly mechanical:
+
+- Kernel (JongvanLier + JongvanLierLoop) merged into rootextraction_mod (siblings
+  of matric_flux, to avoid a module cycle), `use variables` reads aliased to
+  state%crop%common via associate. All soilwater JvL fields (hleaf/Hxylem/mflux/
+  mroot/hroot/rootrho/rootphi/rmax/qrosum/alpJvLier) already exist; only the
+  crop_common scalar params (kroot/kstem/rxylem/rootradius/rootcoefa/rooteff/
+  stephr/criterhr/wiltpoint/taccur) needed adding. Config/init/reader/dispatch
+  wired; gen_switch_cases.py emits the JvL .crp/.toml params. It COMPILES and runs
+  the physics.
+
+**KEY FINDING — a real bug behind the "perf wall".** The 2026-06-01 conclusion
+("Richards/adaptive-dt convergence spiral, needs core-headcalc changes, out of
+scope") was — like the salinitystress/swsalinity1 "irreducible" calls — partly a
+missed bug. `cropfixed_runtime` (and grass/wofost runtime) compute the
+wilting-point water content as `twilt(i) = watcon(crop%common%hlim4, ...)`, but
+legacy is `twilt(i) = watcon(i, wiltpoint)` — the JvL LEAF wilting head
+(-20000), NOT the Feddes hlim4 (-8000). `twilt` is read ONLY by the JvL qmax
+limit, so the wrong (too-wet) twilt starved qmax, which fed a bad qrot into the
+Richards solve and spiralled the dt-reduction retry loop INFINITELY (the run hung,
+0 outer steps). Fixing twilt to use `wiltpoint` removed the spiral entirely:
+cumretry went 0, the run progresses normally pre-crop (124 days in ~30s).
+
+**RESIDUAL — still perf-blocked, but differently.** After the twilt fix the run
+no longer hangs, but it is still too slow to finish (a 9-month window doesn't
+complete in 7 min): during the crop transpiration season dt stays tiny
+(~2.5e-3) with cumretry=0 — i.e. the adaptive-dt CONTROLLER itself picks small dt
+(high numbit), not the forced-reduction loop. Legacy runs the full 3yr in 0.69s,
+so its headcalc converges fast with the same qrot. Two candidates remain: (a) the
+modern JvL qrot still differs subtly from legacy (faithfulness — fixable), or (b)
+genuine core-headcalc convergence sensitivity (the prior session's hypothesis).
+Distinguishing needs an instrumented-legacy per-step qrot/dt/numbit comparison
+(the method that cracked salinitystress) — a dedicated session.
+
+**DISPOSITION.** Reverted the restoration to keep the tree clean (the project
+convention is that dormant compute is uncompiled) and the suite green; swdrought2
+stays pending_restore (gated, fast-fails). The twilt bug + the "spiral was a bug,
+not core-headcalc" finding are the resumption lead. NEXT SESSION: re-apply the
+restoration (kernel into rootextraction_mod + the config/init/state/reader wiring
++ gen params, all worked out above), apply the twilt fix (watcon(wiltpoint,...) in
+cropfixed/grass/wofost runtime), then instrument modern-vs-legacy qrot per step to
+close the dt residual.
