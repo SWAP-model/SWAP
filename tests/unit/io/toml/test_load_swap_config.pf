@@ -105,7 +105,7 @@ subroutine test_load_case6_dra_levels_populated()
    use load_swap_config_mod, only: load_swap_config
    type(swap_config_t)      :: c
    type(error_collection_t) :: errors
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', c, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', c, errors)
    @assertFalse(errors%has_errors())
    @assertEqual(2, c%drain%nrlevs)
    @assertEqual(2, size(c%drain%rdrain))
@@ -124,7 +124,7 @@ subroutine test_load_case6_grass_crp_toml_populated()
    type(swap_config_t)      :: c
    type(error_collection_t) :: errors
    integer :: i, n_loaded
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', c, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', c, errors)
    @assertFalse(errors%has_errors())
    ! Case 6 has 3 type-1 rotations all referencing grass.crp.toml.
    @assertEqual(3, size(c%crop%rotation_loaded))
@@ -157,7 +157,7 @@ subroutine test_load_swap_config_case5_wofost_populated()
    type(swap_config_t)      :: config
    integer :: i
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', &
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', &
                           config, errors)
    @assertFalse(errors%has_fatals())
 
@@ -181,7 +181,7 @@ subroutine test_load_case1_hupselbrook_rotations()
    type(error_collection_t) :: errors
    type(swap_config_t)      :: config
    integer :: i
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    @assertFalse(errors%has_fatals())
    @assertEqual(3, size(config%crop%rotation_loaded))
    @assertTrue(config%crop%rotation_loaded(1))

@@ -22,16 +22,16 @@ subroutine test_salinitystress_parity_general()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
    @assertEqual('saltfarmtexel', trim(config%general%project))
-   @assertEqual('tests/swap-cases/toml/5.salinitystress/', trim(config%general%pathwork))
-   @assertEqual('tests/swap-cases/toml/5.salinitystress/', trim(config%general%pathatm))
-   @assertEqual('tests/swap-cases/toml/5.salinitystress/', trim(config%general%pathcrop))
-   @assertEqual('tests/swap-cases/toml/5.salinitystress/', trim(config%general%pathdrain))
+   @assertEqual('tests/regression/cases/salinitystress/toml/', trim(config%general%pathwork))
+   @assertEqual('tests/regression/cases/salinitystress/toml/', trim(config%general%pathatm))
+   @assertEqual('tests/regression/cases/salinitystress/toml/', trim(config%general%pathcrop))
+   @assertEqual('tests/regression/cases/salinitystress/toml/', trim(config%general%pathdrain))
    @assertEqual(0,               config%general%swscre)
 end subroutine
 
@@ -45,7 +45,7 @@ subroutine test_salinitystress_parity_simulation()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -65,7 +65,7 @@ subroutine test_salinitystress_parity_simulation_numerical()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -86,7 +86,7 @@ subroutine test_salinitystress_parity_meteorology()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -112,7 +112,7 @@ subroutine test_salinitystress_parity_drainage()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -134,7 +134,7 @@ subroutine test_salinitystress_parity_soil()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -159,7 +159,7 @@ subroutine test_salinitystress_parity_crop_meta()
    type(error_collection_t) :: errors
    integer :: i, n_rot
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -194,7 +194,7 @@ subroutine test_salinitystress_parity_potatod_wofost()
    type(error_collection_t) :: errors
    integer, parameter       :: ICROP_POTATOD = 1
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -296,7 +296,7 @@ subroutine test_salinitystress_parity_4d_sections()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -329,7 +329,6 @@ subroutine test_salinitystress_parity_4d_sections()
    @assertEqual(1.051_real64,  config%solute%cdrain, 1.0e-12_real64)
    @assertEqual(15.574_real64, config%solute%cseep,  1.0e-12_real64)
    @assertEqual(0.5_real64,    config%solute%tscf,   1.0e-12_real64)
-   ! Case 5 TOML uses ldis_array = [5.0, 5.0]; assert first-layer entry.
-   @assertTrue(allocated(config%solute%ldis_array))
-   @assertEqual(5.0_real64,    config%solute%ldis_array(1), 1.0e-12_real64)
+   ! Reconstructed case 5 TOML uses a scalar ldis = 5.0 (not a per-layer array).
+   @assertEqual(5.0_real64,    config%solute%ldis, 1.0e-12_real64)
 end subroutine

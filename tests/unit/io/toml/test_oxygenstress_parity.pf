@@ -26,16 +26,16 @@ subroutine test_oxygenstress_general_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
    @assertEqual('zegveld', trim(config%general%project))
-   @assertEqual('tests/swap-cases/toml/4.oxygenstress/', trim(config%general%pathwork))
-   @assertEqual('tests/swap-cases/toml/4.oxygenstress/', trim(config%general%pathatm))
-   @assertEqual('tests/swap-cases/toml/4.oxygenstress/', trim(config%general%pathcrop))
-   @assertEqual('tests/swap-cases/toml/4.oxygenstress/', trim(config%general%pathdrain))
+   @assertEqual('tests/regression/cases/oxygenstress/toml/', trim(config%general%pathwork))
+   @assertEqual('tests/regression/cases/oxygenstress/toml/', trim(config%general%pathatm))
+   @assertEqual('tests/regression/cases/oxygenstress/toml/', trim(config%general%pathcrop))
+   @assertEqual('tests/regression/cases/oxygenstress/toml/', trim(config%general%pathdrain))
    @assertEqual(0,         config%general%swscre)
 end subroutine
 
@@ -49,7 +49,7 @@ subroutine test_oxygenstress_simulation_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -69,7 +69,7 @@ subroutine test_oxygenstress_simulation_numerical_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -90,7 +90,7 @@ subroutine test_oxygenstress_meteorology_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -116,7 +116,7 @@ subroutine test_oxygenstress_drainage_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -138,7 +138,7 @@ subroutine test_oxygenstress_soil_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -160,7 +160,7 @@ subroutine test_oxygenstress_crop_rotation_parity()
    type(error_collection_t) :: errors
    integer :: i, n_rot
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -189,7 +189,7 @@ subroutine test_oxygenstress_grass_data_parity()
    integer  :: i, n_rot, last_grass_idx
    integer, parameter :: ICROP_GRASSD = 10
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -230,7 +230,7 @@ subroutine test_oxygenstress_parity_4d_sections()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -269,7 +269,7 @@ subroutine test_oxygenstress_parity_grass_mowing()
    type(error_collection_t) :: errors
    integer, parameter :: ICROP_GRASSD = 10
 
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())

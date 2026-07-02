@@ -22,11 +22,11 @@ subroutine test_swap_init_sets_time()
    logical      :: fl_run_end_captured
    real(real64) :: t1900_captured
 
-   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call chdir_to('tests/regression/cases/hupselbrook/toml')
    call swap_init('swap.toml', state, config)
    fl_run_end_captured = state%timecontrol%flRunEnd
    t1900_captured      = state%timecontrol%t1900
-   call chdir_to('../../../..')
+   call chdir_to('../../../../..')
 
    @assertFalse(fl_run_end_captured)
    @assertGreaterThan(t1900_captured, 0.0_real64)
@@ -45,12 +45,12 @@ subroutine test_swap_run_step_advances_time()
    type(swap_config_t), target  :: config
    real(real64) :: t_before, t_after
 
-   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call chdir_to('tests/regression/cases/hupselbrook/toml')
    call swap_init('swap.toml', state, config)
    t_before = state%timecontrol%t1900
    call swap_run_step(state, config)
    t_after = state%timecontrol%t1900
-   call chdir_to('../../../..')
+   call chdir_to('../../../../..')
 
    @assertGreaterThan(t_after, t_before)
 end subroutine
@@ -70,7 +70,7 @@ subroutine test_swap_full_lifecycle()
    integer, parameter :: max_steps = 200000
    logical :: fl_run_end_captured
 
-   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call chdir_to('tests/regression/cases/hupselbrook/toml')
    call swap_init('swap.toml', state, config)
    n_steps = 0
    do while (.not. state%timecontrol%flRunEnd .and. n_steps < max_steps)
@@ -79,7 +79,7 @@ subroutine test_swap_full_lifecycle()
    end do
    call swap_close(state, config)
    fl_run_end_captured = state%timecontrol%flRunEnd
-   call chdir_to('../../../..')
+   call chdir_to('../../../../..')
 
    @assertTrue(fl_run_end_captured)
    @assertGreaterThan(n_steps, 0)

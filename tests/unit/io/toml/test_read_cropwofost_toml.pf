@@ -202,7 +202,7 @@ subroutine test_read_cropwofost_potatod_salinity()
    type(toml_error), allocatable         :: terr
 
    call toml_load(doc, &
-      'tests/swap-cases/toml/5.salinitystress/potatod.crp.toml', error=terr)
+      'tests/regression/cases/salinitystress/toml/potatod.crp.toml', error=terr)
    @assertFalse(allocated(terr))
    doc_ptr => doc
    call read_cropwofost_toml(doc_ptr, c, errors)

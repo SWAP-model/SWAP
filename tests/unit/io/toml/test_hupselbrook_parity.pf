@@ -17,16 +17,16 @@ subroutine test_hupselbrook_parity_general()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
    @assertEqual('hupsel', trim(config%general%project))
-   @assertEqual('tests/swap-cases/toml/1.hupselbrook/', trim(config%general%pathwork))
-   @assertEqual('tests/swap-cases/toml/1.hupselbrook/', trim(config%general%pathatm))
-   @assertEqual('tests/swap-cases/toml/1.hupselbrook/', trim(config%general%pathcrop))
-   @assertEqual('tests/swap-cases/toml/1.hupselbrook/', trim(config%general%pathdrain))
+   @assertEqual('tests/regression/cases/hupselbrook/toml/', trim(config%general%pathwork))
+   @assertEqual('tests/regression/cases/hupselbrook/toml/', trim(config%general%pathatm))
+   @assertEqual('tests/regression/cases/hupselbrook/toml/', trim(config%general%pathcrop))
+   @assertEqual('tests/regression/cases/hupselbrook/toml/', trim(config%general%pathdrain))
    @assertEqual(0,        config%general%swscre)
 end subroutine
 
@@ -40,7 +40,7 @@ subroutine test_hupselbrook_parity_simulation()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -61,7 +61,7 @@ subroutine test_hupselbrook_parity_simulation_numerical()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -82,7 +82,7 @@ subroutine test_hupselbrook_parity_meteorology()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -108,7 +108,7 @@ subroutine test_hupselbrook_parity_drainage()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -130,7 +130,7 @@ subroutine test_hupselbrook_parity_soil()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -151,7 +151,7 @@ subroutine test_hupselbrook_parity_crop()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -171,7 +171,7 @@ subroutine test_hupselbrook_parity_maizes_cropfixed()
    type(error_collection_t) :: errors
    integer, parameter       :: ICROP_MAIZES = 1
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -217,7 +217,7 @@ subroutine test_hupselbrook_parity_last_grass_rotation()
    integer  :: i, n_rot, last_grass_idx
    integer, parameter :: ICROP_GRASSD = 3
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -273,7 +273,7 @@ subroutine test_hupselbrook_parity_potatod_wofost()
    type(error_collection_t) :: errors
    integer, parameter       :: ICROP_POTATOD = 2
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -392,7 +392,7 @@ subroutine test_hupselbrook_parity_4d_sections()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())

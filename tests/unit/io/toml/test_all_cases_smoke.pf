@@ -10,7 +10,7 @@ subroutine test_grassgrowth_loads_clean()
    use error_mod
    type(swap_config_t)      :: c
    type(error_collection_t) :: e
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', c, e)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', c, e)
    call c%validate(e)
    call c%finalize(e)
    @assertFalse(e%has_fatals())
@@ -28,7 +28,7 @@ subroutine test_oxygenstress_loads_clean()
    use error_mod
    type(swap_config_t)      :: c
    type(error_collection_t) :: e
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', c, e)
+   call load_swap_config('tests/regression/cases/oxygenstress/toml/swap.toml', c, e)
    call c%validate(e)
    call c%finalize(e)
    @assertFalse(e%has_fatals())
@@ -42,7 +42,7 @@ subroutine test_salinitystress_loads_clean()
    use error_mod
    type(swap_config_t)      :: c
    type(error_collection_t) :: e
-   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', c, e)
+   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', c, e)
    call c%validate(e)
    call c%finalize(e)
    @assertFalse(e%has_fatals())
@@ -56,7 +56,7 @@ subroutine test_surfacewater_loads_clean()
    use error_mod
    type(swap_config_t)      :: c
    type(error_collection_t) :: e
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', c, e)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', c, e)
    call c%validate(e)
    call c%finalize(e)
    @assertFalse(e%has_fatals())

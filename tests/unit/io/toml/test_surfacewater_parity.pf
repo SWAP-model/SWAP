@@ -24,16 +24,16 @@ subroutine test_surfacewater_general_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
-   @assertEqual('wildenborch', trim(config%general%project))
-   @assertEqual('tests/swap-cases/toml/6.surfacewater/', trim(config%general%pathwork))
-   @assertEqual('tests/swap-cases/toml/6.surfacewater/', trim(config%general%pathatm))
-   @assertEqual('tests/swap-cases/toml/6.surfacewater/', trim(config%general%pathcrop))
-   @assertEqual('tests/swap-cases/toml/6.surfacewater/', trim(config%general%pathdrain))
+   @assertEqual('surfacewater', trim(config%general%project))
+   @assertEqual('tests/regression/cases/surfacewater/toml/', trim(config%general%pathwork))
+   @assertEqual('tests/regression/cases/surfacewater/toml/', trim(config%general%pathatm))
+   @assertEqual('tests/regression/cases/surfacewater/toml/', trim(config%general%pathcrop))
+   @assertEqual('tests/regression/cases/surfacewater/toml/', trim(config%general%pathdrain))
    @assertEqual(0,             config%general%swscre)
 end subroutine
 
@@ -47,7 +47,7 @@ subroutine test_surfacewater_simulation_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -67,7 +67,7 @@ subroutine test_surfacewater_simulation_numerical_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -88,7 +88,7 @@ subroutine test_surfacewater_meteorology_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -114,7 +114,7 @@ subroutine test_surfacewater_drainage_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -140,7 +140,7 @@ subroutine test_surfacewater_soil_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -162,7 +162,7 @@ subroutine test_surfacewater_crop_rotation_parity()
    type(error_collection_t) :: errors
    integer :: i, n_rot
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -191,7 +191,7 @@ subroutine test_surfacewater_fixed_data_parity()
    integer  :: i, n_rot, last_fixed_idx
    integer, parameter :: ICROP_GRASS = 3
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -228,10 +228,11 @@ subroutine test_surfacewater_fixed_data_parity()
    @assertEqual(0.5_real64,     config%crop%rotation_fixed(ICROP_GRASS)%adcrh, 1.0e-12_real64)
    @assertEqual(0.1_real64,     config%crop%rotation_fixed(ICROP_GRASS)%adcrl, 1.0e-12_real64)
 
-   ! TOML stores RDI/RRI/RDC verbatim (legacy SWRD=1 ignores them).
-   @assertEqual(30.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rdi, 1.0e-12_real64)
+   ! Reconstructed grass.crp.toml uses rdtb/rdctb tables, so scalar
+   ! RDI/RRI/RDC are unset and default to 0.0. SWRD=1 ignores them anyway.
+   @assertEqual( 0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rdi, 1.0e-12_real64)
    @assertEqual( 0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rri, 1.0e-12_real64)
-   @assertEqual(30.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rdc, 1.0e-12_real64)
+   @assertEqual( 0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rdc, 1.0e-12_real64)
 
    ! Interception (SWINTER=1).
    @assertEqual(0.25_real64, config%crop%rotation_fixed(ICROP_GRASS)%cofab, 1.0e-12_real64)
@@ -249,7 +250,7 @@ subroutine test_surfacewater_parity_4d_sections()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -257,7 +258,7 @@ subroutine test_surfacewater_parity_4d_sections()
    ! [bottom_boundary] — case 6 SWBOTB=3 with haquif_file (sw3=2).
    @assertEqual(3, config%bottom_boundary%swbotb)
    @assertTrue(allocated(config%bottom_boundary%haquif_file))
-   @assertEqual("surfacewater.haquif.csv", config%bottom_boundary%haquif_file)
+   @assertEqual("haquif.csv", config%bottom_boundary%haquif_file)
 
    ! [heat] — case 6 SWHEA=0.
    @assertEqual(0, config%heat%swhea)
@@ -288,7 +289,7 @@ subroutine test_surfacewater_parity_surface_water()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())

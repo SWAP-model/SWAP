@@ -7,7 +7,7 @@ subroutine test_hupselbrook_toml_loads_clean()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
 
    @assertFalse(errors%has_errors())
 end subroutine
@@ -21,7 +21,7 @@ subroutine test_hupselbrook_toml_validates_clean()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
 
    @assertFalse(errors%has_fatals())
@@ -36,7 +36,7 @@ subroutine test_hupselbrook_toml_finalizes_clean()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
 

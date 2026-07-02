@@ -16,10 +16,10 @@ subroutine test_timecontrol_init_sets_iyear()
    type(swap_config_t), target  :: config
    integer :: iyear_captured
 
-   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call chdir_to('tests/regression/cases/hupselbrook/toml')
    call swap_init('swap.toml', state, config)
    iyear_captured = state%timecontrol%iyear
-   call chdir_to('../../../..')
+   call chdir_to('../../../../..')
 
    @assertGreaterThan(iyear_captured, 1900)
 end subroutine
@@ -38,12 +38,12 @@ subroutine test_timecontrol_advance_changes_daynr()
    type(swap_config_t), target  :: config
    integer :: daynr_before, daynr_after
 
-   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call chdir_to('tests/regression/cases/hupselbrook/toml')
    call swap_init('swap.toml', state, config)
    daynr_before = state%timecontrol%daynr
    call swap_run_step(state, config)
    daynr_after = state%timecontrol%daynr
-   call chdir_to('../../../..')
+   call chdir_to('../../../../..')
 
    @assertGreaterThanOrEqual(daynr_after, daynr_before)
 end subroutine
@@ -65,10 +65,10 @@ subroutine test_timecontrol_flzerointr_initialized()
    type(swap_config_t), target  :: config
    logical :: flzerointr_captured
 
-   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call chdir_to('tests/regression/cases/hupselbrook/toml')
    call swap_init('swap.toml', state, config)
    flzerointr_captured = state%timecontrol%flZeroIntr
-   call chdir_to('../../../..')
+   call chdir_to('../../../../..')
 
    @assertTrue(flzerointr_captured)
 end subroutine

@@ -26,16 +26,16 @@ subroutine test_grassgrowth_general_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
    @assertEqual('ruurlo', trim(config%general%project))
-   @assertEqual('tests/swap-cases/toml/2.grassgrowth/', trim(config%general%pathwork))
-   @assertEqual('tests/swap-cases/toml/2.grassgrowth/', trim(config%general%pathatm))
-   @assertEqual('tests/swap-cases/toml/2.grassgrowth/', trim(config%general%pathcrop))
-   @assertEqual('tests/swap-cases/toml/2.grassgrowth/', trim(config%general%pathdrain))
+   @assertEqual('tests/regression/cases/grassgrowth/toml/', trim(config%general%pathwork))
+   @assertEqual('tests/regression/cases/grassgrowth/toml/', trim(config%general%pathatm))
+   @assertEqual('tests/regression/cases/grassgrowth/toml/', trim(config%general%pathcrop))
+   @assertEqual('tests/regression/cases/grassgrowth/toml/', trim(config%general%pathdrain))
    @assertEqual(0,        config%general%swscre)
 end subroutine
 
@@ -49,7 +49,7 @@ subroutine test_grassgrowth_simulation_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -70,7 +70,7 @@ subroutine test_grassgrowth_simulation_numerical_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -91,7 +91,7 @@ subroutine test_grassgrowth_meteorology_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -117,7 +117,7 @@ subroutine test_grassgrowth_drainage_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -139,7 +139,7 @@ subroutine test_grassgrowth_soil_parity()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -161,7 +161,7 @@ subroutine test_grassgrowth_crop_rotation_parity()
    type(error_collection_t) :: errors
    integer :: i, n_rot
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -190,7 +190,7 @@ subroutine test_grassgrowth_grass_data_parity()
    integer  :: i, n_rot, last_grass_idx
    integer, parameter :: ICROP_GRASSD = 5
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -233,7 +233,7 @@ subroutine test_grassgrowth_parity_4d_sections()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())
@@ -241,7 +241,7 @@ subroutine test_grassgrowth_parity_4d_sections()
    ! [bottom_boundary] — case 2 SWBOTB=1 (gwl_file branch).
    @assertEqual(1, config%bottom_boundary%swbotb)
    @assertTrue(allocated(config%bottom_boundary%gwl_file))
-   @assertEqual("grassgrowth.gwl.csv", config%bottom_boundary%gwl_file)
+   @assertEqual("gwlevel.csv", config%bottom_boundary%gwl_file)
 
    ! [heat] — case 2 SWHEA=1 with numerical method (SWCALT=2).
    @assertEqual(1, config%heat%swhea)
@@ -272,7 +272,7 @@ subroutine test_grassgrowth_parity_grass_mowing_grazing()
    type(error_collection_t) :: errors
    integer, parameter :: ICROP_GRASSD = 5
 
-   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call load_swap_config('tests/regression/cases/grassgrowth/toml/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
    @assertFalse(errors%has_fatals())

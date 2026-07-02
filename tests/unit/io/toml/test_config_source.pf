@@ -65,7 +65,7 @@ subroutine test_inmemory_config_load_matches_disk()
                                           config_source_memory, config_source_disk
    use error_mod,                   only: error_collection_t
 
-   character(*), parameter       :: dir = 'tests/swap-cases/toml/1.hupselbrook/'
+   character(*), parameter       :: dir = 'tests/regression/cases/hupselbrook/toml/'
    type(swap_config_t)           :: cfg_disk, cfg_mem
    type(error_collection_t)      :: e_disk, e_mem
    type(config_source_t)         :: disk, mem
@@ -120,7 +120,7 @@ subroutine test_inmemory_meteo_table_matches_disk()
                                           config_source_memory, config_source_disk
    use error_mod,                   only: error_collection_t
 
-   character(*), parameter       :: dir = 'tests/swap-cases/toml/1.hupselbrook/'
+   character(*), parameter       :: dir = 'tests/regression/cases/hupselbrook/toml/'
    type(swap_config_t)           :: cfg_disk, cfg_mem
    type(error_collection_t)      :: e_disk, e_mem
    type(config_source_t)         :: disk, mem
