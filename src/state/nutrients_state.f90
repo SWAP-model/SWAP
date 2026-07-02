@@ -212,13 +212,15 @@ contains
       self%ndemand     = 0.0_real64 ;  self%nsupply     = 0.0_real64
       self%laicritnupt = 0.0_real64
 
-      ! Allocate iamend on the heap.  The (maxamn_ns, maxamn_ns) = (1000,1000)
-      ! dimension is 4 MB; keeping it as a static member of swap_state_t
-      ! (stack-allocated in swap_main.f90) blows the stack on systems with
-      ! ulimit -s <= 8192 (Linux/WSL/SSH/container default).
-      ! Right-sizing the array to actual usage is a separate cleanup task.
+      ! iamend (amendment event-index lookup) is right-sized to the actual event
+      ! count n in load_nutrients_events; both its indices are bounded by n
+      ! (date-bucket <= namend <= n, events-per-bucket <= n). Here we allocate
+      ! only a 1x1 placeholder to hold the "always allocated" invariant. The old
+      ! code allocated the (maxamn_ns,maxamn_ns)=(1000,1000)=4 MB maximum PER
+      ! COLUMN here, unconditionally -- the dominant ensemble memory cost even
+      ! when the run uses no amendments.
       if (.not. allocated(self%iamend)) then
-         allocate(self%iamend(maxamn_ns, maxamn_ns))
+         allocate(self%iamend(1, 1))
       end if
       self%iamend = 0
 
@@ -368,11 +370,11 @@ contains
          self%volafrac(i) = typed_tbl%rows(i)%volat_fraction
       end do
 
-      ! Ensure iamend is allocated (may be called directly in tests without
-      ! going through nutrients_state_init).
-      if (.not. allocated(self%iamend)) then
-         allocate(self%iamend(maxamn_ns, maxamn_ns))
-      end if
+      ! Right-size iamend to the actual event count n (guaranteed 1 <= n <=
+      ! maxamn_ns by the guard above). Both indices used below and by the reader
+      ! (wofost_soil_amendments) are bounded by n, so (n,n) is exact, not a cap.
+      if (allocated(self%iamend)) deallocate(self%iamend)
+      allocate(self%iamend(n, n))
       self%iamend = 0
 
       ! Group dosages per date (mirrors deleted SoilManagement(1)).
