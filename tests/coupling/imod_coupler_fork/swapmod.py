@@ -21,8 +21,10 @@ coefficient (SWAP -> MF6).
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
+import numpy as np
 from numpy.typing import NDArray
 from xmipy import XmiWrapper
 
@@ -203,6 +205,20 @@ class SwapMod(Driver):
         self.swap_volume = self.swap.get_volume_ptr()
         self.swap_storage = self.swap.get_storage_ptr()
 
+        # --- optional ensemble aggregation (real-grid coupling) ---
+        # block_idx.npy, length = n_rch in RCHA-cell (NODELIST) order, maps each
+        # MODFLOW recharge cell to its SWAP column. Many cells -> one column lets
+        # the ensemble run at one SWAP column per N x N patch. Absent -> 1:1
+        # (the two-channel toy demo), where n columns == n recharge cells.
+        block_file = Path(self.swapmod_config.kernels.modflow6.work_dir) / "block_idx.npy"
+        if block_file.exists():
+            self._block = np.load(block_file)
+            self._bcount = np.bincount(self._block).astype(float)
+            logger.info(f"ensemble aggregation: {self._block.size} cells -> "
+                        f"{self._bcount.size} SWAP columns")
+        else:
+            self._block = None
+
     def update(self) -> None:
         # Prepare the MODFLOW time step FIRST: this populates the recharge
         # package's NODELIST (the interior-cell index map) that the head and
@@ -243,24 +259,46 @@ class SwapMod(Driver):
     def get_end_time(self) -> float:
         return self.mf6.get_end_time()
 
+    #: Write SWAP's storage coefficient into MODFLOW's STO/SS. SWAP currently
+    #: emits a constant 0.15 placeholder; STO/SS is *specific storage* (~1e-5),
+    #: so overwriting it with 0.15 is ~1e4x too large and corrupts the transient
+    #: solve (observed: child water table pinned ~6 m on the real LGR grid).
+    #: Disabled until SWAP emits a real phreatic Sy routed to STO/SY.
+    EXCHANGE_STORAGE = False
+
     def exchange_swap2mod(self) -> None:
         """Exchange SWAP to Modflow.
 
-        Storage maps SWAP's per-column specific yield onto the recharge cells'
-        MODFLOW storage entries; recharge is SWAP's per-day percolation depth
-        (m) converted to a rate (m/d) for the RCHA package (already
-        nbound-sized). No area factor: MODFLOW RCHA `recharge` is a flux rate
-        (L/T) that MF6 multiplies by cell area internally.
+        Recharge is SWAP's per-day percolation depth (m) converted to a rate
+        (m/d) for the RCHA package. No area factor: MODFLOW RCHA `recharge` is a
+        flux rate (L/T) that MF6 multiplies by cell area internally. Storage is
+        not exchanged (see EXCHANGE_STORAGE) — MODFLOW keeps its own Sy.
         """
-        self.mf6_storage[self._rch_idx()] = self.swap_storage[:]
-
+        idx = self._rch_idx()
         # Divide recharge volume (m over the step) by delta time -> rate (m/d).
         tled = 1 / self.delt
-        self.mf6_recharge[:] = tled * self.swap_volume[:]
+        if self._block is not None:
+            # one SWAP column feeds every MODFLOW cell in its patch (broadcast).
+            self.mf6_recharge[:] = tled * self.swap_volume[self._block]
+            if self.EXCHANGE_STORAGE:
+                self.mf6_storage[idx] = self.swap_storage[self._block]
+        else:
+            self.mf6_recharge[:] = tled * self.swap_volume[:]
+            if self.EXCHANGE_STORAGE:
+                self.mf6_storage[idx] = self.swap_storage[:]
 
     def exchange_mod2swap(self) -> None:
-        """Exchange Modflow to SWAP (head of the recharge cells, m)."""
-        self.swap_head[:] = self.mf6_head[self._rch_idx()]
+        """Exchange Modflow to SWAP: groundwater level as depth below each cell's
+        surface (gwl = head - cell top, m; datum = surface). With aggregation the
+        per-cell gwls are averaged into their SWAP column."""
+        idx = self._rch_idx()
+        gwl = self.mf6_head[idx] - self.mf6_top[idx]
+        if self._block is not None:
+            self.swap_head[:] = (np.bincount(self._block, weights=gwl,
+                                             minlength=self._bcount.size)
+                                 / self._bcount)
+        else:
+            self.swap_head[:] = gwl
 
     def _rch_idx(self) -> NDArray[Any]:
         """0-based grid-node indices of the recharge cells (resolved lazily).

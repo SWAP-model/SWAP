@@ -10,6 +10,7 @@ module soilhydraulics_mod
    implicit none
    private
    public :: headcalc, soilwater_seed, soilwater_step, soilwater_update, soilwater_save_state, soilwater_restore_state, hysteresis
+   public :: reequilibrate_column_to_gwl
 contains
 
    !> Calculate pressure heads, water contents, and conductivities for next time step
@@ -1077,6 +1078,41 @@ contains
 
       end associate
       end subroutine compute_initial_node_hydraulics
+
+   !> Re-seat a column's moisture profile to hydrostatic equilibrium with a
+   !! prescribed groundwater level (cm, negative below surface). Used ONLY by the
+   !! MODFLOW coupling: each ensemble column is built at the shared config's gwli
+   !! (a single uniform value), but the coupler hands every column its own per-cell
+   !! water table. Leaving the profile at the uniform init injects a large day-1
+   !! re-equilibration flux (44-178 mm/d in single-column tests) that seeds a
+   !! coupled-solver oscillation. Re-seating each column to its own gwl makes the
+   !! first-day bottom flux ~0 (verified), so the coupled recharge field starts
+   !! smooth. Mirrors the swinco=2/swbotb=1 hydrostatic branch of
+   !! apply_soil_initial_conditions exactly (h = gwl - z), then recomputes the
+   !! node hydraulics. Additive and coupling-only: never called on the standalone
+   !! path, so the regression oracle is byte-identical.
+   subroutine reequilibrate_column_to_gwl(state, gwl_cm)
+      use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      real(real64),       intent(in)    :: gwl_cm
+      integer :: i
+
+      associate (mesh => state%mesh, soil => state%soilwater)
+      soil%gwl = gwl_cm
+      if (soil%gwl .gt. 0.0_real64) then
+         soil%pond = soil%gwl
+      else
+         soil%pond = 0.0_real64
+      endif
+      do i = 1, mesh%numnod
+         soil%h(i) = soil%gwl - mesh%z(i)
+      end do
+      end associate
+
+      call compute_initial_node_hydraulics(state)
+   end subroutine reequilibrate_column_to_gwl
 
    subroutine soilwater_step(state)
       use swap_array_dimensions, only: macp, mabbc, matabentries

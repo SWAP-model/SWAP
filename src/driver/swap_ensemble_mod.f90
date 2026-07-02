@@ -7,6 +7,7 @@ module swap_ensemble_mod
    use swap_state_mod,  only: swap_state_t
    use swap_config_mod, only: swap_config_t
    use swap_mod,        only: swap_init_from_loaded_config, swap_run_step, swap_close
+   use soilhydraulics_mod, only: reequilibrate_column_to_gwl
    use load_swap_config_mod, only: load_swap_config
    use error_mod,       only: error_collection_t, &
                               set_library_mode, library_fatal_raised, clear_library_fatal
@@ -27,6 +28,7 @@ module swap_ensemble_mod
    type(swap_config_t), allocatable, save, target :: configs(:)
    integer,             allocatable, save :: column_config(:)
    integer,             save :: ncol = 0
+   logical,             save :: first_step_done = .false.  ! gate per-cell gwl re-seat
 
    real(real64), allocatable, save, target :: gwl(:)          ! MODFLOW head, metres (driver writes)
    real(real64), allocatable, save, target :: qbot_volume(:)  ! recharge depth over step, metres (we write)
@@ -70,6 +72,7 @@ contains
       allocate(gwl(ncol),          source=0.0_real64)
       allocate(qbot_volume(ncol),  source=0.0_real64)
       allocate(storage_coef(ncol), source=real(STORAGE_COEF_DEFAULT_X100, real64)/100.0_real64)
+      first_step_done = .false.   ! re-seat columns to per-cell gwl on first step
 
       if (.not. ensemble_all_swbotb1()) rc = 3
    end function ensemble_init
@@ -99,6 +102,20 @@ contains
       integer      :: i
       real(real64) :: qbot_cm_day, dt_days
       rc = 0
+
+      ! First coupled step: the driver has just injected each column's own
+      ! per-cell water table into gwl(:) (metres). Every column was built at the
+      ! shared config's uniform gwli, so re-seat its moisture profile to
+      ! hydrostatic equilibrium with its actual gwl before solving. This removes
+      ! the day-1 re-equilibration flux that otherwise seeds a coupled-solver
+      ! oscillation (see reequilibrate_column_to_gwl). m -> cm.
+      if (.not. first_step_done) then
+         do i = 1, ncol
+            call reequilibrate_column_to_gwl(columns(i), gwl(i) * 100.0_real64)
+         end do
+         first_step_done = .true.
+      end if
+
       do i = 1, ncol
          ! Drive the whole day with the injected head (gwl_injected persists
          ! across substeps; BoundBottom reads it every substep).

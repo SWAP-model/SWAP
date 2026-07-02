@@ -42,16 +42,6 @@ from build_modflow import build  # noqa: E402
 from config import BaseConfig, SwapModConfig  # noqa: E402  (vendored fork)
 from swapmod import SwapMod  # noqa: E402  (vendored fork)
 
-SWAP_STAGE_FILES = [
-    "swap.toml",
-    "swap.gwl.csv",
-    "283.csv",
-    "grassd.crp.toml",
-    "maizes.crp.toml",
-    "potatod.crp.toml",
-]
-
-
 def stage_run_dir(libswap: Path, libmf6: Path, case_dir: Path, run_dir: Path,
                   ncol: int, nper: int) -> tuple[Path, int]:
     """Build the MODFLOW model + SWAP work dir + coupler config. Returns
@@ -62,13 +52,15 @@ def stage_run_dir(libswap: Path, libmf6: Path, case_dir: Path, run_dir: Path,
     # 1. MODFLOW model in run_dir/mf
     build(run_dir / "mf", ncol=ncol, nper=nper)
 
-    # 2. SWAP work dir in run_dir/swap
+    # 2. SWAP work dir in run_dir/swap -- stage every file in the case dir
+    #    (swap.toml + its `file=` companions: meteo, crop, gwl). Case-agnostic:
+    #    works for hupselbrook_coupled or any other case dir. A stale ensemble.txt
+    #    in the case dir is ignored; we always rewrite it below.
     swap_ws = run_dir / "swap"
     swap_ws.mkdir(exist_ok=True)
-    for f in SWAP_STAGE_FILES:
-        src = case_dir / f
-        if src.exists():
-            shutil.copy(src, swap_ws / f)
+    for src in sorted(case_dir.iterdir()):
+        if src.is_file() and src.name != "ensemble.txt":
+            shutil.copy(src, swap_ws / src.name)
     # ensemble.txt: SWAP column count == MODFLOW interior recharge cells.
     (swap_ws / "ensemble.txt").write_text(f"{n_couple}\n")
 
