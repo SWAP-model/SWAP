@@ -240,6 +240,7 @@ contains
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
                  drai => state%drainage,     &
+                 exch => state%exchange,     &
                  surf => state%surfacewater, &
                  time => state%timecontrol)
 
@@ -260,9 +261,9 @@ contains
         soil%q(i) = - (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt +  &
      &                soil%q(i+1)-soil%qrot(i)+soil%qssdi(i)
 
-        if (allocated(drai%qdra)) then
-          do level=1,drai%nrlevs
-             soil%q(i) = soil%q(i) - drai%qdra(level,i)
+        if (allocated(exch%drain_soil%qdra)) then
+          do level=1,exch%drain_soil%nrlevs
+             soil%q(i) = soil%q(i) - exch%drain_soil%qdra(level,i)
           enddo
         end if
         soil%inq(i) = soil%inq(i) + soil%q(i)*time%dt
@@ -300,6 +301,7 @@ contains
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
                  drai => state%drainage,     &
+                 exch => state%exchange,     &
                  surf => state%surfacewater, &
                  atmo => state%atmosphere,   &
                  crop => state%crop,         &

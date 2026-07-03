@@ -157,9 +157,10 @@ contains
 
       associate (drai => state%drainage,    &
                  soil => state%soilwater,   &
+                 exch => state%exchange,     &
                  time => state%timecontrol)
 
-         gwldra = soil%gwl
+         gwldra = exch%drain_soil%gwl
 
          ! --- drainage flux according to hooghoudt or ernst
          if (drai%dramet .eq. 2) then
@@ -343,6 +344,7 @@ contains
       associate (mesh => state%mesh,         &
                  drai => state%drainage,     &
                  soil => state%soilwater,    &
+                 exch => state%exchange,     &
                  surf => state%surfacewater, &
                  time => state%timecontrol)
 
@@ -418,7 +420,7 @@ contains
             if (time%flZeroCumu) call surf%reset_cumulative_drainage()
 
             ! Skip when groundwater level is below the profile.
-            if (soil%gwl .gt. 998.0d0) then
+            if (exch%drain_soil%gwl .gt. 998.0d0) then
                do level = 1, drai%nrlevs
                   drai%qdrain(level) = 0.0d0
                end do
@@ -430,7 +432,7 @@ contains
                ! Partition the drainage flux over soil compartments.
                if (drai%swdivd .eq. 1) then
                   call divdra(mesh%numnod, drai%nrlevs, mesh%dz, soil%ksatfit, soil%ksatexm, &
-                              soil%fluseksatexm, mesh%layer, soil%cofani, soil%gwl,          &
+                              soil%fluseksatexm, mesh%layer, soil%cofani, exch%drain_soil%gwl,          &
                               drai%L, drai%qdrain, drai%qdra,                                &
                               drai%swdivdinf, drai%swnrsrf, drai%swtopnrsrf, drai%zbotdr,    &
                               time%dt, drai%FacDpthInf, drai%owltab, drai%nowltab, time%t1900)
@@ -532,10 +534,11 @@ contains
 
       associate (drai => state%drainage,    &
                  soil => state%soilwater,   &
+                 exch => state%exchange,     &
                  surf => state%surfacewater)
 
          ! Spec D7: zero drainage when groundwater is dry.
-         if (soil%gwl .gt. 998.0d0) then
+         if (exch%drain_soil%gwl .gt. 998.0d0) then
             do level = 1, drai%nrlevs
                drai%qdrain(level) = 0.0d0
             end do
@@ -584,6 +587,7 @@ contains
 
       associate (drai => state%drainage,    &
                  soil => state%soilwater,   &
+                 exch => state%exchange,     &
                  surf => state%surfacewater)
 
          ! Surface-water level for this drainage level.
@@ -598,10 +602,10 @@ contains
          ! Drainage fluxes set to zero if both gwl and surface water level are
          ! above the ponding sill (compute non-zero flux only when at least one
          ! is below pondmx).
-         if (wl .lt. surf%pondmx .or. soil%gwl .lt. surf%pondmx) then
+         if (wl .lt. surf%pondmx .or. exch%drain_soil%gwl .lt. surf%pondmx) then
 
             ! Channel is active if either gwl or surface water is above bottom.
-            if (soil%gwl .gt. (drai%zbotdr(level) + 0.001d0) .or.        &
+            if (exch%drain_soil%gwl .gt. (drai%zbotdr(level) + 0.001d0) .or.        &
         &       wl       .gt. (drai%zbotdr(level) + 0.001d0)) then
                if (wl .le. (drai%zbotdr(level) + 0.001d0) .or. surf%swsrf .eq. 1) then
 
@@ -622,9 +626,9 @@ contains
                end if
 
                ! Drainage flux (cm/d): head difference.
-               dh = soil%gwl - drai%drainl(level)
-               if (soil%gwl .gt. -0.1d0) dh = dh + soil%pond
-               if (dh .lt. 0.0d0 .and. soil%gwl .lt. drai%gwlinf(level)) then
+               dh = exch%drain_soil%gwl - drai%drainl(level)
+               if (exch%drain_soil%gwl .gt. -0.1d0) dh = dh + exch%drain_soil%pond
+               if (dh .lt. 0.0d0 .and. exch%drain_soil%gwl .lt. drai%gwlinf(level)) then
                   dh = drai%gwlinf(level) - drai%drainl(level)
                end if
                ! Interflow as power function.
@@ -734,12 +738,12 @@ contains
       integer :: level, node, nodeTopDisLay(madr)
       real(8) :: zCum, zTopDisLay(madr), difzTopDisLay(madr), ratio, ratiodz, sumqdr(madr)
 
-      associate (mesh => state%mesh, drai => state%drainage, soil => state%soilwater)
+      associate (mesh => state%mesh, drai => state%drainage, soil => state%soilwater, exch => state%exchange)
          if (drai%swdislay .eq. 2) then
             do level = 1, drai%nrlevs
                if (drai%swtopdislay(level) .eq. 1) then
-                  zTopDisLay(level) = drai%fTopDisLay(level)*soil%gwl +     &
-                                      (1.0d0 - drai%fTopDisLay(level))*(soil%gwl - dh)
+                  zTopDisLay(level) = drai%fTopDisLay(level)*exch%drain_soil%gwl +     &
+                                      (1.0d0 - drai%fTopDisLay(level))*(exch%drain_soil%gwl - dh)
                end if
             end do
          end if

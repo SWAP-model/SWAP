@@ -15,7 +15,8 @@ module exchange_state_mod
    implicit none
    private
 
-   public :: crop_water_exchange_t, heat_soil_exchange_t, swap_exchange_t
+   public :: crop_water_exchange_t, heat_soil_exchange_t, drain_soil_exchange_t
+   public :: swap_exchange_t
 
    !> Crop <-> atmosphere + soil-water (the transpiration/water-relations
    !! surface). The full crop<->SWAP interface an external crop model must
@@ -48,10 +49,23 @@ module exchange_state_mod
       real(real64), allocatable :: theta_prev(:)  !! thetm1 (previous step)
    end type heat_soil_exchange_t
 
+   !> Drainage <-> soil-water. Soil-water provides the groundwater level + ponding
+   !! that drive the lateral-drainage computation; drainage provides the per-level
+   !! drainage flux (the sink applied in the soil-water flux balance).
+   type :: drain_soil_exchange_t
+      ! --- from soil-water -> drainage ---
+      real(real64) :: gwl  = 0.0_real64   !! groundwater level
+      real(real64) :: pond = 0.0_real64   !! surface ponding
+      ! --- from drainage -> soil-water (the sink) ---
+      integer                   :: nrlevs = 0   !! number of drainage levels
+      real(real64), allocatable :: qdra(:,:)    !! drainage flux per level/node
+   end type drain_soil_exchange_t
+
    !> Aggregate of the cross-compartment exchange records. One field per surface.
    type :: swap_exchange_t
       type(crop_water_exchange_t) :: crop_water
       type(heat_soil_exchange_t)  :: heat_soil
+      type(drain_soil_exchange_t) :: drain_soil
    end type swap_exchange_t
 
 end module exchange_state_mod

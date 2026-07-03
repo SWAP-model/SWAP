@@ -289,7 +289,15 @@ contains
          do while (time%fldtreduce)
             time%fldtreduce = .false.
 
+            ! [T2-A / ADR 0053] soil->drainage: GWL + ponding to the lateral
+            ! drainage computation through the exchange record.
+            state%exchange%drain_soil%gwl  = state%soilwater%gwl
+            state%exchange%drain_soil%pond = state%soilwater%pond
             if (time%flDrain) call Drainage(state)
+            ! [T2-A / ADR 0053] drainage->soil: the per-level drainage flux (sink)
+            ! back to the soil-water flux balance.
+            state%exchange%drain_soil%nrlevs = state%drainage%nrlevs
+            if (allocated(state%drainage%qdra)) state%exchange%drain_soil%qdra = state%drainage%qdra
 
             if (.not.time%fldecdt .and. time%flSurfaceWater) call surfacewater_lateral(state, request_smaller_dt)
             if (request_smaller_dt) time%fldecdt = .true.
