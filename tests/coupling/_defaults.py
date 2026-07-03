@@ -16,14 +16,14 @@ from pathlib import Path
 # tests/coupling/_defaults.py -> parents[2] == repo root
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CASE_DIR = REPO_ROOT / "tests" / "coupling" / "hupselbrook_coupled"
-LIBSWAP_XMI = REPO_ROOT / "builddir" / "libswap_xmi.so"
+LIBSWAP_XMI = REPO_ROOT / "builddir" / "libswap.so"
 
 
 def default_libswap() -> Path:
     """Path to the built SWAP XMI kernel; clear error if not built yet."""
     if not LIBSWAP_XMI.exists():
         sys.exit(
-            f"error: libswap_xmi.so not found at {LIBSWAP_XMI}\n"
+            f"error: libswap.so not found at {LIBSWAP_XMI}\n"
             "       build it first:  pixi run build-linux"
         )
     return LIBSWAP_XMI

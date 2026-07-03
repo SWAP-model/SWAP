@@ -9,7 +9,7 @@ columns from a single Python process by:
      ColumnSpec) that describes, per column, a base TOML config plus optional
      per-column parameter overrides.
   2. Running each column **in-memory** through the SWAP BMI C-ABI
-     (libswap_bmi.so) — no per-column scratch files, no subprocess shell-out.
+     (libswap.so) — no per-column scratch files, no subprocess shell-out.
   3. Running the columns **in parallel**, one OS process per column, via a
      multiprocessing pool. Process isolation sidesteps the remaining Tier-3
      module-global state (crop_config_global, a few SAVE locals) that still
@@ -52,7 +52,7 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 
 REPO = Path(__file__).resolve().parent.parent
-DEFAULT_LIB = REPO / "builddir" / "libswap_bmi.so"
+DEFAULT_LIB = REPO / "builddir" / "libswap.so"
 
 # Companion-file extensions SWAP loads at init/seed time alongside swap.toml.
 # Anything matching these in the case dir is attached to the in-memory store.
@@ -344,7 +344,7 @@ def _selftest() -> int:
         print(f"SELFTEST SKIP: case not found at {case}")
         return 0
     if not DEFAULT_LIB.exists():
-        print(f"SELFTEST SKIP: build libswap_bmi.so first ({DEFAULT_LIB})")
+        print(f"SELFTEST SKIP: build libswap.so first ({DEFAULT_LIB})")
         return 0
 
     # 3 columns: baseline + two with a perturbed initial groundwater level.
@@ -403,7 +403,7 @@ def _reload_check(path: Path):
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--selftest", action="store_true", help="run the bundled smoke test")
-    ap.add_argument("--lib", type=Path, default=DEFAULT_LIB, help="path to libswap_bmi.so")
+    ap.add_argument("--lib", type=Path, default=DEFAULT_LIB, help="path to libswap.so")
     args = ap.parse_args(argv)
     if args.selftest:
         return _selftest()

@@ -6,7 +6,7 @@ module swap_ensemble_mod
    use iso_fortran_env, only: real64, int32
    use swap_state_mod,  only: swap_state_t
    use swap_config_mod, only: swap_config_t
-   use swap_mod,        only: swap_init_from_loaded_config, swap_run_step, swap_close
+   use swap_mod,        only: swap_init, swap_init_from_loaded_config, swap_run_step, swap_close
    use soilhydraulics_mod, only: reequilibrate_column_to_gwl
    use load_swap_config_mod, only: load_swap_config
    use error_mod,       only: error_collection_t, &
@@ -21,14 +21,20 @@ module swap_ensemble_mod
    public :: ensemble_set_gwl, ensemble_qbot_volume, ensemble_storage_coef
    public :: ensemble_current_t1900, ensemble_start_t1900, ensemble_end_t1900
    public :: gwl, qbot_volume, storage_coef
+   ! T1-G′ sub-arc 2: single-column standalone mode + shared facade plumbing.
+   public :: ensemble_allocate_single, ensemble_init_single, ensemble_is_coupled
+   public :: ensemble_column1, ensemble_config1
+   public :: read_ncol_sidecar, ensemble_last_error
 
    integer, parameter :: STORAGE_COEF_DEFAULT_X100 = 15   ! sy = 0.15 (smoke placeholder)
 
-   type(swap_state_t),  allocatable, save :: columns(:)
+   type(swap_state_t),  allocatable, save, target :: columns(:)
    type(swap_config_t), allocatable, save, target :: configs(:)
    integer,             allocatable, save :: column_config(:)
    integer,             save :: ncol = 0
    logical,             save :: first_step_done = .false.  ! gate per-cell gwl re-seat
+   logical,             save :: coupled_mode    = .false.  ! set by ensemble_init (coupled) / cleared by single-mode init
+   character(len=1024), save :: ensemble_last_error = ''   ! facade-shared last-error text (get_last_bmi_error)
 
    real(real64), allocatable, save, target :: gwl(:)          ! MODFLOW head, metres (driver writes)
    real(real64), allocatable, save, target :: qbot_volume(:)  ! recharge depth over step, metres (we write)
@@ -73,6 +79,7 @@ contains
       allocate(qbot_volume(ncol),  source=0.0_real64)
       allocate(storage_coef(ncol), source=real(STORAGE_COEF_DEFAULT_X100, real64)/100.0_real64)
       first_step_done = .false.   ! re-seat columns to per-cell gwl on first step
+      coupled_mode    = .true.
 
       if (.not. ensemble_all_swbotb1()) rc = 3
    end function ensemble_init
@@ -153,7 +160,69 @@ contains
       if (allocated(qbot_volume))   deallocate(qbot_volume)
       if (allocated(storage_coef))  deallocate(storage_coef)
       ncol = 0
+      coupled_mode = .false.
    end function ensemble_finalize
+
+   !> Allocate a 1-column, uncoupled ensemble (no exchange arrays, no gwl
+   !! injection). The caller then populates configs(1) (from file or from an
+   !! in-memory TOML string via the CAPI) and inits columns(1). This is the
+   !! backing store for the single-column BMI/CAPI facade — the former
+   !! capi_state singleton (ADR 0050 sub-arc 2).
+   subroutine ensemble_allocate_single()
+      ! Drop any stale storage without swap_close side effects (re-init in one
+      ! process replaces the previous instance, matching the old singleton).
+      if (allocated(columns))       deallocate(columns)
+      if (allocated(configs))       deallocate(configs)
+      if (allocated(column_config)) deallocate(column_config)
+      allocate(configs(1))
+      allocate(columns(1))
+      allocate(column_config(1)); column_config = 1
+      ncol = 1
+      coupled_mode = .false.
+   end subroutine ensemble_allocate_single
+
+   !> Single-column standalone init from a TOML file — the merged facade's
+   !! `initialize()` path when no ensemble.txt sidecar is present. Mirrors the
+   !! former singleton path exactly: swap_init on one (state, config) pair.
+   integer function ensemble_init_single(config_file) result(rc)
+      character(len=*), intent(in) :: config_file
+      rc = 0
+      call ensemble_allocate_single()
+      call swap_init(config_file, columns(1), configs(1))
+   end function ensemble_init_single
+
+   logical function ensemble_is_coupled()
+      ensemble_is_coupled = coupled_mode
+   end function ensemble_is_coupled
+
+   function ensemble_column1() result(p)
+      type(swap_state_t), pointer :: p
+      p => null()
+      if (allocated(columns)) p => columns(1)
+   end function ensemble_column1
+
+   function ensemble_config1() result(p)
+      type(swap_config_t), pointer :: p
+      p => null()
+      if (allocated(configs)) p => configs(1)
+   end function ensemble_config1
+
+   !> Read the integer column count from the `ensemble.txt` sidecar next to the
+   !! config (accepts a dir or a file path). Returns 0 when absent/invalid —
+   !! the merged facade treats 0 as "single-column standalone mode".
+   integer function read_ncol_sidecar(dir_or_file) result(n)
+      character(len=*), intent(in) :: dir_or_file
+      integer :: u, ios
+      character(len=512) :: path
+      n = 0
+      path = trim(dir_or_file)
+      if (index(path, '.toml') > 0) path = path(1:scan(path, '/', back=.true.))
+      open (newunit=u, file=trim(path)//'ensemble.txt', status='old', action='read', iostat=ios)
+      if (ios /= 0) return
+      read (u, *, iostat=ios) n
+      close (u)
+      if (ios /= 0) n = 0
+   end function read_ncol_sidecar
 
    integer function ensemble_ncol(); ensemble_ncol = ncol; end function
 

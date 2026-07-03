@@ -58,31 +58,21 @@ add_project_arguments(gfortran_flags, language: 'fortran')
 # legacy-mode compilation are consumed without issue by f2018-mode
 # compilation. The -std= flag only affects parsing of the file being
 # compiled, not what it can `use`.
-# Core modern modules shared by every facade. Excludes the C-ABI facade
-# modules (swap_capi_mod / swap_bmi_mod / swap_xmi_mod), which export
-# OVERLAPPING bind(C) names (initialize/update/finalize/get_current_time/...)
-# and therefore must NOT be linked into the same shared library together.
-modern_core_sources = [
+# Modern modules — one list, one facade set (ADR 0050 sub-arc 2). The former
+# BMI-vs-XMI bind(C) name collision is resolved: swap_bmi_mod is the sole,
+# mode-aware definer of the shared lifecycle/metadata C names (single-column
+# vs coupled-ensemble, both backed by swap_ensemble_mod), and swap_xmi_mod
+# keeps only the XMI-specific verbs (prepare/solve/get_value_ptr/...). All
+# facades therefore link into ONE shared library: libswap.so.
+modern_sources = [
     'src/driver/swap_mod.f90',
     'src/driver/swap_ensemble_mod.f90',
     'src/bindings/bmi_constants_mod.f90',
     'src/bindings/swap_c_strings_mod.f90',
     'src/bindings/swap_var_registry_mod.f90',
     'src/timecontrol/timecontrol_mod.f90',
-]
-
-# Standalone-BMI facade: singleton (capi_state) backed. Drives libswap_bmi.so
-# and the executable. swap_bmi_mod and swap_capi_mod share the C names.
-modern_sources = modern_core_sources + [
     'src/bindings/swap_capi_mod.f90',
     'src/bindings/swap_bmi_mod.f90',
-]
-
-# XMI coupling facade: ensemble backed. Sole definer of the coupling C-ABI
-# (re-implements the BMI lifecycle/time/info C names over the ensemble) so it
-# CANNOT coexist with swap_capi_mod/swap_bmi_mod in one library. Drives
-# libswap_xmi.so — the library imod_coupler / xmipy loads.
-modern_xmi_sources = modern_core_sources + [
     'src/bindings/swap_xmi_mod.f90',
 ]
 
@@ -305,37 +295,18 @@ executable('swap',
 )
 
 # ============================================================================
-# BMI shared library (Python / imod_coupler entry point)
+# The one shared library: libswap.so (BMI + CAPI + XMI — ADR 0050)
 # ============================================================================
 # link_whole forces all object files from the static libs into the .so
-# (equivalent to -Wl,--whole-archive), so every BMI symbol is exported.
-# Each member library was already compiled with its appropriate -std= flag.
-swap_bmi_lib = shared_library('swap_bmi',
+# (equivalent to -Wl,--whole-archive), so every C-ABI symbol is exported.
+# Every consumer (cffi demos, ctypes orchestrator, xmipy/imod_coupler) loads
+# this library. Target name 'libswap' + empty prefix yields libswap.so while
+# staying distinct from the 'swap' executable target.
+swap_lib = shared_library('libswap',
     link_whole: [swap_modern, swap_legacy],
     dependencies: [tomlf_dep],
     include_directories: src_inc,
-    install: false,
-)
-
-# ============================================================================
-# XMI shared library (imod_coupler / xmipy coupling entry point)
-# ============================================================================
-# Ensemble-backed coupling C-ABI. Built from modern_xmi_sources, which swaps
-# the singleton BMI/CAPI facades for swap_xmi_mod. swap_xmi is the SOLE definer
-# of the overlapping bind(C) names in THIS library, so the link is clean. This
-# is the library the coupler loads (libswap_xmi.so), kept separate from
-# libswap_bmi.so (standalone singleton BMI + its tests).
-swap_modern_xmi = static_library('swap_modern_xmi',
-    sources: modern_xmi_sources,
-    dependencies: [tomlf_dep, swap_legacy_dep],
-    include_directories: src_inc,
-    fortran_args: ['-std=f2018', '-Wall', '-Wextra'],
-)
-
-swap_xmi_lib = shared_library('swap_xmi',
-    link_whole: [swap_modern_xmi, swap_legacy],
-    dependencies: [tomlf_dep],
-    include_directories: src_inc,
+    name_prefix: '',
     install: false,
 )
 # ============================================================================

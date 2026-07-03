@@ -8,7 +8,7 @@ heads and plot the final water table.
 Usage:
     python run_coupled.py LIBSWAP_XMI LIBMF6 CASE_DIR RUN_DIR [NCOL] [NPER]
 
-  LIBSWAP_XMI : path to libswap_xmi.so  (the XMI kernel; NOT libswap_bmi.so)
+  LIBSWAP_XMI : path to libswap.so  (the XMI kernel; NOT libswap.so)
   LIBMF6      : path to libmf6.so
   CASE_DIR    : .../tests/coupling/hupselbrook_coupled (self-contained source
                 of the SWAP coupled config + meteo + crop files + gwl csv)
@@ -67,7 +67,7 @@ def stage_run_dir(libswap: Path, libmf6: Path, case_dir: Path, run_dir: Path,
     # 3. Coupler config with discovered absolute dll paths.
     cfg_text = (HERE / "imod_coupler.toml").read_text() \
         .replace("<ABS_PATH_TO>/libmf6.so", str(libmf6)) \
-        .replace("<ABS_PATH_TO>/libswap_xmi.so", str(libswap))
+        .replace("<ABS_PATH_TO>/libswap.so", str(libswap))
     (run_dir / "imod_coupler.toml").write_text(cfg_text)
     return run_dir, n_couple
 

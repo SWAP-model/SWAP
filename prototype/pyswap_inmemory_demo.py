@@ -2,7 +2,7 @@
 """Prototype: drive SWAP fully in-memory from Python (diskless init) and
 verify the run is bit-identical to the on-disk standalone path.
 
-Both runs go through the SAME library (libswap_bmi.so) over the singleton
+Both runs go through the SAME library (libswap.so) over the singleton
 (state, config); they are executed in isolated subprocesses so the singleton
 is fresh each time. The in-memory run pushes the TOML config + every companion
 file (drainage/crop subfiles + the meteo CSV) as bytes via the new
@@ -27,7 +27,7 @@ import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LIB = os.path.join(REPO, "builddir", "libswap_bmi.so")
+LIB = os.path.join(REPO, "builddir", "libswap.so")
 CASE = os.path.join(REPO, "tests", "swap-cases", "toml", "1.hupselbrook")
 # Every load-time + seed-time companion hupselbrook reads.
 COMPANIONS = [

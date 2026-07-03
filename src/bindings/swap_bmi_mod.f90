@@ -14,8 +14,12 @@ module swap_bmi_mod
    ! methods (update/finalize) and the CAPI accessors all operate on the
    ! same (state, config) pair.
    use swap_capi_mod,   only: bmi_state => capi_state, bmi_config => capi_config, &
-                              bmi_registry => capi_registry
+                              bmi_registry => capi_registry, &
+                              capi_bind_first_column, capi_unbind
    ! [GR-BH Task 24] numnod/dz removed — now read via bmi_state%mesh%numnod / bmi_state%mesh%dz
+   use swap_ensemble_mod, only: ensemble_init, ensemble_init_single, ensemble_step_day, &
+                                ensemble_finalize, ensemble_is_coupled, ensemble_ncol, &
+                                read_ncol_sidecar, ensemble_last_error
    use swap_var_registry_mod, only: build_variable_registry, NS_BMI
    use swap_c_strings_mod, only: c_to_f_string, f_to_c_string
    use diagnostics_mod, only: diag_overrides_t, default_embedded_config, &
@@ -29,22 +33,53 @@ contains
    ! Lifecycle
    !----------------------------------------------------------------------
 
+   !> Unified initialize (ADR 0050 sub-arc 2): mode-dependent on the
+   !! ensemble.txt sidecar next to the config. Present -> coupled ensemble mode
+   !! (the former XMI path, ncol columns, exchange arrays); absent ->
+   !! single-column standalone mode (the former singleton BMI path). Both back
+   !! onto the ensemble; the facade pointers alias column 1. Note: n (the
+   !! config-path length) is intentionally unread — the path is NUL-terminated,
+   !! and xmipy calls this symbol with the path argument only.
    function bmi_initialize(config_file, n) result(rc) bind(C, name='initialize')
       character(kind=c_char), intent(in)    :: config_file(*)
       integer(c_int),  value, intent(in)    :: n
       integer(c_int)                        :: rc
-      character(len=256) :: f_config_file
+      character(len=512) :: f_config_file
       type(diag_overrides_t) :: toml_ov
+      integer :: ncol_sidecar
       call c_to_f_string(config_file, f_config_file)
-      call read_logging_overrides_from_file(trim(f_config_file), toml_ov)
-      call init_logging(default_embedded_config(), toml_ov)
-      call swap_init(trim(f_config_file), bmi_state, bmi_config)
+      ncol_sidecar = read_ncol_sidecar(trim(f_config_file))
+      if (ncol_sidecar > 0) then
+         ! Coupled mode: ensemble_init does its own logging setup.
+         rc = ensemble_init(trim(f_config_file), ncol_sidecar)
+         if (rc /= 0) then
+            ensemble_last_error = 'ensemble_init failed'
+            return
+         end if
+      else
+         call read_logging_overrides_from_file(trim(f_config_file), toml_ov)
+         call init_logging(default_embedded_config(), toml_ov)
+         rc = ensemble_init_single(trim(f_config_file))
+         if (rc /= 0) then
+            ensemble_last_error = 'single-column init failed'
+            return
+         end if
+      end if
+      call capi_bind_first_column()
       call build_variable_registry(bmi_registry, bmi_state)
       rc = 0
    end function bmi_initialize
 
+   !> update(): single-column mode advances one Richards substep (former BMI
+   !! semantics); coupled mode advances one day across all columns (former XMI
+   !! semantics). Behavior is mode-, not consumer-, dependent.
    function bmi_update() result(rc) bind(C, name='update')
       integer(c_int) :: rc
+      if (ensemble_is_coupled()) then
+         rc = ensemble_step_day()
+         if (rc /= 0) ensemble_last_error = 'ensemble_step_day failed'
+         return
+      end if
       call swap_run_step(bmi_state, bmi_config)
       if (bmi_state%diag%aborted()) then
          rc = 1
@@ -55,8 +90,8 @@ contains
 
    function bmi_finalize() result(rc) bind(C, name='finalize')
       integer(c_int) :: rc
-      call swap_close(bmi_state, bmi_config)
-      rc = 0
+      rc = ensemble_finalize()
+      call capi_unbind()
    end function bmi_finalize
 
    !----------------------------------------------------------------------
@@ -87,7 +122,11 @@ contains
    function bmi_get_time_step(dt) result(rc) bind(C, name='get_time_step')
       real(c_double), intent(out) :: dt
       integer(c_int)              :: rc
-      dt = bmi_state%timecontrol%dt
+      if (ensemble_is_coupled()) then
+         dt = 1.0_c_double   ! daily coupling cadence (former XMI semantics)
+      else
+         dt = bmi_state%timecontrol%dt
+      end if
       rc = 0
    end function bmi_get_time_step
 
@@ -102,6 +141,12 @@ contains
    function bmi_update_until(target_time) result(rc) bind(C, name='update_until')
       real(c_double), value, intent(in) :: target_time
       integer(c_int)                    :: rc
+      if (ensemble_is_coupled()) then
+         ! MF6 leads the clock; one day per call (former XMI semantics).
+         rc = ensemble_step_day()
+         if (rc /= 0) ensemble_last_error = 'ensemble_step_day failed'
+         return
+      end if
       do while (bmi_state%timecontrol%t1900 < target_time .and. &
                 .not. bmi_state%timecontrol%flRunEnd)
          call swap_run_step(bmi_state, bmi_config)
@@ -113,25 +158,34 @@ contains
    ! Component info
    !----------------------------------------------------------------------
 
-   function bmi_get_component_name(name_buf, n) result(rc) bind(C, name='get_component_name')
+   !> Unbounded (XMI-arity) form: xmipy calls this with (buf) only, so the
+   !! bounded 2-arg form would read a garbage length. "SWAP"+NUL always fits.
+   function bmi_get_component_name(name_buf) result(rc) bind(C, name='get_component_name')
       character(kind=c_char), intent(out) :: name_buf(*)
-      integer(c_int),  value, intent(in)  :: n
       integer(c_int)                      :: rc
-      call f_to_c_string("SWAP", name_buf, n)
+      call f_to_c_string("SWAP", name_buf)
       rc = 0
    end function bmi_get_component_name
 
    function bmi_get_input_item_count(count) result(rc) bind(C, name='get_input_item_count')
       integer(c_int), intent(out) :: count
       integer(c_int)              :: rc
-      count = bmi_registry%count_ns(NS_BMI, want_settable=.true.)
+      if (ensemble_is_coupled()) then
+         count = 1   ! gwl (former XMI surface)
+      else
+         count = bmi_registry%count_ns(NS_BMI, want_settable=.true.)
+      end if
       rc = 0
    end function bmi_get_input_item_count
 
    function bmi_get_output_item_count(count) result(rc) bind(C, name='get_output_item_count')
       integer(c_int), intent(out) :: count
       integer(c_int)              :: rc
-      count = bmi_registry%count_ns(NS_BMI, want_settable=.false.)
+      if (ensemble_is_coupled()) then
+         count = 2   ! qbot_volume, storage_coef (former XMI surface)
+      else
+         count = bmi_registry%count_ns(NS_BMI, want_settable=.false.)
+      end if
       rc = 0
    end function bmi_get_output_item_count
 
@@ -205,13 +259,14 @@ contains
    ! Variable metadata
    !----------------------------------------------------------------------
 
-   function bmi_get_var_type(var_name, type_buf, n) result(rc) bind(C, name='get_var_type')
+   !> Unbounded (XMI-arity) form: xmipy's get_value_ptr calls this internally
+   !! with (name, buf) only. All SWAP variables are double precision;
+   !! "double"+NUL always fits xmipy's buffer.
+   function bmi_get_var_type(var_name, type_buf) result(rc) bind(C, name='get_var_type')
       character(kind=c_char), intent(in)  :: var_name(*)
       character(kind=c_char), intent(out) :: type_buf(*)
-      integer(c_int),  value, intent(in)  :: n
       integer(c_int)                      :: rc
-      ! All SWAP BMI variables are double precision
-      call f_to_c_string("double", type_buf, n)
+      call f_to_c_string("double", type_buf)
       rc = 0
    end function bmi_get_var_type
 
@@ -257,6 +312,12 @@ contains
       integer(c_int)                      :: rc
       character(len=64) :: name
       integer           :: idx
+      if (ensemble_is_coupled()) then
+         ! Exchange arrays are rank-1 over the columns (former XMI semantics).
+         nb = 8 * ensemble_ncol()
+         rc = 0
+         return
+      end if
       call c_to_f_string(var_name, name)
       idx = bmi_registry%find(NS_BMI, trim(name))
       if (idx == 0) then

@@ -11,10 +11,10 @@ test('cffi-demo-hupselbrook',
     args: [
         meson.current_source_dir() / 'run_ensemble.py',
         meson.project_source_root() / 'tests/swap-cases/toml/1.hupselbrook',
-        swap_bmi_lib.full_path(),
+        swap_lib.full_path(),
     ],
     workdir: meson.project_source_root(),
     suite: 'cffi-demo',
-    depends: [swap_bmi_lib],
+    depends: [swap_lib],
     timeout: 120,
 )

@@ -5,12 +5,12 @@ Loads SWAP TOML config in Python; passes it to SWAP via cffi
 inspects state via the capi accessor surface; finalizes.
 
 Usage:
-    python run_ensemble.py <case_dir> <path_to_libswap_bmi.so>
+    python run_ensemble.py <case_dir> <path_to_libswap.so>
 
 Example:
     python tests/cffi-demo/run_ensemble.py \\
            tests/swap-cases/toml/1.hupselbrook \\
-           builddir/libswap_bmi.so
+           builddir/libswap.so
 
 Pure-cffi proof of concept — pyswap rewrite (separate arc) replaces
 this with a proper class-based API.
@@ -109,7 +109,7 @@ def main(case_dir: pathlib.Path, lib_path: pathlib.Path) -> int:
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("usage: run_ensemble.py <case_dir> <path_to_libswap_bmi.so>",
+        print("usage: run_ensemble.py <case_dir> <path_to_libswap.so>",
               file=sys.stderr)
         sys.exit(2)
     case = pathlib.Path(sys.argv[1]).resolve()

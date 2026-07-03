@@ -1,6 +1,6 @@
 """SS-DRV Phase 1: BMI hello-world.
 
-Loads libswap_bmi.so via cffi, drives the hupselbrook simulation
+Loads libswap.so via cffi, drives the hupselbrook simulation
 through one initialize / update / finalize cycle, and asserts the
 two sentinel get_value_double variables return physically plausible
 data. End-to-end proof that the C binding path works.
@@ -16,7 +16,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("usage: hello_swap.py <path-to-libswap_bmi.so>", file=sys.stderr)
+        print("usage: hello_swap.py <path-to-libswap.so>", file=sys.stderr)
         return 2
 
     so_path = sys.argv[1]

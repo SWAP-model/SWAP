@@ -69,7 +69,7 @@ check-full = { cmd = "python tests/regression/test_output_regression.py", depend
 #                  headless mode, swap_view_array zero-copy, water-balance
 #                  struct readout. Hupselbrook case, ~30k update steps.
 # test-xmi      : SWAP-only XMI contract smoke via xmipy (no MODFLOW) —
-#                  loads libswap_xmi.so, exercises get_value_ptr on the three
+#                  loads libswap.so, exercises get_value_ptr on the three
 #                  exchange arrays + a few coupled-style steps.
 # test-coupling : full SWAP<->MODFLOW6 coupled smoke (short run, ncol=10/nper=30)
 #                  via the vendored swapmod driver; needs libmf6.so (test env).

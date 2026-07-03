@@ -1,4 +1,4 @@
-"""SWAP-only XMI contract smoke test (no MODFLOW). Loads libswap_xmi via xmipy,
+"""SWAP-only XMI contract smoke test (no MODFLOW). Loads libswap via xmipy,
 runs a few coupled-style steps, exercises get_value_ptr on the 3 exchange
 arrays, asserts shapes and finite values.
 

@@ -4,12 +4,12 @@ test('swap-xmi-smoke',
     python3,
     args: [
         meson.current_source_dir() / 'test_swap_xmi_smoke.py',
-        swap_xmi_lib.full_path(),
+        swap_lib.full_path(),
         meson.current_source_dir() / 'hupselbrook_coupled',
         meson.current_build_dir(),
     ],
     suite: 'coupling',
-    depends: [swap_xmi_lib],
+    depends: [swap_lib],
     timeout: 600,
 )
 
@@ -25,12 +25,12 @@ if fs.exists(libmf6)
         python3,
         args: [
             meson.current_source_dir() / 'test_coupled_smoke.py',
-            swap_xmi_lib.full_path(),
+            swap_lib.full_path(),
             libmf6,
             meson.current_source_dir() / 'hupselbrook_coupled',
         ],
         suite: 'coupling',
-        depends: [swap_xmi_lib],
+        depends: [swap_lib],
         timeout: 1200,
     )
 else

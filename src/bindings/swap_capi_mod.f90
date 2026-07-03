@@ -20,20 +20,32 @@ module swap_capi_mod
                               read_logging_overrides_from_text, init_logging
    use swap_var_registry_mod, only: var_registry_t, build_variable_registry, NS_CAPI
    use swap_c_strings_mod,    only: c_to_f_string
+   use swap_ensemble_mod,     only: ensemble_allocate_single, ensemble_column1, &
+                                    ensemble_config1
    implicit none
    private
 
-   ! Shared singleton — swap_bmi_mod imports these via USE-rename so that
-   ! the BMI lifecycle methods (update/finalize) and the CAPI accessors
-   ! all operate on the same (state, config) pair.
-   ! Multi-instance handles are Phase 3.
-   type(swap_state_t),          save, public, target :: capi_state
-   type(swap_config_t), target, save, public         :: capi_config
+   ! T1-G′ sub-arc 2 (ADR 0050): the former (state, config) singleton is now a
+   ! pair of POINTERS bound to the ensemble's column 1 — the ensemble
+   ! (swap_ensemble_mod) is the sole owner of storage. swap_bmi_mod imports
+   ! these via USE-rename so the BMI lifecycle and the CAPI accessors operate
+   ! on the same instance. Unassociated until an initialize path has run.
+   ! Multi-instance handles remain Phase 3.
+   type(swap_state_t),  pointer, public :: capi_state  => null()
+   type(swap_config_t), pointer, public :: capi_config => null()
 
-   ! Variable registry over capi_state — single source of truth for the C-ABI
+   public :: capi_bind_first_column, capi_unbind
+
+   ! Variable registry over column 1 — single source of truth for the C-ABI
    ! variable surface, shared with swap_bmi_mod. Built after init (arrays
    ! allocated) in every init path; empty until then (lookups return not-found).
    type(var_registry_t), save, public :: capi_registry
+
+   ! swap_set_headless is legitimately called BEFORE initialize (the Python
+   ! orchestrator's call order); with pointer-backed state there is nothing to
+   ! write to yet, so the flag is buffered and applied at bind time.
+   logical, save :: pending_headless      = .false.
+   logical, save :: have_pending_headless = .false.
 
    ! In-memory companion blobs (TOML subfiles + CSV tables) pushed from
    ! Python via swap_attach_config_file, consumed by the in-memory init so
@@ -77,10 +89,33 @@ contains
    ! Lifecycle
    !----------------------------------------------------------------------
 
+   !> Bind the facade pointers at the ensemble's column 1 and apply any
+   !! pre-init headless request. Called by every initialize path.
+   subroutine capi_bind_first_column()
+      capi_state  => ensemble_column1()
+      capi_config => ensemble_config1()
+      if (have_pending_headless .and. associated(capi_state)) then
+         capi_state%timecontrol%headless = pending_headless
+         have_pending_headless = .false.
+      end if
+   end subroutine capi_bind_first_column
+
+   !> Drop the facade pointers (after ensemble_finalize deallocates storage).
+   subroutine capi_unbind()
+      capi_state  => null()
+      capi_config => null()
+      call capi_registry%clear()
+   end subroutine capi_unbind
+
    function swap_set_headless(flag) result(ierr) bind(C, name='swap_set_headless')
       integer(c_int), value, intent(in) :: flag
       integer(c_int)                    :: ierr
-      capi_state%timecontrol%headless = (flag /= 0)
+      if (associated(capi_state)) then
+         capi_state%timecontrol%headless = (flag /= 0)
+      else
+         pending_headless      = (flag /= 0)
+         have_pending_headless = .true.
+      end if
       ierr = 0
    end function swap_set_headless
 
@@ -101,6 +136,11 @@ contains
 
       call read_logging_overrides_from_text(f_text, toml_ov)
       call init_logging(default_embedded_config(), toml_ov)
+
+      ! Storage lives on the ensemble (single-column, uncoupled); the facade
+      ! pointers alias its column 1.
+      call ensemble_allocate_single()
+      call capi_bind_first_column()
 
       if (capi_companions%in_memory) then
          call load_swap_config_from_string(f_text, capi_config, errors, source=capi_companions)
