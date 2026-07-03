@@ -7,7 +7,7 @@ module array_utils
     use iso_fortran_env, only: real64
     implicit none
     private
-    public :: afgen, stepnr, insw, interpol
+    public :: afgen, insw, interpol
 
 contains
     ! ----------------------------------------------------------------------
@@ -50,44 +50,6 @@ contains
       afgen = table(iltab)
       
    end function afgen
-
-    ! ----------------------------------------------------------------------
-
-   function stepnr(array, length, x)
-      !> Find step number in array
-      !! @warning
-      !! This function is not called from any SWAP code.
-      !!
-      implicit none
-      
-      ! Arguments
-      integer, intent(in) :: length
-      real(real64), intent(in) :: array(length)
-      real(real64), intent(in) :: x
-      integer :: stepnr
-      
-      ! Local variables
-      integer :: i
-      
-      if (x <= array(1)) then
-         ! Argument less or equal to first x in array
-         stepnr = 1
-         return
-      end if
-      
-      do i = 2, length
-         if (array(i) > x .or. array(i) < array(i-1)) then
-            ! Array partly filled, argument larger than last x in array or
-            ! argument between first and last x in table
-            stepnr = i - 1
-            return
-         end if
-      end do
-      
-      ! Array fully filled, argument larger than last x in array
-      stepnr = length
-      
-   end function stepnr
 
     ! ----------------------------------------------------------------------
    function insw(x1, x2, x3)

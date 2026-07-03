@@ -55,7 +55,6 @@ contains
 
       ! set initial values
       soil%gwl    = 999.0d0
-      soil%pegwl  = 999.0d0
       flsat     = .false.
       soil%nodgwl = mesh%numnod+1
       nodhlp    = mesh%numnod
@@ -129,27 +128,14 @@ contains
             if (soil%h(node) .lt. 0.0d0) then
                ! Macropore branch removed (ADR 0040; always .false.).
                flsat = .false.
-               soil%npegwl = node
-               soil%pegwl  = level (state,1,node,nodheq1)
             endif
          end do
 
-         ! whole profile saturated, then add ponding layer to perched groundwater level
-         if (flsat)then
-            if(soil%h(1) .gt. 0.0d0)then
-               if (soil%pond .lt. 1.d-8) then
-                  soil%pegwl = min(mesh%z(1)+soil%h(1),soil%pond)
-               else
-                  soil%pegwl = soil%pond
-               endif
-            else
-               soil%pegwl = 0.0d0
-            end if
-            soil%npegwl = 1
-         endif
+         ! [T1-B 2026-07-03] Perched-gwl level diagnostics (pegwl/npegwl) removed:
+         ! they were written here (incl. the whole-profile-saturated ponding
+         ! branch) but read nowhere. bpegwl is the only live output of this block.
       else
          soil%bpegwl = -1
-         soil%npegwl = -1
       endif
 
       ! fatal error if gwl below profile and flux has to be calculated

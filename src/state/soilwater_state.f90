@@ -188,9 +188,7 @@ module soilwater_state_mod
       real(real64) :: gwl          = 0.0_real64   !< groundwater level below surface (cm)
       real(real64) :: gwlm1        = 0.0_real64   !< gwl at previous time level (cm)
       integer      :: nodgwl       = 0            !< node directly above gwl (-)
-      real(real64) :: pegwl        = 0.0_real64   !< perched groundwater level (cm)
       integer      :: bpegwl       = 0            !< node at bottom of perched gwl (-)
-      integer      :: npegwl       = 0            !< node above perched gwl (-)
       real(real64) :: gwlflcpzo    = 0.0_real64   !< capillary-zone gwl (cm)
       integer      :: nodgwlflcpzo = 0            !< node index for capillary-zone gwl (-)
       real(real64) :: hatm         = 0.0_real64   !< air pressure head near surface (cm); init to −2.75e5 in soilwater_init
