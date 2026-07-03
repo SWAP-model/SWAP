@@ -75,15 +75,48 @@ immediately; and it forces the per-variable contract into one place — the
 precondition for pointing a merged library at it in sub-arc 2 without re-deriving
 semantics.
 
-### Sub-arc 2 — one `libswap.so` on the ensemble backing store  *(next spec)*
-The structural move. Port the CAPI accessors + in-memory init + a per-timestep
-step onto the ensemble; point the BMI facade at a 1-column ensemble; collapse
-`modern_sources`/`modern_xmi_sources` so `swap_bmi_mod` + `swap_xmi_mod` no longer
-export colliding names (one lifecycle, ensemble-backed); merge the two
-`shared_library` targets into `libswap.so`; update every consumer
-(`tests/{bmi,cffi-demo,coupling}`, `prototype/`) to load the one library. Keep the
-CLI static. Semantic reconciliation to resolve: BMI `update()` = one timestep vs
-XMI `solve()` = one day.
+### Sub-arc 2 — one `libswap.so` on the ensemble backing store  *(in progress)*
+The structural move, decomposed into verifiable steps. **The full test path is
+runnable in this environment** — `libmf6.so` + `mf6` + flopy are present, so the
+SWAP↔MODFLOW6 coupling smoke test runs — so every step below is verifiable across
+BMI + CAPI + XMI + coupling + check-fast + pFUnit (a major de-risk vs. the earlier
+assumption the coupling path was blind).
+
+- **2a — shared C-string helpers (DONE 2026-07-03).** `swap_c_strings_mod`
+  (modern_core): one `c_to_f_string` + a generic `f_to_c_string` resolving BMI's
+  bounded (3-arg) and XMI's unbounded (2-arg) forms by argument count, so every
+  call site is unchanged. The three per-facade copies deleted. Verified across all
+  six paths byte-behavior-preserving.
+- **2b — ensemble gains uncoupled single-column mode + in-memory init + a
+  per-substep step.** Additive extension of `swap_ensemble_mod` (an `ncol=1`,
+  `flcoupled_gwl=.false.` path that skips the gwl-injection/re-equilibration that
+  today's `ensemble_step_day` assumes a MODFLOW driver supplies; a `swap_run_step`
+  substep entry). Existing coupled path untouched.
+- **2c — port CAPI accessors + registry onto ensemble column 1.** The results
+  view, water balance, `swap_view_array`, in-memory config attach, meteo buffer,
+  and the registry build operate on `columns(1)`.
+- **2d — retire the singleton; unify the colliding lifecycle symbols.**
+  *(Revised 2026-07-03 — the earlier "BMI `update()` = one day" proposal was a
+  behavior change dressed as a default and is dropped.)* The unified lifecycle is
+  **mode-dependent**: `initialize()` detects the `ensemble.txt` sidecar — present
+  → coupled ensemble mode, lifecycle behaves exactly as XMI today (`update()` =
+  one day via `ensemble_step_day`, `get_time_step()` = 1.0, item counts 1/2);
+  absent → single-column mode, lifecycle behaves exactly as BMI today
+  (`update()` = one Richards substep, `get_time_step()` = dt, registry-driven
+  counts). Both existing consumer populations see bit-for-bit unchanged behavior.
+  Storage unifies via pointer indirection, not a port: `capi_state`/`capi_config`
+  become pointers bound to `columns(1)`/`configs(1)` (ensemble arrays gain
+  `target`), so every CAPI accessor compiles unchanged while the ensemble becomes
+  the sole owner. Signature reconciliation for the 3 colliding metadata calls
+  whose BMI/XMI arities differ (`get_var_type`, `get_component_name`): adopt the
+  2-arg unbounded XMI form — xmipy is their only caller; no BMI consumer calls
+  them. `swap_set_headless` before init (orchestrator's call order) is buffered
+  and applied at init, since the pointer is unassociated pre-init.
+- **2e — merge the meson targets → `libswap.so`; update consumers.** Collapse
+  `modern_sources`/`modern_xmi_sources`; one `shared_library('swap')`; update the
+  hardcoded `libswap_bmi.so`/`libswap_xmi.so` paths in `prototype/`,
+  `tests/coupling/_defaults.py`, `imod_coupler.toml`, and the meson test
+  registrations. CLI stays static (built from the same core).
 
 ## Plan for sub-arc 1 (each step ends with the binding tests + check-fast green)
 

@@ -19,6 +19,7 @@ module swap_capi_mod
    use diagnostics_mod, only: diag_overrides_t, default_embedded_config, &
                               read_logging_overrides_from_text, init_logging
    use swap_var_registry_mod, only: var_registry_t, build_variable_registry, NS_CAPI
+   use swap_c_strings_mod,    only: c_to_f_string
    implicit none
    private
 
@@ -53,21 +54,6 @@ module swap_capi_mod
    end type swap_water_balance_t
 
 contains
-
-   !----------------------------------------------------------------------
-   ! Private helpers
-   !----------------------------------------------------------------------
-
-   subroutine c_to_f_string(c_str, f_str)
-      character(kind=c_char), intent(in)  :: c_str(*)
-      character(len=*),       intent(out) :: f_str
-      integer :: i
-      f_str = ' '
-      do i = 1, len(f_str)
-         if (c_str(i) == c_null_char) exit
-         f_str(i:i) = c_str(i)
-      end do
-   end subroutine c_to_f_string
 
    !----------------------------------------------------------------------
    ! Host logging control (highest-precedence C-API surface)

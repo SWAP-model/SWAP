@@ -21,6 +21,7 @@ module swap_xmi_mod
    use iso_c_binding
    use swap_ensemble_mod
    use error_mod, only: library_fatal_raised
+   use swap_c_strings_mod, only: c_to_f_string, f_to_c_string
    implicit none
    private
 
@@ -215,28 +216,6 @@ contains
       call f_to_c_string(trim(last_error), buf)
       rc = 0
    end function xmi_get_last_bmi_error
-
-   ! ---- private C-string helpers (mirror swap_bmi_mod.f90) --------------
-   subroutine c_to_f_string(c_str, f_str)
-      character(kind=c_char), intent(in) :: c_str(*)
-      character(len=*), intent(out) :: f_str
-      integer :: i
-      f_str = ''
-      do i = 1, len(f_str)
-         if (c_str(i) == c_null_char) exit
-         f_str(i:i) = c_str(i)
-      end do
-   end subroutine c_to_f_string
-
-   subroutine f_to_c_string(f_str, c_str)
-      character(len=*), intent(in) :: f_str
-      character(kind=c_char), intent(out) :: c_str(*)
-      integer :: i
-      do i = 1, len_trim(f_str)
-         c_str(i) = f_str(i:i)
-      end do
-      c_str(len_trim(f_str) + 1) = c_null_char
-   end subroutine f_to_c_string
 
    integer function read_ncol_sidecar(dir_or_file) result(n)
       character(len=*), intent(in) :: dir_or_file

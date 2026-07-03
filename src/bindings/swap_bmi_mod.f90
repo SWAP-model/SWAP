@@ -17,6 +17,7 @@ module swap_bmi_mod
                               bmi_registry => capi_registry
    ! [GR-BH Task 24] numnod/dz removed — now read via bmi_state%mesh%numnod / bmi_state%mesh%dz
    use swap_var_registry_mod, only: build_variable_registry, NS_BMI
+   use swap_c_strings_mod, only: c_to_f_string, f_to_c_string
    use diagnostics_mod, only: diag_overrides_t, default_embedded_config, &
                               read_logging_overrides_from_file, init_logging
    implicit none
@@ -340,34 +341,5 @@ contains
       end do
       rc = 0
    end function bmi_get_grid_z
-
-   !----------------------------------------------------------------------
-   ! Helpers
-   !----------------------------------------------------------------------
-
-   subroutine c_to_f_string(c_str, f_str)
-      character(kind=c_char), intent(in)  :: c_str(*)
-      character(len=*),       intent(out) :: f_str
-      integer :: i
-      f_str = ' '
-      do i = 1, len(f_str)
-         if (c_str(i) == c_null_char) exit
-         f_str(i:i) = c_str(i)
-      end do
-   end subroutine c_to_f_string
-
-   subroutine f_to_c_string(f_str, c_buf, max_len)
-      ! Copies a Fortran character string into a C NUL-terminated char array.
-      ! Writes at most max_len-1 characters, then appends a NUL terminator.
-      character(len=*),              intent(in)  :: f_str
-      character(kind=c_char),        intent(out) :: c_buf(*)
-      integer,                       intent(in)  :: max_len
-      integer :: i, n
-      n = min(len_trim(f_str), max_len - 1)
-      do i = 1, n
-         c_buf(i) = f_str(i:i)
-      end do
-      c_buf(n + 1) = c_null_char
-   end subroutine f_to_c_string
 
 end module swap_bmi_mod

@@ -66,6 +66,7 @@ modern_core_sources = [
     'src/driver/swap_mod.f90',
     'src/driver/swap_ensemble_mod.f90',
     'src/bindings/bmi_constants_mod.f90',
+    'src/bindings/swap_c_strings_mod.f90',
     'src/bindings/swap_var_registry_mod.f90',
     'src/timecontrol/timecontrol_mod.f90',
 ]
