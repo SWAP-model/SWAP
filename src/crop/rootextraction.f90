@@ -64,7 +64,8 @@ module rootextraction_mod
          atmo     => state%atmosphere,           &
          mesh     => state%mesh,                 &
          heat     => state%heat,                 &
-         sol      => state%solute                &
+         sol      => state%solute,               &
+         exch     => state%exchange              &
       )
 
 ! --- reset writes — state-only.
@@ -77,7 +78,7 @@ module rootextraction_mod
       soil%qredfrssum = 0.0d0
 
 ! --- skip routine if there are no roots
-      if (crop%common%rd .lt. vsmall) return
+      if (exch%crop_water%rooting_depth .lt. vsmall) return
 
 ! --- skip routine if transpiration rate is zero
       if (atmo%ptra .lt. 1.d-10) return
@@ -88,11 +89,11 @@ module rootextraction_mod
 ! --- calculate potential root extraction of the compartments
         ! 22-10-2018: bug repair signalled by Paul van Walsum: division not by rd but by depth bottom of last compartment where roots are present
         !             rd replaced by (newly calculated) rd_noddrz
-        rd_noddrz = abs(mesh%zbotcp(crop%common%noddrz))
-        do node = 1,crop%common%noddrz
+        rd_noddrz = abs(mesh%zbotcp(exch%crop_water%root_nodes))
+        do node = 1,exch%crop_water%root_nodes
           top = abs(mesh%ztopcp(node) / rd_noddrz)
           bot = abs(mesh%zbotcp(node) / rd_noddrz)
-          soil%qrot(node) = (afgen(crop%common%cumdens,202,bot)-afgen(crop%common%cumdens,202,top))* atmo%ptra
+          soil%qrot(node) = (afgen(exch%crop_water%root_density,202,bot)-afgen(exch%crop_water%root_density,202,top))* atmo%ptra
         enddo
 
 ! --- calculating critical point hlim3 according to feddes
@@ -119,7 +120,7 @@ module rootextraction_mod
 
       soil%qrosum = 0.0d0
 
-      do 200 node = 1,crop%common%noddrz
+      do 200 node = 1,exch%crop_water%root_nodes
         alpdry = 1.0d0
         alpwet = 1.0d0
         alpsol = 1.0d0
@@ -166,7 +167,7 @@ module rootextraction_mod
 !         WOFOST: root zone remain the aim, but biomass is increasing
 !         GRASS : stop root development
           soil%flWrtNonox = .false.
-          if (crop%common%swWrtNonox .eq. 1 .and. node .eq. crop%common%noddrz) then
+          if (crop%common%swWrtNonox .eq. 1 .and. node .eq. exch%crop_water%root_nodes) then
             if (alpwet .lt. crop%common%aeratecrit) then
               soil%flWrtNonox = .true.
             end if
@@ -289,7 +290,7 @@ module rootextraction_mod
           endif
 
           ! Change the abstraction of the roots
-          do node = 1,crop%common%noddrz
+          do node = 1,exch%crop_water%root_nodes
             soil%qrot(node) = soil%qrot(node) * alptotcom / alptot
           enddo
 

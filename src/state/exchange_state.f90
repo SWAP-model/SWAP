@@ -23,7 +23,13 @@ module exchange_state_mod
    !! signal. Populated so far: the stress feedback (potential + actual
    !! transpiration); the ET/canopy inputs and root sink are added in subsequent
    !! byte-identical steps.
+   integer, parameter :: ROOTDENS_LEN = 202   !! matches crop%common%cumdens
+
    type :: crop_water_exchange_t
+      ! --- from crop: root distribution (set before the sink; stable per day) ---
+      real(real64) :: rooting_depth = 0.0_real64          !! rd (cm)
+      integer      :: root_nodes    = 0                   !! noddrz
+      real(real64) :: root_density(ROOTDENS_LEN) = 0.0_real64  !! cumdens (afgen table)
       ! --- from atmosphere: potential transpiration (set by the ET step) ---
       real(real64) :: pot_transp = 0.0_real64   !! ptra (cm/d)
       ! --- from soil-water: actual transpiration (finalized at day end) ---

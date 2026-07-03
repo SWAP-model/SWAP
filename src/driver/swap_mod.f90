@@ -268,6 +268,12 @@ contains
          ! Conductivity reduction for frozen conditions.
          if (config%soil%frost%swfrost == 1) call FrozenCond(state, config)
 
+         ! [T2-A / ADR 0053] crop->water: hand the crop's root distribution to the
+         ! sink through the exchange record (stable within the day), so
+         ! RootExtraction reads it there — not from state%crop directly.
+         state%exchange%crop_water%rooting_depth = state%crop%common%rd
+         state%exchange%crop_water%root_nodes    = state%crop%common%noddrz
+         state%exchange%crop_water%root_density  = state%crop%common%cumdens
          ! Potential and actual root water extraction profile.
          call RootExtraction(state)
 
