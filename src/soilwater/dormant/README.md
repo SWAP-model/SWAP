@@ -18,6 +18,13 @@ exports in active modules — has two benefits:
 2. The reactivation checklist for each feature is co-located with
    the body, not buried in an ADR.
 
+> **Staleness note (2026-07-03, arc T1-B).** Reactivation steps below may name
+> scaffolding that has since been deleted: `variables.f90` / bare globals (gone —
+> runtime symbols live on typed `state%…` records) and the `state%cfg` pointer
+> (retired, ADR 0046 — use a `config%…` argument). Read those as "wire through the
+> typed `state`/`config` records"; harmonizing the frozen body is part of
+> reactivation.
+
 ## Current dormant modules
 
 | File | Feature | Reactivation prerequisite |

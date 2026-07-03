@@ -18,12 +18,27 @@ in active modules — has two benefits:
 2. The reactivation checklist for each feature is co-located with
    the body, not buried in an ADR.
 
+> **Staleness note (2026-07-03, arc T1-B).** The reactivation checklists below
+> were written during the migration and name scaffolding that has since been
+> deleted: `variables.f90` and its bare globals (gone — every runtime symbol now
+> lives on a typed `state%…` record) and the `state%cfg` back-pointer (retired,
+> ADR 0046 — read config via a `config%…` argument instead). Treat any
+> `use variables` / `state%cfg%…` step as "wire through the typed `state`/`config`
+> records"; harmonizing the frozen body against the current data model is itself
+> part of reactivation (see the Style note).
+
 ## Current dormant modules
 
 | File | Feature | Reactivation prerequisite |
 |------|---------|----------------------------|
-| `jongvanlier.f90` | De Jong van Lier (2013) microscopic root-water uptake — `swdrought = 2` path; contains `JongvanLier` (outer Newton-Raphson on `hleaf`/`Tactual`) and `JongvanLierLoop` (per-node soil-root pressure-head balance + matric-flux extraction). Reads `criterhr`, `stephr`, `kroot`, `kstem`, `rxylem`, `rootradius`, `rootcoefa`, `rooteff`, `flhydrlift`, `twilt`, `wiltpoint`. | Restore the two `fatalerr_collected` dispatch stubs in `rootextraction.f90` (search for `'swdrought=2'`): (1) replace the stub at the top of `RootExtraction` with `call JongvanLier(state)`, (2) restore `alpdry = soil%alpJvLier` in the per-node combination loop. Wire `criterhr`/`stephr`/`kroot`/`kstem`/`rxylem`/`rootradius`/`rootcoefa`/`rooteff` through a new `crop_jvl_t` sub-record on `state%cfg%crop` (`cropfixed_config_t` has slots but no TOML reader). Drop the dormant module's `use variables` blocks. Add this file to both `meson.build` and `tests/unit/meson.build` under the Crop section. Restore the retired legacy declarations (`rootcoefa`, `rooteff`, `rootradius`, `kstem`) and orphan stubs (`CriterHr`, `Kroot`, `Rxylem`, `StepHr`) — or move them directly to `state%cfg%crop`. |
 | `oxygenrepro.f90` | Bartholomeus reproduction-function oxygen stress — `swoxygen=2` + `swoxygentype=2` path; contains `oxygen_dat` (loads the 4 hard-coded 18×6 coefficient tables for top/sub × slope/intercept) and `OxygenReproFunction` (per-node `rwu_factor` as a polynomial in soil temperature, depth, and mean gas-filled porosity above the node). Reads `state%mesh%zbotcp`. | Restore the dispatch site in `RootExtraction` (the `fatalerr_collected('RootExtraction', 'swoxygen=2/swoxygentype=2 (OxygenReproFunction) is dormant — …')` stub near rootextraction.f90:155) with the original `oxygen_dat` + `OxygenReproFunction` calls. Add the two 6-element arrays (`OxygenSlope`, `OxygenIntercept`) to `state%crop%oxygen` (or a new `crop_oxygen_repro_state_t`) — the legacy `variables.f90` declarations for them were already retired with the Bartholomeus migration. Wire `swtopsub` and `nrstaring` from the per-rotation config (cropfixed/cropwofost already have schema slots under their `swoxygen=2` sub-record, but the validator stub-errors that branch today). Add this file to `meson.build` and `tests/unit/meson.build` under the Crop section, and add `use oxygenrepro_dormant_mod, only: oxygen_dat, OxygenReproFunction` to `rootextraction.f90`. Add a TOML regression fixture before relying on the path — the existing 6 regression cases do not cover it. |
+
+**Not here (deleted, not dormant):** the De Jong van Lier (2013) microscopic
+root-water-uptake body (`swdrought=2`, formerly `jongvanlier.f90`) was **deleted**
+in ADR 0047 (W12), not preserved in this directory. Its `swdrought=2` dispatch is
+`fatalerr_collected`-stubbed in `rootextraction.f90`; the reference body lives on
+the `legacy/swap-4.2.0` branch. (`swdrought2` is tracked as a pending regression
+restore — see `tests/regression/INVESTIGATION_NOTES.md`.)
 
 ## Build exclusion
 
