@@ -366,6 +366,16 @@ gated. Tier 2 is the structural direction Tier 1 sets up.
 > not a bug-fix). **T2-E is promoted earlier** (gridded ensemble C-ABI is now a
 > natural extension of the unified ensemble surface). Two small infra items and a
 > process rule were added from execution experience.
+>
+> **Reframed again by ADR 0051 + 0052.** A strategic boundary was drawn (ADR 0051):
+> SWAP-native = vadose-zone water/heat/solute + the native table-driven "Plant";
+> detailed crop growth (WOFOST/grass) and nutrients are *coupled components*, not
+> embedded models. First detachment landed (ADR 0052): the WOFOST-N / ANIMO-derived
+> soil-N subsystem was **deleted** (~2.7k LoC, ~85 module globals). So the §1
+> crop↔soil-nutrient isolation break (#5) and the §2 nutrient blockers are **gone**,
+> and **T1-E-b is moot**. Detailed nutrients are now external ANIMO (SWAP hydrology
+> via the parked `.afo` output). The next structural item is T2-A's crop↔water
+> exchange record — the seam an external WOFOST would plug into.
 
 ### Method rule (added from execution)
 
@@ -384,7 +394,7 @@ library). Every arc's discovery ends with this check.
 | **T1-B Dead-code sweep** | `stepnr`, write-only `pegwl`/`npegwl`; dormant-museum policy (ADR 0049); README refresh | 4 | S | Med | **DONE** |
 | **T1-G′ Binding convergence** | one `libswap.so` (BMI+CAPI+XMI) over the ensemble; variable registry; C-string dedup (ADR 0050) | 7,2 | M–H | High | **DONE** |
 | **T0.5 Binding-gate infra** | a `check-bindings` pixi task (the 6-path gate); re-point meson `bmi`/`cffi-demo` suites off the un-checked-out `tests/swap-cases` onto `tests/regression/cases` | 9 | XS | High | **next** |
-| **T1-E Crop reentrancy** *(program, not one arc — see [arc doc](2026-07-03-arc-t1e-crop-reentrancy.md))* | `crop_config_global` already retired. **E1 (DONE):** TOTASS/ASSIM de-save. **E2:** `wofost()` ≥10 carries-state → `crop%wofost`. **E3:** `grass()` carries-state → `crop%grass`. **E4:** `cropfixed()`. **E5:** `O2_pars` state-pointer. **E-b (blocked):** WOFOST nutrient globals (~85 vars) — dark in regression, needs a fixture first | 2 | E1 S; E2–E5 M each | High | **E1 done; E2 next** |
+| **T1-E Crop reentrancy** *(program, not one arc — see [arc doc](2026-07-03-arc-t1e-crop-reentrancy.md))* | `crop_config_global` already retired. **E1 (DONE):** TOTASS/ASSIM de-save. **E2:** `wofost()` ≥10 carries-state → `crop%wofost`. **E3:** `grass()` carries-state → `crop%grass`. **E4:** `cropfixed()`. **E5:** `O2_pars` state-pointer. **~~E-b~~ (DONE — deleted, not de-globalled):** the ~85 WOFOST nutrient globals were removed with the nutrient subsystem (ADR 0052), so E-b is moot | 2 | E1 S; E2–E5 M each | High | **E1 done; nutrients detached; E2 next** |
 | **T1-D Uninit-read triage** | `-Wmaybe-uninitialized` audit; fix real reads behind `-finit-local-zero` | 3 | M | Med | mid |
 | **T1-C Scratch-array sizing** | `MACP` locals → `numnod` (solute `:37,:128`, tridag `:52`, …), byte-identical | 3 | S | Med (parallel) | filler |
 | **T1-F Init consolidation** | uniform `state%X%init`, explicit Phase-2 seed inputs | 6 | M | Med | mid |

@@ -69,10 +69,13 @@ discovery agent misclassifying `grass` as safe** — see the byte-identity note.
   module-level `state` pointer bound during `OxygenStress` for a ZBRENT callback.
   Thread-unsafe; thread the state through the callback instead. Verifiable
   (oxygenstress case active).
-- **T1-E-b (UNBLOCKED via a constructed case): WOFOST nutrient de-globaling.**
-  `Wofost_Soil_Interface` (7) + `Wofost_Soil_Declarations` (~70, blanket `save`) +
-  `cropwofost_init_mod` carries-state subset (`cw_anlv`/`cw_anst`/`cw_nni`/
-  `cw_fstr`/`cw_nmaxlv`/`cw_nmaxst`/`cw_nmaxrt`) → `state%nutrients`.
+- **T1-E-b — SUPERSEDED (nutrients DELETED, not de-globalled).** Rather than
+  migrate the ~85 nutrient module globals with no oracle, the whole WOFOST-N /
+  ANIMO-derived soil-N subsystem was **removed** (ADR 0051 boundary + ADR 0052
+  detachment). So `Wofost_Soil_Interface`, `Wofost_Soil_Declarations`, and the
+  nutrient `cw_*` no longer exist. E-b is moot; the remaining E2–E5 (wofost/grass
+  growth carries-state) stand as before. *(Original de-global analysis retained
+  below for the record.)*
 
   **The "no coverage" blocker is resolvable — verified by construction
   (2026-07-03).** A nutrient-enabled case *can* be built from hupselbrook and it
