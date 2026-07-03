@@ -217,7 +217,24 @@ end type
 4. After cutover, the sibling-state field is no longer read cross-compartment
    (it may still be the record's *source* on the owner side).
 
-## Implementation sequencing
+## Status (2026-07-04)
+
+**Done — all four clean surfaces routed through `state%exchange`, each
+byte-identical (`check-fast` 4/4, pFUnit 806, `check-bindings` OK):**
+- `crop_water` **soil-water coupling** — root distribution (crop→sink) +
+  transpiration feedback (water→crop). *(Atmosphere-ET sub-part deferred — see
+  the implementation finding above.)*
+- `heat_soil` — `tsoil`/`rfcp` ↔ `theta`/`thetm1` (runtime NR-loop reads routed;
+  only the init/reseat `compute_initial_node_hydraulics` read left as `heat%`).
+- `drain_soil` — `qdra`/`nrlevs`/`zbotdr` ↔ `gwl`/`h`/`pond`.
+- `atmos_soil` — top-boundary net flux ↔ realized soil evaporation/pond.
+  (`soil%pond` appears in both `drain_soil` and `atmos_soil` — two distinct
+  surfaces both read ponding; intentional, not a conflict.)
+
+**Deferred:** `crop_water` atmosphere-ET sub-part (untangle the in-module ET
+computation); `solute` (driver-bundle); `surfacewater` (bidirectional loop).
+
+## Implementation sequencing (as executed)
 
 Records are independent surfaces, so order by value/clarity. Each is a
 byte-identical arc with its own commit; the set shares one architecture ADR
