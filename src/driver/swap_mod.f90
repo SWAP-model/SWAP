@@ -296,6 +296,10 @@ contains
 
             if (config%soil%frost%swfrost == 1) call FrozenBounds(state, config)
 
+            ! [T2-A / ADR 0053] heat->soil: hand the frozen-fraction + soil
+            ! temperature to the Richards solve through the exchange record.
+            state%exchange%heat_soil%rfcp  = state%heat%rfcp
+            state%exchange%heat_soil%tsoil = state%heat%tsoil
             if (.not.time%fldecdt) call soilwater_step(state)
 
             if (.not.time%fldecdt .and. time%flSurfaceWater) call surfacewater_balance(state, request_smaller_dt)
@@ -313,7 +317,12 @@ contains
 
          if (state%diag%aborted()) return
 
-         if (time%flTemperature) call temperature_step(state, config)
+         ! [T2-A / ADR 0053] soil->heat: hand water content to the heat step.
+         if (time%flTemperature) then
+            state%exchange%heat_soil%theta      = state%soilwater%theta
+            state%exchange%heat_soil%theta_prev = state%soilwater%thetm1
+            call temperature_step(state, config)
+         end if
          if (time%flSolute)      call solute_step(state)
 
          ! Update time variables and switches/flags.

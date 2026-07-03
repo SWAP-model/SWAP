@@ -75,6 +75,7 @@ contains
                mesh => state%mesh,           &
                soil => state%soilwater,     &
                atmo => state%atmosphere,    &
+               exch => state%exchange,      &
                time => state%timecontrol,   &
                heat_cfg => config%heat)
 
@@ -156,6 +157,7 @@ contains
                mesh => state%mesh,           &
                soil => state%soilwater,     &
                atmo => state%atmosphere,    &
+               exch => state%exchange,      &
                time => state%timecontrol,   &
                heat_cfg => config%heat)
 
@@ -219,7 +221,7 @@ contains
 
             ! Heat conductivity and capacity.
             do i = 1, mesh%numnod
-               theave(i) = 0.5d0 * (soil%theta(i) + soil%thetm1(i))
+               theave(i) = 0.5d0 * (exch%heat_soil%theta(i) + exch%heat_soil%theta_prev(i))
             end do
             ! heacap_loc is a local workspace (macp-sized) so devries' explicit-shape args fit.
             call devries(mesh%numnod, theave, heacap_loc, heacnd, &

@@ -15,7 +15,7 @@ module exchange_state_mod
    implicit none
    private
 
-   public :: crop_water_exchange_t, swap_exchange_t
+   public :: crop_water_exchange_t, heat_soil_exchange_t, swap_exchange_t
 
    !> Crop <-> atmosphere + soil-water (the transpiration/water-relations
    !! surface). The full crop<->SWAP interface an external crop model must
@@ -36,9 +36,22 @@ module exchange_state_mod
       real(real64) :: act_transp = 0.0_real64   !! tra  (cm/d)
    end type crop_water_exchange_t
 
+   !> Heat <-> soil-water. Heat provides the frozen-fraction / soil-temperature
+   !! for the hydraulic-conductivity adjustment read in the Richards solve;
+   !! soil-water provides the water content for the de Vries thermal properties.
+   type :: heat_soil_exchange_t
+      ! --- from heat -> soil-water (read in the Richards solve) ---
+      real(real64), allocatable :: rfcp(:)        !! reduced-frozen-fraction on K
+      real(real64), allocatable :: tsoil(:)       !! soil temperature (degC)
+      ! --- from soil-water -> heat (de Vries thermal props) ---
+      real(real64), allocatable :: theta(:)       !! current water content
+      real(real64), allocatable :: theta_prev(:)  !! thetm1 (previous step)
+   end type heat_soil_exchange_t
+
    !> Aggregate of the cross-compartment exchange records. One field per surface.
    type :: swap_exchange_t
       type(crop_water_exchange_t) :: crop_water
+      type(heat_soil_exchange_t)  :: heat_soil
    end type swap_exchange_t
 
 end module exchange_state_mod

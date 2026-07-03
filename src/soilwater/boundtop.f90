@@ -45,6 +45,7 @@ contains
                  atmo => state%atmosphere,   &
                  mesh => state%mesh,         &
                  heat => state%heat,         &
+                 exch => state%exchange,     &
                  time => state%timecontrol)
 
          dt = time%dt
@@ -65,7 +66,7 @@ contains
                             soil%iHWCKmodel(soil%layer(1)), &
                             1, soil)
             ksurf  = hconduc(dble(soil%hatm), TheAtm,       &
-                             heat%rfcp(1), heat%tsoil(1),   &
+                             exch%heat_soil%rfcp(1), exch%heat_soil%tsoil(1),   &
                              soil%vg_params(1),             &
                              soil%iHWCKmodel(soil%layer(1)),&
                              soil%fluseksatexm(1),          &
@@ -107,11 +108,11 @@ contains
 
          ! Maximum conductivity assuming saturation at ground surface (z=0)
          if (soil%fluseksatexm(1)) then
-            ks = heat%rfcp(1) * soil%ksatexm(mesh%layer(1)) &
-                 + (1.0d0 - heat%rfcp(1)) * hconode_vsmall
+            ks = exch%heat_soil%rfcp(1) * soil%ksatexm(mesh%layer(1)) &
+                 + (1.0d0 - exch%heat_soil%rfcp(1)) * hconode_vsmall
          else
-            ks = heat%rfcp(1) * soil%ksatfit(mesh%layer(1)) &
-                 + (1.0d0 - heat%rfcp(1)) * hconode_vsmall
+            ks = exch%heat_soil%rfcp(1) * soil%ksatfit(mesh%layer(1)) &
+                 + (1.0d0 - exch%heat_soil%rfcp(1)) * hconode_vsmall
          endif
          soil%k1max = hcomean(soil%swkmean, &
                               ks, soil%k(1), mesh%dz(1), mesh%dz(1))

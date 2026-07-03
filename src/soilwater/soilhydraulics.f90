@@ -80,6 +80,7 @@ contains
                  soil => state%soilwater,    &
                  drai => state%drainage,     &
                  heat => state%heat,         &
+                 exch => state%exchange,     &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
                  swbotb => state%soilwater%swbotb_runtime)
@@ -121,7 +122,7 @@ contains
                                   soil%vg_params(1), &
                                   soil%iHWCKmodel(soil%layer(1)), &
                                   1, soil)
-            soil%kmean(1) = hconduc(soil%gwlinp,soil%theta(1),heat%rfcp(1),heat%tsoil(1), &
+            soil%kmean(1) = hconduc(soil%gwlinp,soil%theta(1),exch%heat_soil%rfcp(1),exch%heat_soil%tsoil(1), &
                                   soil%vg_params(1), &
                                   soil%iHWCKmodel(soil%layer(1)), &
                                   soil%fluseksatexm(1), &
@@ -140,7 +141,7 @@ contains
 
             if(soil%swkimpl.eq.1)then
                do i=1,mesh%numnod
-                  soil%k(i) = hconduc(soil%h(i),soil%theta(i),heat%rfcp(i),heat%tsoil(i), &
+                  soil%k(i) = hconduc(soil%h(i),soil%theta(i),exch%heat_soil%rfcp(i),exch%heat_soil%tsoil(i), &
                                     soil%vg_params(i), &
                                     soil%iHWCKmodel(soil%layer(i)), &
                                     soil%fluseksatexm(i), &
@@ -183,7 +184,7 @@ contains
          flcaprise = .false.
       endif
       do i = 1,mesh%numnod
-         soil%k(i) = hconduc(soil%h(i),soil%theta(i),heat%rfcp(i),heat%tsoil(i), &
+         soil%k(i) = hconduc(soil%h(i),soil%theta(i),exch%heat_soil%rfcp(i),exch%heat_soil%tsoil(i), &
                            soil%vg_params(i), &
                            soil%iHWCKmodel(soil%layer(i)), &
                            soil%fluseksatexm(i), &
@@ -253,7 +254,7 @@ contains
 
          if(soil%swkimpl.eq.1)then
             do i = 1, NN
-               dkdh(i) = dhconduc(soil%h(i),soil%theta(i),soil%dimoca(i),heat%rfcp(i), &
+               dkdh(i) = dhconduc(soil%h(i),soil%theta(i),soil%dimoca(i),exch%heat_soil%rfcp(i), &
                                    soil%vg_params(i), &
                                    soil%iHWCKmodel(soil%layer(i)), &
                                    i, soil)
@@ -380,7 +381,7 @@ contains
             if(soil%swkimpl.eq.1)then
                call Rootextraction(state)
                do i = 1,NN
-                  soil%k(i) = hconduc(soil%h(i),soil%theta(i),heat%rfcp(i),heat%tsoil(i), &
+                  soil%k(i) = hconduc(soil%h(i),soil%theta(i),exch%heat_soil%rfcp(i),exch%heat_soil%tsoil(i), &
                                     soil%vg_params(i), &
                                     soil%iHWCKmodel(soil%layer(i)), &
                                     soil%fluseksatexm(i), &
@@ -627,6 +628,7 @@ contains
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
                  heat => state%heat,         &
+                 exch => state%exchange,     &
                  time => state%timecontrol,  &
                  swbotb => state%soilwater%swbotb_runtime)
 
@@ -666,7 +668,7 @@ contains
                               soil%vg_params(NN), &
                               soil%iHWCKmodel(soil%layer(NN)), &
                               NN, soil)
-         soil%k(NN)    = hconduc(soil%h(NN),soil%theta(NN),heat%rfcp(NN),heat%tsoil(NN), &
+         soil%k(NN)    = hconduc(soil%h(NN),soil%theta(NN),exch%heat_soil%rfcp(NN),exch%heat_soil%tsoil(NN), &
                               soil%vg_params(NN), &
                               soil%iHWCKmodel(soil%layer(NN)), &
                               soil%fluseksatexm(NN), &
@@ -693,7 +695,7 @@ contains
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
          else if(swbotb.eq.7 .or. swbotb .eq. -2)then ! free drainage option
-            soil%kmean(mesh%numnod+1) = hconduc(soil%h(mesh%numnod),soil%theta(mesh%numnod),heat%rfcp(mesh%numnod),heat%tsoil(mesh%numnod), &
+            soil%kmean(mesh%numnod+1) = hconduc(soil%h(mesh%numnod),soil%theta(mesh%numnod),exch%heat_soil%rfcp(mesh%numnod),exch%heat_soil%tsoil(mesh%numnod), &
                                          soil%vg_params(mesh%numnod), &
                                          soil%iHWCKmodel(soil%layer(mesh%numnod)), &
                                          soil%fluseksatexm(mesh%numnod), &
@@ -790,6 +792,7 @@ contains
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
                  heat => state%heat,         &
+                 exch => state%exchange,     &
                  atmo => state%atmosphere)
 
          ! Initialize Soilwater rate/state variables
@@ -1046,6 +1049,7 @@ contains
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
                  heat => state%heat,         &
+                 exch => state%exchange,     &
                  time => state%timecontrol)
 
       ! In case of preferential flow, adjust Van Genuchten parameters
@@ -1137,6 +1141,7 @@ contains
                  soil => state%soilwater,    &
                  drai => state%drainage,     &
                  heat => state%heat,         &
+                 exch => state%exchange,     &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
                  swbotb => state%soilwater%swbotb_runtime)
@@ -1204,6 +1209,7 @@ contains
                  soil => state%soilwater,    &
                  drai => state%drainage,     &
                  heat => state%heat,         &
+                 exch => state%exchange,     &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
                  swbotb => state%soilwater%swbotb_runtime)
@@ -1211,7 +1217,7 @@ contains
          ! Update hydraulic conductivities to time level t+1
          do i = 1,mesh%numnod
          soil%k(i) = hconduc(soil%h(i),soil%theta(i), &
-                                        heat%rfcp(i),heat%tsoil(i), &
+                                        exch%heat_soil%rfcp(i),exch%heat_soil%tsoil(i), &
                                         soil%vg_params(i), &
                                         soil%iHWCKmodel(soil%layer(i)), &
                                         soil%fluseksatexm(i), &
