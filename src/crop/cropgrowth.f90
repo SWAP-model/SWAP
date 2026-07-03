@@ -592,7 +592,11 @@
       real(8) xgauss(3),wgauss(3)
 
       parameter (pi=3.1415926d0)
-      save
+      ! [T1-E] Save only the data-initialised Gauss constants (data-init locals
+      ! must persist). The working locals are pure per-call and written before
+      ! read, so leaving them automatic makes this routine reentrant/thread-safe
+      ! without changing results.
+      save xgauss, wgauss
 
 !**
 !*     gauss points and weights are stored in an array
@@ -669,7 +673,11 @@
       real(8) fgrsh,vispp,fgrsun,fslla,fgl
       real(8) xgauss(3),wgauss(3)
 
-      save
+      ! [T1-E] Save only the data-initialised constants (Gauss points/weights,
+      ! scattering coefficient). ASSIM is a pure function of its arguments; the
+      ! working locals are written before read, so leaving them automatic makes
+      ! it reentrant/thread-safe without changing results.
+      save xgauss, wgauss, scv
 
 !*     initialize GAUSS array and scattering coefficient
       data xgauss /0.1127017d0, 0.5000000d0, 0.8872983d0/
