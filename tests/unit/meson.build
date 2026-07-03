@@ -156,6 +156,7 @@ if get_option('enable_pfunit')
         '../../src/state/crop_irrigation_state.f90',
         '../../src/state/crop_oxygen_state.f90',
         '../../src/state/crop_state.f90',
+        '../../src/state/exchange_state.f90',
         '../../src/state/swap_state.f90',
         '../../src/state/results_state.f90',
         # [GR-IO 2026-05-25 Phase 6 Step 6] initialize.f90 deleted.

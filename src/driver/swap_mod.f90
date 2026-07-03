@@ -315,6 +315,12 @@ contains
 
          ! End-of-day section.
          if (time%flDayEnd) then
+            ! [T2-A / ADR 0053] crop<->water exchange: hand the day's transpiration
+            ! to the crop through the exchange record (potential from ET, actual
+            ! from the water solve), so the crop reads it there — not from
+            ! state%atmosphere / state%soilwater directly.
+            state%exchange%crop_water%pot_transp = state%atmosphere%ptra
+            state%exchange%crop_water%act_transp = state%soilwater%tra
             ! [ADR 0052] SoilManagement (WOFOST-N soil nutrient) calls removed.
             if (crop%common%flCropCalendar) call CropGrowth(2, state%heat%tsoil, state)  ! potential growth
             if (crop%common%flCropCalendar) call CropGrowth(3, state%heat%tsoil, state)  ! actual growth

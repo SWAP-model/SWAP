@@ -131,6 +131,7 @@
                  soil     => state%soilwater,       &
                  mesh     => state%mesh,            &
                  atmo     => state%atmosphere,      &
+                 exch     => state%exchange,        &
                  time     => state%timecontrol      )
 
       select case (task)
@@ -650,10 +651,12 @@
 ! --- rates of change of the crop variables ----------------------------
 
 ! --- water stress reduction of pgass to gass
-      if(dabs(atmo%ptra).lt.nihil) then
+!     [T2-A / ADR 0053] read potential + actual transpiration from the crop<->water
+!     exchange record, not from state%atmosphere / state%soilwater directly.
+      if(dabs(exch%crop_water%pot_transp).lt.nihil) then
         crop%common%reltr = 1.0d0
       else
-        crop%common%reltr = max(0.0d0,min(1.0d0,soil%tra/atmo%ptra))
+        crop%common%reltr = max(0.0d0,min(1.0d0,exch%crop_water%act_transp/exch%crop_water%pot_transp))
       endif
 
 ! [ADR 0052] nitrogen-stress reduction of reltr removed (WOFOST-N detached).

@@ -19,6 +19,7 @@ module swap_state_mod
    use mesh_state_mod,          only: mesh_state_t
    use crop_state_mod,          only: crop_state_t
    use results_state_mod,       only: results_state_t
+   use exchange_state_mod,      only: swap_exchange_t
    use diagnostics_mod,         only: diagnostics_t
    implicit none
    private
@@ -36,6 +37,7 @@ module swap_state_mod
       type(mesh_state_t)         :: mesh
       type(crop_state_t)         :: crop
       type(results_state_t)      :: results
+      type(swap_exchange_t)      :: exchange   !! cross-compartment exchange records (T2-A / ADR 0053)
       type(diagnostics_t)        :: diag
    end type swap_state_t
 
