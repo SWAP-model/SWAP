@@ -13,8 +13,10 @@ module swap_bmi_mod
    ! Import the shared singleton from swap_capi_mod so that BMI lifecycle
    ! methods (update/finalize) and the CAPI accessors all operate on the
    ! same (state, config) pair.
-   use swap_capi_mod,   only: bmi_state => capi_state, bmi_config => capi_config
+   use swap_capi_mod,   only: bmi_state => capi_state, bmi_config => capi_config, &
+                              bmi_registry => capi_registry
    ! [GR-BH Task 24] numnod/dz removed — now read via bmi_state%mesh%numnod / bmi_state%mesh%dz
+   use swap_var_registry_mod, only: build_variable_registry, NS_BMI
    use diagnostics_mod, only: diag_overrides_t, default_embedded_config, &
                               read_logging_overrides_from_file, init_logging
    implicit none
@@ -36,6 +38,7 @@ contains
       call read_logging_overrides_from_file(trim(f_config_file), toml_ov)
       call init_logging(default_embedded_config(), toml_ov)
       call swap_init(trim(f_config_file), bmi_state, bmi_config)
+      call build_variable_registry(bmi_registry, bmi_state)
       rc = 0
    end function bmi_initialize
 
@@ -120,48 +123,40 @@ contains
    function bmi_get_input_item_count(count) result(rc) bind(C, name='get_input_item_count')
       integer(c_int), intent(out) :: count
       integer(c_int)              :: rc
-      count = 2
+      count = bmi_registry%count_ns(NS_BMI, want_settable=.true.)
       rc = 0
    end function bmi_get_input_item_count
 
    function bmi_get_output_item_count(count) result(rc) bind(C, name='get_output_item_count')
       integer(c_int), intent(out) :: count
       integer(c_int)              :: rc
-      count = 8
+      count = bmi_registry%count_ns(NS_BMI, want_settable=.false.)
       rc = 0
    end function bmi_get_output_item_count
 
    function bmi_get_input_var_names(buf, n) result(rc) bind(C, name='get_input_var_names')
-      ! NUL-delimited list of 2 settable variable names packed into buf.
-      ! Format: "groundwater_level_imposed\0bottom_flux_imposed\0"
+      ! NUL-delimited list of the BMI settable variable names (from the registry).
       character(kind=c_char), intent(out) :: buf(*)
       integer(c_int),  value, intent(in)  :: n
       integer(c_int)                      :: rc
-      integer :: i
-      character(len=46), parameter :: names = &
-         "groundwater_level_imposed" // c_null_char // "bottom_flux_imposed" // c_null_char
-      do i = 1, min(n, len(names))
+      character(len=512) :: names
+      integer :: i, nb
+      call bmi_registry%pack_names(NS_BMI, .true., names, nb)
+      do i = 1, min(int(n), nb)
          buf(i) = names(i:i)
       end do
       rc = 0
    end function bmi_get_input_var_names
 
    function bmi_get_output_var_names(buf, n) result(rc) bind(C, name='get_output_var_names')
-      ! NUL-delimited list of 8 readable variable names packed into buf.
+      ! NUL-delimited list of the BMI readable variable names (from the registry).
       character(kind=c_char), intent(out) :: buf(*)
       integer(c_int),  value, intent(in)  :: n
       integer(c_int)                      :: rc
-      integer :: i
-      character(len=145), parameter :: names = &
-         "soil_water_content"         // c_null_char // &
-         "pressure_head"              // c_null_char // &
-         "soil_temperature"           // c_null_char // &
-         "groundwater_level"          // c_null_char // &
-         "bottom_flux"                // c_null_char // &
-         "actual_evapotranspiration"  // c_null_char // &
-         "recharge"                   // c_null_char // &
-         "surface_runoff"             // c_null_char
-      do i = 1, min(n, len(names))
+      character(len=512) :: names
+      integer :: i, nb
+      call bmi_registry%pack_names(NS_BMI, .false., names, nb)
+      do i = 1, min(int(n), nb)
          buf(i) = names(i:i)
       end do
       rc = 0
@@ -177,52 +172,14 @@ contains
       real(c_double),         intent(out)   :: dest(n)
       integer(c_int)                        :: rc
       character(len=64) :: name
-      integer :: m
+      integer           :: idx
       call c_to_f_string(var_name, name)
-      select case (trim(name))
-      case ('soil_water_content')
-         m = min(n, size(bmi_state%soilwater%theta))
-         dest(1:m) = bmi_state%soilwater%theta(1:m)
-         if (m < n) dest(m+1:n) = 0.0_c_double
-         rc = 0
-      case ('pressure_head')
-         m = min(n, size(bmi_state%soilwater%h))
-         dest(1:m) = bmi_state%soilwater%h(1:m)
-         if (m < n) dest(m+1:n) = 0.0_c_double
-         rc = 0
-      case ('soil_temperature')
-         m = min(n, size(bmi_state%heat%tsoil))
-         dest(1:m) = bmi_state%heat%tsoil(1:m)
-         if (m < n) dest(m+1:n) = 0.0_c_double
-         rc = 0
-      case ('groundwater_level')
-         ! state%soilwater%gwl verified: soilwater_state.f90 line 152
-         if (n >= 1) dest(1) = bmi_state%soilwater%gwl
-         if (n > 1)  dest(2:n) = 0.0_c_double
-         rc = 0
-      case ('bottom_flux')
-         ! state%soilwater%qbot verified: soilwater_state.f90 line 79
-         if (n >= 1) dest(1) = bmi_state%soilwater%qbot
-         if (n > 1)  dest(2:n) = 0.0_c_double
-         rc = 0
-      case ('actual_evapotranspiration')
-         ! state%soilwater%iqrot verified: soilwater_state.f90 line 182
-         if (n >= 1) dest(1) = bmi_state%soilwater%iqrot
-         if (n > 1)  dest(2:n) = 0.0_c_double
-         rc = 0
-      case ('recharge')
-         ! sign: positive = downward into aquifer (recharge), hence -qbot
-         if (n >= 1) dest(1) = -bmi_state%soilwater%qbot
-         if (n > 1)  dest(2:n) = 0.0_c_double
-         rc = 0
-      case ('surface_runoff')
-         ! state%soilwater%runots verified: soilwater_state.f90 line 72
-         if (n >= 1) dest(1) = bmi_state%soilwater%runots
-         if (n > 1)  dest(2:n) = 0.0_c_double
-         rc = 0
-      case default
-         rc = 1
-      end select
+      idx = bmi_registry%find(NS_BMI, trim(name))
+      if (idx == 0 .or. .not. bmi_registry%is_readable(idx)) then
+         rc = 1; return
+      end if
+      call bmi_registry%read_into(idx, dest, int(n))
+      rc = 0
    end function bmi_get_value_double
 
    function bmi_set_value_double(var_name, n, src) result(rc) bind(C, name='set_value_double')
@@ -231,19 +188,16 @@ contains
       real(c_double),         intent(in) :: src(n)
       integer(c_int)                     :: rc
       character(len=64) :: name
+      integer           :: idx
       call c_to_f_string(var_name, name)
+      ! Settable BCs (groundwater_level_imposed -> bottom-node head;
+      ! bottom_flux_imposed -> qbot) are registry entries flagged settable.
+      idx = bmi_registry%find(NS_BMI, trim(name))
+      if (idx == 0 .or. .not. bmi_registry%is_settable(idx)) then
+         rc = 2; return   ! unknown / not settable
+      end if
+      call bmi_registry%write_from(idx, src, int(n))
       rc = 0
-      select case (trim(name))
-      case ('groundwater_level_imposed')
-         ! Sets bottom Dirichlet BC: overwrite last node pressure head.
-         ! Full MODFLOW exchange plumbing (swdrasur/BoundBottom) is a follow-on.
-         if (n >= 1) bmi_state%soilwater%h(size(bmi_state%soilwater%h)) = src(1)
-      case ('bottom_flux_imposed')
-         ! Sets bottom Neumann BC via state%soilwater%qbot.
-         if (n >= 1) bmi_state%soilwater%qbot = src(1)
-      case default
-         rc = 2   ! not settable
-      end select
    end function bmi_set_value_double
 
    !----------------------------------------------------------------------
@@ -266,24 +220,16 @@ contains
       integer(c_int),  value, intent(in)  :: n
       integer(c_int)                      :: rc
       character(len=64) :: name
+      integer           :: idx
       call c_to_f_string(var_name, name)
-      rc = 0
-      select case (trim(name))
-      case ('soil_water_content')
-         call f_to_c_string("m3 m-3", units_buf, n)
-      case ('pressure_head')
-         call f_to_c_string("cm", units_buf, n)
-      case ('soil_temperature')
-         call f_to_c_string("degC", units_buf, n)
-      case ('groundwater_level', 'groundwater_level_imposed')
-         call f_to_c_string("cm", units_buf, n)
-      case ('bottom_flux', 'bottom_flux_imposed', 'recharge', &
-            'actual_evapotranspiration', 'surface_runoff')
-         call f_to_c_string("cm d-1", units_buf, n)
-      case default
+      idx = bmi_registry%find(NS_BMI, trim(name))
+      if (idx == 0) then
          call f_to_c_string("", units_buf, n)
          rc = 1
-      end select
+         return
+      end if
+      call f_to_c_string(trim(bmi_registry%units(idx)), units_buf, n)
+      rc = 0
    end function bmi_get_var_units
 
    function bmi_get_var_grid(var_name, grid_id) result(rc) bind(C, name='get_var_grid')
@@ -309,21 +255,17 @@ contains
       integer(c_int),         intent(out) :: nb
       integer(c_int)                      :: rc
       character(len=64) :: name
+      integer           :: idx
       call c_to_f_string(var_name, name)
-      rc = 0
-      select case (trim(name))
-      case ('soil_water_content', 'pressure_head', 'soil_temperature')
-         ! Profile arrays: numnod elements × 8 bytes
-         nb = bmi_state%mesh%numnod * 8
-      case ('groundwater_level', 'bottom_flux', 'actual_evapotranspiration', &
-            'recharge', 'surface_runoff', &
-            'groundwater_level_imposed', 'bottom_flux_imposed')
-         ! Scalar variables: 1 element × 8 bytes
-         nb = 8
-      case default
+      idx = bmi_registry%find(NS_BMI, trim(name))
+      if (idx == 0) then
          nb = 0
          rc = 1
-      end select
+         return
+      end if
+      ! Profile arrays: numnod × 8 bytes; scalars: 8 bytes (from the registry).
+      nb = bmi_registry%nbytes(idx)
+      rc = 0
    end function bmi_get_var_nbytes
 
    function bmi_get_var_location(var_name, loc_buf, n) result(rc) bind(C, name='get_var_location')

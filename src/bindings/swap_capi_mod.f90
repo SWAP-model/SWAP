@@ -18,6 +18,7 @@ module swap_capi_mod
    use swap_log,        only: log_set_level, log_set_stdout
    use diagnostics_mod, only: diag_overrides_t, default_embedded_config, &
                               read_logging_overrides_from_text, init_logging
+   use swap_var_registry_mod, only: var_registry_t, build_variable_registry, NS_CAPI
    implicit none
    private
 
@@ -27,6 +28,11 @@ module swap_capi_mod
    ! Multi-instance handles are Phase 3.
    type(swap_state_t),          save, public, target :: capi_state
    type(swap_config_t), target, save, public         :: capi_config
+
+   ! Variable registry over capi_state — single source of truth for the C-ABI
+   ! variable surface, shared with swap_bmi_mod. Built after init (arrays
+   ! allocated) in every init path; empty until then (lookups return not-found).
+   type(var_registry_t), save, public :: capi_registry
 
    ! In-memory companion blobs (TOML subfiles + CSV tables) pushed from
    ! Python via swap_attach_config_file, consumed by the in-memory init so
@@ -128,6 +134,7 @@ contains
       end if
 
       call swap_init_from_loaded_config(capi_state, capi_config)
+      call build_variable_registry(capi_registry, capi_state)
       ierr = 0
    end function swap_initialize_from_toml_string
 
@@ -189,42 +196,23 @@ contains
    ! Task 19: swap_view_array — zero-copy array accessor
    !----------------------------------------------------------------------
 
+   !> Zero-copy view of a named rank-1 state array. Names and pointers come from
+   !! the shared registry (CAPI namespace); unknown/non-array names return rc=1.
    function swap_view_array(name, ptr, n) result(ierr) bind(C, name='swap_view_array')
       character(kind=c_char), intent(in)  :: name(*)
       type(c_ptr),            intent(out) :: ptr
       integer(c_int),         intent(out) :: n
       integer(c_int)                      :: ierr
       character(len=64) :: f_name
+      integer           :: idx, nsize
       call c_to_f_string(name, f_name)
+      idx = capi_registry%find(NS_CAPI, trim(f_name))
+      if (idx == 0) then
+         ierr = 1; ptr = c_null_ptr; n = 0; return
+      end if
+      call capi_registry%c_view(idx, ptr, nsize)
+      n    = nsize
       ierr = 0
-      select case (trim(f_name))
-      case ('theta')
-         if (.not. allocated(capi_state%soilwater%theta)) then
-            ierr = 2; ptr = c_null_ptr; n = 0; return
-         end if
-         ptr = c_loc(capi_state%soilwater%theta(1))
-         n   = size(capi_state%soilwater%theta)
-      case ('h')
-         if (.not. allocated(capi_state%soilwater%h)) then
-            ierr = 2; ptr = c_null_ptr; n = 0; return
-         end if
-         ptr = c_loc(capi_state%soilwater%h(1))
-         n   = size(capi_state%soilwater%h)
-      case ('tsoil')
-         if (.not. allocated(capi_state%heat%tsoil)) then
-            ierr = 2; ptr = c_null_ptr; n = 0; return
-         end if
-         ptr = c_loc(capi_state%heat%tsoil(1))
-         n   = size(capi_state%heat%tsoil)
-      case ('inqrot')
-         if (.not. allocated(capi_state%soilwater%inqrot)) then
-            ierr = 2; ptr = c_null_ptr; n = 0; return
-         end if
-         ptr = c_loc(capi_state%soilwater%inqrot(1))
-         n   = size(capi_state%soilwater%inqrot)
-      case default
-         ierr = 1; ptr = c_null_ptr; n = 0
-      end select
    end function swap_view_array
 
    function swap_get_scalar(name, value) result(ierr) bind(C, name='swap_get_scalar')

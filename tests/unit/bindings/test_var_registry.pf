@@ -1,0 +1,121 @@
+! Unit tests for swap_var_registry_mod — the C-ABI variable registry (arc T1-G′).
+! Exercises the generic machinery directly against local target arrays (no full
+! swap_state_t): scalar/array read semantics, the recharge sign scale, namespace
+! isolation, readable/settable flags + counts, and NUL-delimited name packing.
+
+@test
+subroutine test_registry_scalar_and_scale()
+   use funit
+   use swap_var_registry_mod
+   use iso_fortran_env, only: real64
+   type(var_registry_t) :: reg
+   real(real64), target :: gwl, qbot
+   real(real64) :: dest(1)
+   integer :: idx
+
+   gwl  =  12.5_real64
+   qbot = -3.0_real64
+   call reg%add_scalar(NS_BMI, 'groundwater_level', 'cm', gwl)
+   call reg%add_scalar(NS_BMI, 'recharge', 'cm d-1', qbot, scale=-1.0_real64)
+
+   idx = reg%find(NS_BMI, 'groundwater_level')
+   @assertTrue(idx > 0)
+   call reg%read_into(idx, dest, 1)
+   @assertEqual(12.5_real64, dest(1), 1.0e-12_real64)
+
+   ! recharge = -qbot (scale = -1): -(-3) = 3
+   idx = reg%find(NS_BMI, 'recharge')
+   call reg%read_into(idx, dest, 1)
+   @assertEqual(3.0_real64, dest(1), 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_registry_array_fill_and_truncate()
+   use funit
+   use swap_var_registry_mod
+   use iso_fortran_env, only: real64
+   type(var_registry_t) :: reg
+   real(real64), target :: theta(3)
+   real(real64) :: dest5(5), dest2(2)
+   integer :: idx
+
+   theta = [0.1_real64, 0.2_real64, 0.3_real64]
+   call reg%add_array(NS_BMI, 'soil_water_content', 'm3 m-3', theta)
+   idx = reg%find(NS_BMI, 'soil_water_content')
+
+   ! n > size: copy 3, zero-fill the remaining 2
+   call reg%read_into(idx, dest5, 5)
+   @assertEqual(0.1_real64, dest5(1), 1.0e-12_real64)
+   @assertEqual(0.3_real64, dest5(3), 1.0e-12_real64)
+   @assertEqual(0.0_real64, dest5(4), 1.0e-12_real64)
+   @assertEqual(0.0_real64, dest5(5), 1.0e-12_real64)
+
+   ! n < size: truncate to n
+   call reg%read_into(idx, dest2, 2)
+   @assertEqual(0.2_real64, dest2(2), 1.0e-12_real64)
+
+   @assertEqual(3 * 8, reg%nbytes(idx))
+end subroutine
+
+@test
+subroutine test_registry_namespace_isolation()
+   use funit
+   use swap_var_registry_mod
+   use iso_fortran_env, only: real64
+   type(var_registry_t) :: reg
+   real(real64), target :: theta(2)
+
+   ! Same field, two namespaces / names — resolution is namespace-scoped.
+   call reg%add_array(NS_BMI,  'soil_water_content', 'm3 m-3', theta)
+   call reg%add_array(NS_CAPI, 'theta',              'm3 m-3', theta)
+
+   @assertTrue(reg%find(NS_BMI,  'soil_water_content') > 0)
+   ! wrong namespace resolves to not-found
+   @assertEqual(0, reg%find(NS_CAPI, 'soil_water_content'))
+   @assertTrue(reg%find(NS_CAPI, 'theta') > 0)
+   @assertEqual(0, reg%find(NS_BMI,  'theta'))
+end subroutine
+
+@test
+subroutine test_registry_readable_settable_counts()
+   use funit
+   use swap_var_registry_mod
+   use iso_fortran_env, only: real64
+   type(var_registry_t) :: reg
+   real(real64), target :: gwl, qbot
+   integer :: idx
+
+   call reg%add_scalar(NS_BMI, 'groundwater_level', 'cm', gwl)
+   call reg%add_scalar(NS_BMI, 'bottom_flux_imposed', 'cm d-1', qbot, &
+                       readable=.false., settable=.true.)
+
+   ! one readable, one settable in the BMI namespace
+   @assertEqual(1, reg%count_ns(NS_BMI, .false.))
+   @assertEqual(1, reg%count_ns(NS_BMI, .true.))
+
+   idx = reg%find(NS_BMI, 'bottom_flux_imposed')
+   @assertFalse(reg%is_readable(idx))
+   @assertTrue(reg%is_settable(idx))
+end subroutine
+
+@test
+subroutine test_registry_pack_names()
+   use funit
+   use swap_var_registry_mod
+   use iso_fortran_env, only: real64
+   type(var_registry_t) :: reg
+   real(real64), target :: a, b
+   character(len=128) :: names
+   integer :: nb
+
+   call reg%add_scalar(NS_BMI, 'alpha', 'x', a)
+   call reg%add_scalar(NS_BMI, 'beta',  'x', b)
+   call reg%pack_names(NS_BMI, .false., names, nb)
+
+   ! "alpha\0beta\0" = 5 + 1 + 4 + 1 = 11 bytes
+   @assertEqual(11, nb)
+   @assertEqual('alpha', names(1:5))
+   @assertEqual(achar(0), names(6:6))
+   @assertEqual('beta', names(7:10))
+   @assertEqual(achar(0), names(11:11))
+end subroutine

@@ -212,6 +212,7 @@ if get_option('enable_pfunit')
         '../../src/core/numericalsolvers.f90',
         '../../src/driver/swap_mod.f90',
         '../../src/driver/swap_ensemble_mod.f90',
+        '../../src/bindings/swap_var_registry_mod.f90',
         '../../src/crop/irrigation.f90',
         '../../src/io/file_io.f90',
         '../../src/timecontrol/timecontrol_mod.f90',
@@ -221,6 +222,7 @@ if get_option('enable_pfunit')
 
     pf_files = [
         'state/test_mesh_init.pf',
+        'bindings/test_var_registry.pf',
         'core/test_swap_log.pf',
         'utils/test_arrayutils.pf',
         'atmosphere/test_precipitation.pf',
