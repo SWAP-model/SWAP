@@ -89,6 +89,19 @@ boundary. The record encodes this so the ordering is explicit, not conventional.
 
 ## The record set
 
+> **Implementation finding (2026-07-04).** The crop↔*soil-water* coupling routes
+> cleanly and is **done**: the root distribution (`rd`/`noddrz`/`cumdens`) and the
+> transpiration feedback (`ptra`/`tra`→`reltr`) go through the record; the Feddes
+> reduction thresholds stay native sink config. But the crop↔*atmosphere* ET
+> coupling is **not** a clean handoff: `et0`/`es0`/`ew0` are computed *inside* the
+> ET module (`meteo_orchestrator.f90:368-383`) from the crop factor × reference
+> ET, stored on crop state — they are atmosphere outputs, not crop-provided. The
+> genuine crop→atmosphere dynamic crossings are the canopy props (`lai`, `ch`);
+> the potential-ET quantities are intra-atmosphere. Routing the ET interface
+> therefore needs its own focused sub-pass (untangling the in-module ET
+> computation), and `et0`/`es0`/`ew0` are **removed** from the from-crop list
+> below. Deferred as `crop_water` sub-part 2.
+
 ### 1. `crop_water_exchange_t` — full crop↔SWAP interface (~18 dynamic fields)
 
 The complete boundary an external crop model must satisfy: it feeds SWAP's ET +
