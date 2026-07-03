@@ -118,6 +118,43 @@ assumption the coupling path was blind).
   `tests/coupling/_defaults.py`, `imod_coupler.toml`, and the meson test
   registrations. CLI stays static (built from the same core).
 
+## Sub-arc 2 outcome (2026-07-03) — DONE (2b–2e landed together)
+
+One `libswap.so` now exposes BMI + CAPI + XMI; `libswap_bmi.so`/`libswap_xmi.so`
+are gone. Implementation as revised:
+
+- **Ensemble is the sole storage owner.** `swap_ensemble_mod` gained an
+  uncoupled single-column mode (`ensemble_allocate_single` /
+  `ensemble_init_single`), `target` columns/configs, pointer getters, the
+  `ensemble.txt` sidecar reader, and a facade-shared `ensemble_last_error`.
+- **The singleton became pointers.** `capi_state`/`capi_config` are pointers
+  bound to `columns(1)`/`configs(1)` (`capi_bind_first_column`), so every CAPI
+  accessor compiled unchanged. `swap_set_headless` before init is buffered and
+  applied at bind (the orchestrator's call order).
+- **Mode-aware lifecycle in one definer.** `swap_bmi_mod` holds the 14
+  formerly-colliding C names: `initialize()` detects the sidecar (present →
+  coupled ensemble init; absent → single-column); `update`/`update_until`/
+  `get_time_step`/item-counts/`get_var_nbytes` branch on mode, reproducing the
+  former BMI and XMI behaviors exactly. `get_var_type`/`get_component_name`
+  adopt the 2-/1-arg unbounded XMI arity (verified from xmipy source: its
+  `get_value_ptr` calls `get_var_type` with 2 args; no BMI consumer calls
+  either). `initialize` keeps the unused-`n` 2-arg form (xmipy passes 1 arg;
+  `n` is never read). `swap_xmi_mod` shrank to the XMI-specific verbs only.
+- **Code-verified consumer contracts** (per "don't trust the docs"): the
+  coupled driver's full call set on the SWAP library is initialize /
+  prepare_time_step / prepare_solve / solve / finalize_solve /
+  finalize_time_step / finalize / get_version / get_value_ptr(+rank/type/
+  shape); `report_timing_totals` is an xmipy python-side timer (never a lib
+  symbol); the coupled driver does NOT call `get_current_time`/`get_time_step`
+  on SWAP (an earlier agent report claimed otherwise — wrong).
+
+**Verification (all six paths, merged library):** BMI hello_swap and CAPI
+run_ensemble bit-identical values (theta[0]=0.2712560347028374, dt=0.0002 —
+substep semantics preserved); XMI smoke qbot_volume bit-identical; SWAP↔MODFLOW6
+coupled smoke water table bit-identical; check-fast 4/4 byte-identical; pFUnit
+838. Remaining for a later arc (recorded in ADR 0050): re-home XMI
+`get_value_ptr` onto the registry (NS_XMI), handle-based multi-instance.
+
 ## Plan for sub-arc 1 (each step ends with the binding tests + check-fast green)
 
 1. `swap_c_strings_mod` + switch all three facades to it (dedup). Build; run

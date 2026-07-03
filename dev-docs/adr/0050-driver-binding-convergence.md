@@ -1,6 +1,6 @@
 # ADR 0050 — Driver / binding convergence (one library, registry-backed)
 
-**Status:** Accepted — sub-arc 1 landed 2026-07-03; sub-arc 2 planned
+**Status:** Accepted — sub-arcs 1 and 2 landed 2026-07-03 (see Addendum)
 **Arc:** T1-G′ (Tier-1, from the 2026-07-03 modernization review)
 **Relates to:** the review's §7 and the driver-convergence discussion. Does not
 supersede an existing ADR (the two-library split was a meson artifact documented
@@ -72,4 +72,51 @@ internal variables by string.
 - The `f_to_c_string` copies were deliberately NOT merged in sub-arc 1: BMI's is
   bounded by `max_len`, XMI's is unbounded — merging is a behavior change to be
   reconciled during the sub-arc-2 facade unification, not a mechanical move.
+
+## Addendum (2026-07-03) — sub-arc 2 landed, with one design revision
+
+**Revision.** The original sub-arc-2 sketch proposed "BMI `update()` = one day"
+in the merged library. That was a behavior change dressed as a default and was
+dropped. The landed design is **mode-dependent lifecycle semantics**:
+`initialize()` detects the `ensemble.txt` sidecar next to the config — present →
+coupled ensemble mode (former XMI behavior exactly: `update()` = one day,
+`get_time_step()` = 1.0, item counts 1/2, `get_var_nbytes` = 8·ncol); absent →
+single-column standalone mode (former BMI behavior exactly: `update()` = one
+Richards substep, `get_time_step()` = dt, registry-driven metadata). Both
+existing consumer populations observe bit-identical behavior.
+
+**Storage unification** happened by pointer indirection, not a port:
+`capi_state`/`capi_config` are now pointers bound to the ensemble's
+`columns(1)`/`configs(1)` (the ensemble arrays gained `target`), so every CAPI
+accessor compiled unchanged while `swap_ensemble_mod` became the sole owner of
+state storage. Pre-init `swap_set_headless` (a real consumer call order) is
+buffered and applied at bind time. `swap_c_strings_mod` (2a) holds the shared
+string helpers; the generic `f_to_c_string` preserves both bounded/unbounded
+contracts by arity.
+
+**Symbol unification.** `swap_bmi_mod` is the sole definer of the 14
+formerly-colliding C names; `swap_xmi_mod` retains only the XMI-specific verbs
+(`prepare_time_step`/`solve`/`get_value_ptr`/`get_version`/rank/shape/
+`get_last_bmi_error`, with last-error shared via the ensemble). Two arity
+conflicts were resolved toward the XMI (unbounded) forms after verifying the
+callers from source: xmipy's `get_value_ptr` calls `get_var_type(name, buf)`
+(2-arg), and no BMI consumer calls `get_var_type`/`get_component_name` at all;
+`initialize` keeps its 2-arg form with `n` unread (xmipy passes 1 arg).
+
+**Build/consumers.** One `shared_library('libswap', name_prefix: '')` →
+`libswap.so`; `libswap_bmi.so`/`libswap_xmi.so` and the `swap_modern_xmi`
+static lib deleted; all consumer references updated (meson test registrations,
+`tests/coupling/_defaults.py`, `imod_coupler.toml` + its `run_coupled.py`
+rewrite string, `prototype/*.py`, docstrings). The CLI remains static-linked
+from the same core.
+
+**Verified** on the merged library: BMI hello_swap + CAPI run_ensemble
+(bit-identical values, substep semantics intact), XMI smoke + SWAP↔MODFLOW6
+coupled smoke (bit-identical exchange values / water table), `check-fast` 4/4
+byte-identical, pFUnit 838.
+
+**Deferred to later arcs:** XMI `get_value_ptr` onto the registry (an `NS_XMI`
+namespace over the exchange arrays); handle-based multi-instance (per-instance
+ensemble + error state); threaded ensemble (gated on the Tier-3 crop
+de-globaling, T1-E).
 </content>
