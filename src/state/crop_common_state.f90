@@ -18,7 +18,6 @@ module crop_common_state_mod
       integer      :: icrop          = 0              !! current crop number
       logical      :: flCropCalendar = .false.        !! crop season is active
       logical      :: flCropOutput   = .false.        !! write *.CRP output
-      logical      :: flCropNut      = .false.        !! simulate crop nutrient stress
       logical      :: flHarvestDay   = .false.        !! current day is harvest day
 
       ! [SS-GR-CROPRT D1] swend state field retired — ADR 0009 zeroed permanently; swap_mod branches dropped

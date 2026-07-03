@@ -14,7 +14,6 @@ module load_swap_config_mod
    use read_surface_water_toml_mod, only: read_surface_water_toml
    use read_crop_toml_mod,         only: read_crop_toml
    use read_output_csv_toml_mod,   only: read_output_csv_toml
-   use read_nutrients_toml_mod,    only: read_nutrients_toml
    use load_crop_rotation_files_mod, only: load_crop_rotation_files
    use config_source_mod, only: config_source_t
    use error_mod, only: error_collection_t, ERR_PARSE_MALFORMED_TOML
@@ -113,7 +112,6 @@ contains
       call read_surface_water_toml(doc_ptr, config%surface_water, errors)
       call read_crop_toml       (doc_ptr, config%crop,       errors)
       call read_output_csv_toml (doc_ptr, config%output_csv, errors)
-      call read_nutrients_toml  (doc_ptr, config%nutrients,  errors)
    end subroutine apply_section_readers
 
 end module load_swap_config_mod

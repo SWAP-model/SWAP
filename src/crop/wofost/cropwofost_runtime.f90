@@ -16,37 +16,8 @@
       private
 
       public :: wofost
-      public :: wofost_apply_nstress
 
       contains
-
-! ----------------------------------------------------------------------
-      subroutine wofost_apply_nstress(state)
-! ----------------------------------------------------------------------
-! Purpose: Apply WOFOST nitrogen-stress reduction to potential gross
-!          assimilation. Called by cropgrowth.f90 dispatcher when
-!          state%crop%common%flCropNut is true. The nutrient cluster
-!          (anlv/anst/nmxlv/nmaxlv/.../nlue/lrnr/lsnr/fstr/...) still
-!          lives in legacy_state — this wrapper isolates the bare-global
-!          access so the dispatcher can stay `use variables`-free.
-! ----------------------------------------------------------------------
-      ! [GR-CROP 2026-05-25] Nutrient cluster now lives as module-level cw_* SAVE
-      ! in cropwofost_init_mod (single-file scope across the cropwofost pair).
-      use cropwofost_init_mod, only: cw_nlue, cw_anlv, cw_anst, cw_nmxlv, &
-                                     cw_nmaxlv, cw_nmaxst, cw_nmaxrt,     &
-                                     cw_lrnr, cw_lsnr, cw_nni, cw_rnflv,  &
-                                     cw_rnfst, cw_frnx, cw_fstr
-      use swap_state_mod, only: swap_state_t
-      implicit none
-      type(swap_state_t), intent(inout) :: state
-
-      call NUTRIE(cw_NLUE, state%crop%wofost%wlv, state%crop%wofost%wst, &
-                  state%crop%common%dvs, cw_ANLV, cw_ANST, cw_NMXLV, cw_NMAXLV,   &
-                  cw_NMAXST, cw_NMAXRT, cw_LRNR, cw_LSNR, cw_NNI, cw_RNFLV, cw_RNFST, cw_FRNX, cw_FSTR)
-      state%crop%wofost%pgass = state%crop%wofost%pgass * cw_FSTR
-
-      return
-      end subroutine wofost_apply_nstress
 
       subroutine wofost(task, state)
 ! ----------------------------------------------------------------------
@@ -65,17 +36,10 @@
       !     oxygenstress/rootextraction); cannot retire here.
       ! [GR-CROP 2026-05-25] outfil/pathwork/project read via state%cfg%general
       ! at each outbalcrop* call site; file is now `use variables`-free.
-      use wofost_soil_interface
-      ! [GR-CROP 2026-05-25] cw_* snapshots — written by cropwofost_init_mod%apply_cropwofost_nutrient
-      ! Nutrient cluster + harvest/vernalisation fractions. Single-file scope.
-      use cropwofost_init_mod, only: cw_rdrns, cw_dvsnlt, cw_dvsnt, cw_fntrt, cw_tcnt,            &
-                                     cw_fraharlosorm_lv, cw_fraharlosorm_so, cw_fraharlosorm_st, &
-                                     cw_vernbase, cw_verndvs, cw_vernsat, cw_vernrtb,            &
-                                     cw_nlue, cw_lrnr, cw_lsnr, cw_rnflv, cw_rnfst, cw_rnfrt,     &
-                                     cw_frnx, cw_nlai, cw_nmaxso, cw_npart, cw_nfixf, cw_nsla,    &
-                                     cw_nmxlv, cw_ilnmxl,                                         &
-                                     cw_anlv, cw_anst, cw_nni, cw_fstr,                          &
-                                     cw_nmaxlv, cw_nmaxst, cw_nmaxrt
+      ! [ADR 0052] wofost_soil_interface + the nutrient cw_* imports removed
+      ! (WOFOST-N detached); only the vernalisation cw_* (non-nutrient phenology)
+      ! remain.
+      use cropwofost_init_mod, only: cw_vernbase, cw_verndvs, cw_vernsat, cw_vernrtb
       use array_utils, only: interpol, afgen, insw
       use soilhydraulics_utils, only: watcon
         use swap_constants, only: tiny, nihil
@@ -206,28 +170,7 @@
 ! --- if crop based on calendar is still active, but already harvested
       if (crop%common%flCropHarvest) return
 
-! --- n-p-k
-      if( crop%common%flCropNut) then
-!        Legacy nutrient parameters (cw_LRNR, cw_LSNR, cw_NLAI, cw_NLUE, cw_NMAXSO,
-!        cw_NPART, cw_NFIXF, cw_NSLA, cw_RNFLV/RT/ST, cw_tcnt, cw_dvsnlt, cw_dvsnt, RDRNS,
-!        cw_fntrt, cw_FRNX, cw_NMXLV, cw_fraharlosorm_lv/st/so) used to be read here
-!        from <cropfil>.crp via TTutil rdinit/rdsdou. Read block deleted
-!        as part of legacy readers physical deletion. These globals are
-!        now populated by apply_cropwofost_nutrient when crop%common%flCropNut=true
-!        on the active rotation (ADR 0025 N1, ADR 0028 N3).
-
-!        open output files and write header
-         if (crop%common%icrop.eq.1) then
-            call outbalcropOM1(1,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,  &
-     &         time%t,crop%common%dvs,crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
-            call outbalcropOM2(1,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,  &
-     &         time%t,crop%common%dvs,crop%common%tsum,storagediff,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wso,crop%wofost%wrt,delt,         &
-     &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
-            call outbalcropN(1,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop, &
-     &         time%t,crop%common%dvs,crop%common%tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,cw_anlv,&
-     &         cw_anst,anrt,anso,nlossl,nlossr,nlosss,nbalan,cw_nni)
-         endif
-      endif
+! [ADR 0052] n-p-k nutrient output-init block removed (WOFOST-N detached).
 
 ! --- maximum rooting depth
       if (crop%common%swrd.eq.1) then
@@ -314,27 +257,7 @@
         crop%wofost%dwso = 0.0d0
         crop%wofost%dwst = 0.0d0
         crop%wofost%dwstpot = 0.0d0
-        if(crop%common%flCropNut) then
-          WLVt0 = crop%wofost%wlv
-          WSTt0 = crop%wofost%wst
-          WSOt0 = crop%wofost%wso
-          WRTt0 = crop%wofost%wrt
-        endif
-        
-! ---   n-p-k 
-        if( crop%common%flCropNut) then
-!******************************************************************
-!         initial maximum nutrient concentrations in plant organs 
-!         per kg biomass [kg N kg-1 dry biomass] at sowing added IS
-!******************************************************************        
-          call nutrsow(cw_anlv,cw_anst,anrt,anso)
-!******************************************************************
-!         initial maximum nutrient concentrations in plant organs 
-!         per kg biomass [kg N kg-1 dry biomass] at emergence added IS
-!******************************************************************
-          call nutremrg(cw_nmxlv,cw_lsnr,cw_lrnr,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wrt,                    &
-     &      cw_anlv,cw_anst,anrt,anso,anlvi,ansti,anrti,ansoi,crop%common%dvs)
-        endif
+! [ADR 0052] n-p-k sowing/emergence nutrient init removed (WOFOST-N detached).
 
 ! --- actual rooting depth
         if (crop%common%swrd.eq.1) then
@@ -398,13 +321,7 @@
         enddo
       endif
 
-! -      n-p-k 
-      if( crop%common%flCropNut) then
-        call nutrinit    (nlossl,nlossr,nlosss,                         &
-     &                    nuptt,rnlv,rnst,rnrt,rnso,                    &
-     &                    rnldlv,rnldst,rnldrt,                         &
-     &                    nfixtt,cw_nni,NLOSSLDeceasedLvToSoil)
-      endif
+! [ADR 0052] n-p-k nutrinit removed (WOFOST-N detached).
 
 
       return
@@ -739,11 +656,7 @@
         crop%common%reltr = max(0.0d0,min(1.0d0,soil%tra/atmo%ptra))
       endif
 
-! --- nitrogen stress reduction of pgass to gass
-      if (crop%common%flCropNut) then
-        crop%common%reltr = min(crop%common%reltr,cw_fstr)
-        cw_fstr  = crop%common%reltr
-      end if
+! [ADR 0052] nitrogen-stress reduction of reltr removed (WOFOST-N detached).
       gass = crop%wofost%pgass * crop%common%reltr
 
 ! --- respiration and partitioning of carbohydrates between growth and
@@ -771,17 +684,9 @@
 ! --- check on partitioning
       call chckprt(crop%common%dvs,fr,fl,fs,fo,fbl)    
 
-      if( crop%common%flCropNut) then
-!********************************************************************         
-!         partitioning correction as influenced by water and N stress
-!         Note: the partioning depends only on the Nitrogen stress,
-!         not on the P and K stress. Personal communication Joost Wolf        
-!         added IS
-!******************************************************************** 
-          CALL SUBPAR (crop%common%reltr,cw_NPART,cw_NNI,FR,FL,FS,FO)
-      endif
-      
-! --- conversion factor 
+! [ADR 0052] N-stress partitioning correction (SUBPAR) removed (WOFOST-N detached).
+
+! --- conversion factor
       if(crop%wofost%swbulb) then
 !       only for bulb crops (tulips etc..)
         cvf = 1.0d0/((fl/crop%common%cvl+fs/crop%common%cvs+fbl/crop%common%cvs+fo/crop%common%cvo)*(1.0d0-fr)+fr/crop%common%cvr)
@@ -800,7 +705,7 @@
       if (crop%common%swrd.eq.3 .and. soil%flWrtNonox) grrt = 0.d0
 
 ! --- death of leaves due to water stress or high lai or nitrogen stress
-      call deaths(crop%common%flCropNut,crop%wofost%wlv,crop%kdif,crop%lai,cw_NNI,crop%common%perdl,cw_rdrns,crop%common%reltr,dslv)
+      call deaths(crop%wofost%wlv,crop%kdif,crop%lai,crop%common%perdl,crop%common%reltr,dslv)
 
 ! --- death of leaves due to exceeding life span:
       call deatha(dslv,delt,crop%common%ilvold,crop%common%lv,crop%common%lvage,crop%common%span,i1,dalv)
@@ -840,12 +745,7 @@
       endif
 
 ! --- specific leaf area valid for current timestep
-      if(crop%common%flCropNut) then
-!       nutrient and water stress
-        slat = afgen (crop%common%slatb,30,crop%common%dvs)*EXP(-cw_NSLA * (1.0d0-cw_NNI))
-      else
-        slat = afgen (crop%common%slatb,30,crop%common%dvs)
-      endif
+      slat = afgen (crop%common%slatb,30,crop%common%dvs)   ! [ADR 0052] N-stress SLA term removed
 !
 !     Do not allow slat higher than slatpot; slatpot can be limited by exponential growth
       slat = min(slat,slatpot)   ! pvw
@@ -853,13 +753,7 @@
 ! --- calculation of specific leaf area in case of exponential growth:
 ! --- leaf area not to exceed exponential growth curve
 ! --- cw_FSTR is actual stress: water and nutrient 
-      Fstress = crop%common%reltr
-      if (crop%common%flCropNut) then
-         Fstress = cw_FSTR
-         if ((crop%common%dvs .LT. 0.2d0).AND.(crop%lai .LT. 0.75d0)) then
-           Fstress = crop%common%reltr * EXP(-cw_NLAI* (1.0d0 - cw_NNI))
-         endif
-      endif
+      Fstress = crop%common%reltr   ! [ADR 0052] N-stress Fstress override removed
       call GLAI(Fstress,crop%common%LAIEXP,crop%common%GLAIEX,atmo%Tav,crop%common%tbase,crop%common%rgrlai,GRLV,SLAT,GLA)
 
 
@@ -943,205 +837,13 @@
 !     KRO-BOO-20160403: suppressed because deviates from Wofost
 !      lai = max(lai, laiem)
 
-! --- update state variables for nutrient stress
-
-!     Calling the subroutine for N losses of leaves, roots and stem storage
-!     organs (kg N ha-1 d-1)
-      if(crop%common%flCropNut)then
-
-!        Calling the subroutines for N demand of leaves, roots and stem storage
-!        organs (kg N ha-1 d-1)
-         CALL NDEMND(crop%wofost%wlv,crop%wofost%wst,crop%wofost%wrt,crop%wofost%wso,cw_NMAXLV,cw_NMAXST,                     &
-     &                               cw_NMAXRT,cw_NMAXSO,cw_ANLV,cw_ANST,ANRT,ANSO, &
-     &                               cw_tcnt,NDEML,NDEMS,NDEMR,NDEMSO)
-
-!        Total N demand (kg N ha-1)
-
-         NDEMTO = MAX (0.0d0,(NDEML + NDEMS + NDEMR))
-
-!        Nutrient uptake limiting factor (-) at low moisture conditions in the
-!        rooted soil layer before anthesis. After anthesis/cw_dvsnlt there is no
-!        nutrient uptake from the soil
-         NLIMIT = INSW(crop%common%dvs-cw_dvsnlt,INSW(crop%common%reltr-0.01d0,0.0d0,1.0d0),0.d0)
-         NdemandSoil = (1.d0-cw_NFIXF) * NDEMTO * NLIMIT
-         NdemandBioFix =  cw_NFIXF * NDEMTO * NLIMIT
-
-      end if
-
+! [ADR 0052] N-demand (NDEMND) block removed (WOFOST-N detached).
 
       return
 
       case (4)
 
-      if(crop%common%flCropNut) then
-
-!        Total N uptake (kg N ha-1 d-1) from soil and by biological N fixation         
-         NUPTR = (MAX(0.d0, MIN(NdemandSoil, NsupplySoil) ))/DELT
-         NFIXTR = (MAX(0.d0, NdemandBioFix))/DELT
-
-!        Calling the subroutine to estimate the translocatable nutrients in leaves, stem, roots and
-!        storage organs (kg N ha-1)
-         CALL NTRLOC(cw_ANLV,cw_ANST,ANRT,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wrt,cw_RNFLV,cw_RNFST,cw_RNFRT,      &
-     &                  cw_fntrt,ATNLV,ATNST,ATNRT,ATN)
-
-!        N supply to the storage organs (kg N ha-1 d-1)      
-         NSUPSO = INSW (crop%common%dvs-cw_dvsnt,0.0d0,ATN/cw_tcnt)
-
-!        Rate of N uptake in grains (kg N ha-1 d-1)
-         RNSO =  MIN (NDEMSO,NSUPSO)
-
-!        Calling the subroutine to calculate nutrient translocation from leaves, stem, and roots (kg N ha-1 d-1)
-         CALL NTRANS(RNSO,ATNLV,ATNST,ATNRT,ATN,RNTLV,RNTST,RNTRT)
-
-!        Calling the subroutine to compute the partitioning of the total
-!        nutrient uptake rate (NUPTR) over the leaves, stem and roots (kg N ha-1 d-1)
-         CALL RNUSUB(NDEML,NDEMS,NDEMR,NUPTR,                           &
-     &                  NFIXTR,NDEMTO, RNULV,RNUST,RNURT)
-        
-!        Calling routine to calculate nutrient losses due to dying leaves, stems           
-!        and roots (kg N ha-1 d-1)    
-         CALL RNLD(DRLV,DRRT,DRST,cw_RNFLV,cw_RNFRT,cw_RNFST,                    &
-     &                RNLDLV,RNLDRT,RNLDST)
-
-
-!   - ---Rate of change of N in crop organs   
-         RNLV = RNULV - RNTLV - RNLDLV
-         RNST = RNUST - RNTST - RNLDST
-         RNRT = RNURT - RNTRT - RNLDRT
-
-!-----   Total N  uptake by crop over time (kg N ha-1) from soil and by biological fixation
-         NUPTT = NUPTT + NUPTR*DELT
-         NFIXTT= NFIXTT+ NFIXTR*DELT
-
-!-----   Actual N amount in various living organs and total living N amount(kg N ha-1)
-         cw_ANLV =  max(0.0d0, (cw_ANLV + RNLV*DELT) )
-         cw_ANST =  max(0.0d0, (cw_ANST + RNST*DELT) )
-         ANRT =  max(0.0d0, (ANRT + RNRT*DELT) )
-         ANSO =  ANSO + RNSO*DELT
-!!!         NLIVT=  cw_ANLV + cw_ANST + ANRT + ANSO
-
-!-----   N losses from leaves, roots and stems due to senescence and total N loss (kg N ha-1)
-         NLOSSL =  NLOSSL + RNLDLV*DELT
-         NLOSSR =  NLOSSR + RNLDRT*DELT
-         NLOSSS =  NLOSSS + RNLDST*DELT
-!!!         NLOSST =  NLOSSL + NLOSSR + NLOSSS
-
-!----    total N  in living and dead roots
-!!!         NROOT= ANRT + NLOSSR
-
-!       increment values of dead weight of plant organs,
-!       to be used in the soil nutrient submodel
-         idwrt = drrt*delt
-         idwlv = idwlvSoil
-         idwst = 0.0d0
-         idwso = 0.0d0
-         iNLOSSR =  RNLDRT*DELT
-         iNLOSSL =  FraDeceasedLvToSoil * RNLDLV*DELT
-         NLOSSLDeceasedLvToSoil =  NLOSSLDeceasedLvToSoil + iNLOSSL
-         NLOSSL =  NLOSSL - iNLOSSL
-         iNLOSSS =  0.0d0
-         iNLOSSO =  0.0d0
-         HarLosOrm_rt = 0.0d0; HarLosOrm_lv = 0.0d0; HarLosOrm_st = 0.0d0
-         HarLosOrm_dwlv = 0.0d0; HarLosOrm_dwst = 0.0d0
-         HarLosOrm_so = 0.0d0; crop%common%HarLosOrm_tot = 0.0d0 
-         HarLosNit_rt = 0.0d0; HarLosNit_lv = 0.0d0 
-         HarLosNit_st = 0.0d0; HarLosNit_so = 0.0d0 
-!!         HarLosNit_dwrt = 0.0d0; HarLosOrm_dwrt = 0.0d0
-         HarLosNit_dwst = 0.0d0; HarLosNit_dwso = 0.0d0; HarLosNit_dwlv = 0.0d0 
-!        during the last day of the crop period: add the weight of living roots 
-!        to the dead roots and reset living weight to zero
-         if (crop%common%flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
-     &                 dabs(time%t1900-1.0d0-crop%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
-            HarLosOrm_rt = crop%wofost%wrt
-            HarLosOrm_dwlv =  cw_fraharlosorm_lv * crop%wofost%dwlv
-            HarLosOrm_lv   = cw_fraharlosorm_lv * crop%wofost%wlv + HarLosOrm_dwlv
-            HarLosOrm_dwst =  cw_fraharlosorm_st * crop%wofost%dwst
-            HarLosOrm_st   = cw_fraharlosorm_st * crop%wofost%wst + HarLosOrm_dwst
-            HarLosOrm_dwso =  cw_fraharlosorm_so * crop%wofost%dwso
-            HarLosOrm_so   = cw_fraharlosorm_so * crop%wofost%wso + HarLosOrm_dwso
-            crop%common%HarLosOrm_tot = HarLosOrm_rt + cw_fraharlosorm_lv * crop%wofost%wlv +      &
-     &             cw_fraharlosorm_st * crop%wofost%wst + cw_fraharlosorm_so * crop%wofost%wso
-!ckro_sup_20170714 : suppressed because it will happen after harvest
-!            wrt = wrt - HarLosOrm_rt
-!            wlv = wlv - cw_fraharlosorm_lv * wlv
-!            wst = wst - cw_fraharlosorm_st * wst
-!            wso = wso - cw_fraharlosorm_so * wso
-            idwrt = idwrt + HarLosOrm_rt
-            idwlv = idwlv + HarLosOrm_lv
-            idwst = idwst + HarLosOrm_st
-            idwso = idwso + HarLosOrm_so
-            HarLosNit_rt = ANRT
-            HarLosNit_dwlv = cw_fraharlosorm_lv * NLOSSL 
-            HarLosNit_lv = cw_fraharlosorm_lv * cw_ANLV + HarLosNit_dwlv 
-            HarLosNit_dwst = cw_fraharlosorm_st * NLOSSS 
-            HarLosNit_st = cw_fraharlosorm_st * cw_ANST + HarLosNit_dwst 
-            HarLosNit_dwso = cw_fraharlosorm_so * 0.0d0 
-            HarLosNit_so = cw_fraharlosorm_so * ANSO + HarLosNit_dwso 
-            iNLOSSL = iNLOSSL + HarLosNit_lv
-            iNLOSSS = iNLOSSS + HarLosNit_st
-            iNLOSSO = iNLOSSO + HarLosNit_so
-            iNLOSSR = iNLOSSR + HarLosNit_rt
-            cw_ANLV = cw_ANLV - cw_fraharlosorm_lv * cw_ANLV
-            cw_ANST = cw_ANST - cw_fraharlosorm_st * cw_ANST
-            ANSO = ANSO - cw_fraharlosorm_so * ANSO
-            ANRT = ANRT - HarLosNit_rt
-        end if
-
-! ----- CHECK and WRITE MASS BALANCE: dry matter of crop
-
-!       output of OM balance1: from air to partitioning (kg/ha DM CH2O)
-        call outbalcropOM1(2,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,   &
-     &       time%t,crop%common%dvs,crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
-
-! -     OM balance2: storage difference(kg/ha DM CH2O)
-        storagediff = (crop%wofost%wlv+crop%wofost%wst+crop%wofost%wso+crop%wofost%wrt) - (wlvt0+wstt0+wsot0+wrtt0)
-        ombalan = storagediff - ( (grlv+grst+grso+grrt)*delt -          &
-     &            (drlv+drst+drso+drrt)*delt )
-!ckro_20171002 harvest losses happen after harvest and should not be
-!    in this balance, therefore this commented out of source code.
-!        storagediff = HarLosOrm_rt + HarLosOrm_lv + HarLosOrm_st +      &
-!     &  HarLosOrm_so -(HarLosOrm_dwlv + HarLosOrm_dwst + HarLosOrm_dwso)
-        if (dabs(ombalan) .ge. 1.0d0) then
-           write(messag,'(a,f8.3)')                                     &
-     &      ' Warning Wofost: OM balance2 not 0, OMBAL = ',ombalan
-           call log_warn('wofost', messag)
-!     &     ' OM balance2 not 0, simulation stopped OMBAL=',ombalan
-!           call fatalerr ('wofost',messag)
-        endif
-!       output of OM balance2
-        call outbalcropom2(2,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,   &
-     &         time%t,crop%common%dvs,crop%common%tsum,storagediff,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wso,crop%wofost%wrt,delt,         &
-     &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
-
-! ----- CHECK and WRITE MASS BALANCE: nitrogen of crop
-
-        NBALAN =  NUPTT + NFIXTT + (ANLVI+ANSTI+ANRTI+ANSOI)            &
-     &      - (cw_ANLV+cw_ANST+ANRT+ANSO) - (NLOSSL+NLOSSR+NLOSSS)            &
-     &      - NLOSSLDeceasedLvToSoil                                    &
-     &      - (HarLosNit_lv+HarLosNit_st+HarLosNit_so+HarLosNit_rt)     &
-     &      +  HarLosNit_dwlv + HarLosNit_dwst + HarLosNit_dwso
-
-!       output of N balance
-        call outbalcropN(2,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,     &
-     &         time%t,crop%common%dvs,crop%common%tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,cw_ANLV,&
-     &         cw_ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,cw_nni)
-        IF (dabs(NBALAN) .GE. 1.0d-03) then
-           write(messag,'(1a,i6,a,f8.3)') ' Nitrogen balance not 0,'//  &
-     &     ' simulation stopped, day = ', time%daycum,' NBAL=',NBALAN
-!*           call fatalerr ('wofost',messag)
-           call log_warn('CropGrowth_Wofost', messag)
-        endif
- 
-        if (crop%common%flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
-     &                 dabs(time%t1900-1.0d0-crop%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
-          gwst  = 0.0d0
-          crop%wofost%gwrt  = 0.0d0
-          gwso  = 0.0d0
-          grlv  = 0.0d0
-          NdemandSoil = 0.0d0
-          crop%common%HarLosOrm_tot = 0.0d0
-        endif
-      endif
+      ! [ADR 0052] case(4) N uptake/translocation/loss + crop OM-N balance block removed (WOFOST-N detached).
 
 ! --- update normalized cumulative root density based on root extraction or stress (cumdens)
       if (crop%common%swrdc.eq.1) call update_rootdistribution(state)
@@ -1549,8 +1251,7 @@
       RETURN
       END
 
-      subroutine deaths(flcropnut,wlv,kdif,lai,NNI,perdl,rdrns,         &
-     &                  reltr,dslv)
+      subroutine deaths(wlv,kdif,lai,perdl,reltr,dslv)
 ! ----------------------------------------------------------------------
 !     Last modified      : April 2015
 !       based on routines needed for LINTUL4 model (May 2011, Joost Wolf)
@@ -1579,25 +1280,19 @@
 ! ===== ==== =======  =============================================  ==============
       implicit none
 ! --- global
-      logical   flCropNut
-      real(8)   DSLV,KDIF,LAI,NNI,PERDL,RDRNS,reltr,WLV
+      real(8)   DSLV,KDIF,LAI,PERDL,reltr,WLV
 ! --- local
       real(8)   DSLV1,DSLV2,LAICR
-!      save     
-      
+!      save
+
 !     death rate of leaves due to water stress
       DSLV1 = WLV*(1.d0-reltr)*PERDL
-      
+
 !     death rate of leaves due high LAI
       LAICR = 3.2d0/KDIF
       DSLV2 = WLV*max(0.0d0, min(0.03d0, (0.03d0*(LAI-LAICR)/LAICR)))
       DSLV  = MAX (DSLV1, DSLV2)
-      
-!     death rate increase due to nutrient shortage
-      IF(flCropNut .AND. NNI.LT.1.0d0) THEN
-         DSLV = DSLV + WLV*RDRNS * (1.0d0-NNI)
-      END IF 
-      
+
       RETURN
       END
       

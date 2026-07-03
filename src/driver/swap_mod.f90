@@ -106,7 +106,6 @@ contains
                                 config%simulation, &
                                 state%mesh%numnod, state%mesh%numlay, &
                                 config%general%pathwork)
-      call state%nutrients%init(state%mesh%numlay, config%nutrients, config%general%pathwork)
       call state%crop%irrigation%init(config%irrigation, state%timecontrol%tstart, &
                                       state%timecontrol%tend, state%mesh, &
                                       config%general%pathwork)
@@ -218,7 +217,6 @@ contains
       use solute_mod,         only: solute_step
       use soilhydraulics_mod, only: soilwater_step, soilwater_update, soilwater_restore_state
       use irrigation_mod,     only: irrigation_step, ssdi_irrigation_step
-      use management_soil_mod, only: SoilManagement
       use drainage_mod,       only: drainage
       use error_mod,          only: error_collection_t, set_active_error_sink
 
@@ -317,12 +315,9 @@ contains
 
          ! End-of-day section.
          if (time%flDayEnd) then
-            if (crop%common%flCropNut)      call SoilManagement(2, state)  ! nutrient status
+            ! [ADR 0052] SoilManagement (WOFOST-N soil nutrient) calls removed.
             if (crop%common%flCropCalendar) call CropGrowth(2, state%heat%tsoil, state)  ! potential growth
-            if (crop%common%flCropNut)      call SoilManagement(5, state)  ! crop-residue amendment
-            if (crop%common%flCropNut)      call SoilManagement(3, state)  ! fertilizer amendment
             if (crop%common%flCropCalendar) call CropGrowth(3, state%heat%tsoil, state)  ! actual growth
-            if (crop%common%flCropNut)      call SoilManagement(4, state)  ! nutrient processes
             if (crop%common%flCropCalendar) call CropGrowth(4, state%heat%tsoil, state)  ! harvest
 
             ! Watchdog against (near-)endless simulations.
@@ -345,14 +340,13 @@ contains
             if (time%floutputshort) call csv_output_step(state)
          end if
 
-         if (time%flDayEnd .and. crop%common%flCropNut) call SoilManagement(6, state)
+         ! [ADR 0052] SoilManagement(6) removed (WOFOST-N detached).
 
       end associate
 
    end subroutine swap_run_step
 
    subroutine swap_close(state, config)
-      use management_soil_mod,  only: SoilManagement
       use timecontrol_mod,      only: itertime_close
       use csv_output,           only: csv_output_finalize
       use error_mod,            only: clear_active_error_sink
@@ -366,7 +360,7 @@ contains
 
       call itertime_close(state)
       call csv_output_finalize(state)
-      if (state%crop%common%flCropNut) call SoilManagement(7, state)
+      ! [ADR 0052] SoilManagement(7) removed (WOFOST-N detached).
 
       ! Okay-file for external runners.
       call WriteSwapOk(config%general%project)

@@ -32,7 +32,7 @@ contains
       type(toml_table), pointer :: prep, sow, germ, harv, cf, ph, init, ga,  &
                                    asm, conv, resp, part, deth, root, oxy,    &
                                    drou, salt, comp, inter, co2t, mgmt,       &
-                                   irr_sched, soy, bul, nut
+                                   irr_sched, soy, bul
 
       call get_table(doc_root, 'preparation', prep, 'preparation', errors)
       if (associated(prep)) then
@@ -268,34 +268,7 @@ contains
          call read_table_2d(bul, 'fbltb', config%bulb%fbltb, 2, 'bulb.fbltb', errors)
       end if
 
-      ! ----------------------------------------------------------------
-      ! Nutrient model (optional section; absent in most cases)
-      ! ----------------------------------------------------------------
-      call get_table(doc_root, 'nutrient', nut, 'nutrient', errors)
-      if (associated(nut)) then
-         call get_optional_logical_with_default(nut, 'flcropnut', config%nutrient%flcropnut, .false., 'nutrient.flcropnut', errors)
-         call get_optional_real_with_default(nut, 'lrnr',   config%nutrient%lrnr,   0.0_real64, 'nutrient.lrnr',   errors)
-         call get_optional_real_with_default(nut, 'lsnr',   config%nutrient%lsnr,   0.0_real64, 'nutrient.lsnr',   errors)
-         call get_optional_real_with_default(nut, 'nlai',   config%nutrient%nlai,   0.0_real64, 'nutrient.nlai',   errors)
-         call get_optional_real_with_default(nut, 'nlue',   config%nutrient%nlue,   0.0_real64, 'nutrient.nlue',   errors)
-         call get_optional_real_with_default(nut, 'nmaxso', config%nutrient%nmaxso, 0.0_real64, 'nutrient.nmaxso', errors)
-         call get_optional_real_with_default(nut, 'npart',  config%nutrient%npart,  0.0_real64, 'nutrient.npart',  errors)
-         call get_optional_real_with_default(nut, 'nfixf',  config%nutrient%nfixf,  0.0_real64, 'nutrient.nfixf',  errors)
-         call get_optional_real_with_default(nut, 'nsla',   config%nutrient%nsla,   0.0_real64, 'nutrient.nsla',   errors)
-         call get_optional_real_with_default(nut, 'rnflv',  config%nutrient%rnflv,  0.0_real64, 'nutrient.rnflv',  errors)
-         call get_optional_real_with_default(nut, 'rnfrt',  config%nutrient%rnfrt,  0.0_real64, 'nutrient.rnfrt',  errors)
-         call get_optional_real_with_default(nut, 'rnfst',  config%nutrient%rnfst,  0.0_real64, 'nutrient.rnfst',  errors)
-         call get_optional_real_with_default(nut, 'tcnt',   config%nutrient%tcnt,   0.0_real64, 'nutrient.tcnt',   errors)
-         call get_optional_real_with_default(nut, 'dvsnlt', config%nutrient%dvsnlt, 0.0_real64, 'nutrient.dvsnlt', errors)
-         call get_optional_real_with_default(nut, 'dvsnt',  config%nutrient%dvsnt,  0.0_real64, 'nutrient.dvsnt',  errors)
-         call get_optional_real_with_default(nut, 'rdrns',  config%nutrient%rdrns,  0.0_real64, 'nutrient.rdrns',  errors)
-         call get_optional_real_with_default(nut, 'fntrt',  config%nutrient%fntrt,  0.0_real64, 'nutrient.fntrt',  errors)
-         call get_optional_real_with_default(nut, 'frnx',   config%nutrient%frnx,   0.0_real64, 'nutrient.frnx',   errors)
-         call read_real_array_1d(nut, 'nmxlv', config%nutrient%nmxlv, 'nutrient.nmxlv', errors)
-         call get_optional_real_with_default(nut, 'frahar_los_orm_lv', config%nutrient%frahar_los_orm_lv, 0.0_real64, 'nutrient.frahar_los_orm_lv', errors)
-         call get_optional_real_with_default(nut, 'frahar_los_orm_st', config%nutrient%frahar_los_orm_st, 0.0_real64, 'nutrient.frahar_los_orm_st', errors)
-         call get_optional_real_with_default(nut, 'frahar_los_orm_so', config%nutrient%frahar_los_orm_so, 0.0_real64, 'nutrient.frahar_los_orm_so', errors)
-      end if
+      ! [ADR 0052] [nutrient] block reader removed (WOFOST-N detached).
 
       call get_table(doc_root, 'irrigation_schedule', irr_sched, 'irrigation_schedule', errors)
       call read_irrigation_schedule_from_section(irr_sched, config%schedule, errors)

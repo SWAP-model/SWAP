@@ -56,7 +56,6 @@ subroutine test_cropwofost_init_basic_globals()
    cfg%management%fradeceasedlvtosoil = 0.35_real64
    cfg%soybean%swsoybean            = 0
    cfg%bulb%swbulb                  = 0
-   cfg%nutrient%flcropnut           = .false.
    cfg%schedule%schedule            = 0
    ! rdctb = [[0.0, 1.0], [1.0, 0.0]] — linear ramp
    allocate(cfg%root%rdctb(2, 2))
@@ -120,7 +119,6 @@ subroutine test_cropwofost_init_cumdens_linear_ramp()
 
    cfg%soybean%swsoybean       = 0
    cfg%bulb%swbulb             = 0
-   cfg%nutrient%flcropnut      = .false.
    cfg%schedule%schedule       = 0
    cfg%co2%swco2               = 0
    cfg%harvest%swharv          = 0
@@ -162,137 +160,4 @@ subroutine test_cropwofost_init_cumdens_linear_ramp()
    @assertEqual(0.75_real64, state%crop%common%cumdens(102), 1.0e-6_real64)
 end subroutine
 
-@test
-subroutine test_flcropnut_true_propagates_to_global()
-   ! N3: cfg%nutrient%flcropnut = .true. on a rotation must set the
-   ! state%crop%common%flCropNut = .true. so the daily loop's gates open.
-   ! [GR-CROP 2026-05-25] flCropNut legacy global retired → state.
-   use funit
-   use iso_fortran_env, only: real64
-   use cropwofost_config_mod, only: cropwofost_config_t
-   use cropwofost_init_mod,   only: cropwofost_init_from_config
-   use swap_state_mod, only: swap_state_t
-   type(cropwofost_config_t) :: cfg
-   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
-   real(real64) :: FraDeceasedLvToSoil
-   integer, parameter :: ICROP = 1
-
-   ! Build the minimum viable fixture (same shape as test_cropwofost_init_basic_globals).
-   cfg%crop_factor%swcf         = 2
-   cfg%crop_factor%albedo       = 0.19_real64
-   cfg%crop_factor%rsc          = 207.0_real64
-   cfg%crop_factor%rsw          = 0.0_real64
-   cfg%oxygen_stress%swoxygen   = 1
-   cfg%oxygen_stress%swwrtnonox = 1
-   cfg%oxygen_stress%aeratecrit = 0.5_real64
-   cfg%oxygen_stress%hlim1      = -10.0_real64
-   cfg%oxygen_stress%hlim2u     = -25.0_real64
-   cfg%oxygen_stress%hlim2l     = -25.0_real64
-   cfg%drought_stress%swdrought = 1
-   cfg%drought_stress%hlim3h    = -300.0_real64
-   cfg%drought_stress%hlim3l    = -500.0_real64
-   cfg%drought_stress%hlim4     = -10000.0_real64
-   cfg%drought_stress%adcrh     = 0.5_real64
-   cfg%drought_stress%adcrl     = 0.1_real64
-   cfg%salinity%swsalinity      = 1
-   cfg%salinity%saltmax         = 0.732_real64
-   cfg%salinity%saltslope       = 0.0868_real64
-   cfg%compensate%swcompensate  = 0
-   cfg%interception%swinter     = 1
-   cfg%interception%cofab       = 0.25_real64
-   cfg%co2%swco2                = 0
-   cfg%root%swrd                = 2
-   cfg%root%rdi                 = 10.0_real64
-   cfg%root%rri                 = 1.2_real64
-   cfg%root%rdc                 = 50.0_real64
-   cfg%root%swdmi2rd            = 1
-   cfg%root%swrdc               = 0
-   cfg%management%swpotrelmf        = 2
-   cfg%management%relmf             = 0.8_real64
-   cfg%management%fradeceasedlvtosoil = 0.35_real64
-   cfg%soybean%swsoybean            = 0
-   cfg%bulb%swbulb                  = 0
-   cfg%schedule%schedule            = 0
-   allocate(cfg%root%rdctb(2, 2))
-   cfg%root%rdctb(1,1) = 0.0_real64; cfg%root%rdctb(1,2) = 1.0_real64
-   cfg%root%rdctb(2,1) = 1.0_real64; cfg%root%rdctb(2,2) = 0.0_real64
-
-   ! Nutrient activation. nmxlv must be allocated and non-empty when
-   ! flcropnut=true (validator rule, cropwofost_config.f90:1012-1019).
-   cfg%nutrient%flcropnut = .true.
-   allocate(cfg%nutrient%nmxlv(1))
-   cfg%nutrient%nmxlv(1) = 60.0_real64
-
-   ! Pre-set the state field to .false. to prove the assignment is doing the work.
-   state%crop%common%flCropNut = .false.
-
-   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
-
-   @assertTrue(state%crop%common%flCropNut)
-end subroutine test_flcropnut_true_propagates_to_global
-
-
-@test
-subroutine test_flcropnut_false_resets_global()
-   ! N3 per-rotation toggle: a rotation with flcropnut=.false. must
-   ! drive state%crop%common%flCropNut to .false. even if a previous rotation
-   ! left it .true.. cropwofost_init_from_config runs at every rotation start.
-   ! [GR-CROP 2026-05-25] flCropNut legacy global retired → state.
-   use funit
-   use iso_fortran_env, only: real64
-   use cropwofost_config_mod, only: cropwofost_config_t
-   use cropwofost_init_mod,   only: cropwofost_init_from_config
-   use swap_state_mod, only: swap_state_t
-   type(cropwofost_config_t) :: cfg
-   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
-   real(real64) :: FraDeceasedLvToSoil
-   integer, parameter :: ICROP = 1
-
-   cfg%crop_factor%swcf         = 2
-   cfg%crop_factor%albedo       = 0.19_real64
-   cfg%crop_factor%rsc          = 207.0_real64
-   cfg%crop_factor%rsw          = 0.0_real64
-   cfg%oxygen_stress%swoxygen   = 1
-   cfg%oxygen_stress%swwrtnonox = 1
-   cfg%oxygen_stress%aeratecrit = 0.5_real64
-   cfg%oxygen_stress%hlim1      = -10.0_real64
-   cfg%oxygen_stress%hlim2u     = -25.0_real64
-   cfg%oxygen_stress%hlim2l     = -25.0_real64
-   cfg%drought_stress%swdrought = 1
-   cfg%drought_stress%hlim3h    = -300.0_real64
-   cfg%drought_stress%hlim3l    = -500.0_real64
-   cfg%drought_stress%hlim4     = -10000.0_real64
-   cfg%drought_stress%adcrh     = 0.5_real64
-   cfg%drought_stress%adcrl     = 0.1_real64
-   cfg%salinity%swsalinity      = 1
-   cfg%salinity%saltmax         = 0.732_real64
-   cfg%salinity%saltslope       = 0.0868_real64
-   cfg%compensate%swcompensate  = 0
-   cfg%interception%swinter     = 1
-   cfg%interception%cofab       = 0.25_real64
-   cfg%co2%swco2                = 0
-   cfg%root%swrd                = 2
-   cfg%root%rdi                 = 10.0_real64
-   cfg%root%rri                 = 1.2_real64
-   cfg%root%rdc                 = 50.0_real64
-   cfg%root%swdmi2rd            = 1
-   cfg%root%swrdc               = 0
-   cfg%management%swpotrelmf        = 2
-   cfg%management%relmf             = 0.8_real64
-   cfg%management%fradeceasedlvtosoil = 0.35_real64
-   cfg%soybean%swsoybean            = 0
-   cfg%bulb%swbulb                  = 0
-   cfg%nutrient%flcropnut           = .false.
-   cfg%schedule%schedule            = 0
-   allocate(cfg%root%rdctb(2, 2))
-   cfg%root%rdctb(1,1) = 0.0_real64; cfg%root%rdctb(1,2) = 1.0_real64
-   cfg%root%rdctb(2,1) = 1.0_real64; cfg%root%rdctb(2,2) = 0.0_real64
-
-   ! Pre-set the state field to .true. — simulates a previous rotation that
-   ! had nutrients on. The current rotation must reset it.
-   state%crop%common%flCropNut = .true.
-
-   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
-
-   @assertFalse(state%crop%common%flCropNut)
-end subroutine test_flcropnut_false_resets_global
+! [ADR 0052] flcropnut propagation tests removed (WOFOST-N detached).

@@ -45,9 +45,7 @@
       use cropgrowth_helpers_mod, only: nocrop, ArableLandGerm, FacCO2, &
                                          update_rootdistribution
       ! GR-CROPWS Phase 0.2: wofost extracted to cropwofost_runtime_mod
-      ! [GR-CROP 2026-05-25] wofost_apply_nstress isolates the nutrient-cluster legacy
-      !   globals (NLUE/ANLV/.../FSTR + flCropNut) — keeps dispatcher use-variables-free.
-      use cropwofost_runtime_mod, only: wofost, wofost_apply_nstress
+      use cropwofost_runtime_mod, only: wofost
       ! GR-CROPWS Phase 0.3: grass extracted to cropgrass_runtime_mod
       use cropgrass_runtime_mod, only: grass
       ! GR-CROPWS Phase 0.4: cropfixed extracted to cropfixed_runtime_mod
@@ -417,15 +415,9 @@
         ! reduction due to limited attainable maximum yield
         state%crop%wofost%pgass = state%crop%wofost%pgass * state%crop%grass%relmf  ! [SS-GR-CROPRT B1]
 
-        ! nitrogen stress reduction of pgass
-        ! [GR-CROP 2026-05-25] Nutrient cluster (NLUE/ANLV/.../FSTR) is shared persistent
-        ! state with cropwofost_runtime; isolated behind wofost_apply_nstress wrapper so
-        ! the dispatcher stays use-variables-free.
-        if (state%crop%common%flCropNut) then
-          call wofost_apply_nstress(state)
-        endif
+        ! [ADR 0052] WOFOST N-stress reduction of pgass removed (WOFOST-N detached).
 
-      endif  
+      endif
 
       return
 

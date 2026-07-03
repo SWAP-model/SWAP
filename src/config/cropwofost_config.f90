@@ -34,7 +34,6 @@ module cropwofost_config_mod
    public :: wofost_management_t
    public :: wofost_soybean_t
    public :: wofost_bulb_t
-   public :: wofost_nutrient_t
    public :: cropwofost_config_t
 
    ! ------------------------------------------------------------------
@@ -382,36 +381,6 @@ module cropwofost_config_mod
       procedure :: finalize => wofost_bulb_finalize
    end type wofost_bulb_t
 
-   ! ------------------------------------------------------------------
-   ! N-P-K nutrient (activated when flcropnut=.true.; ADR 0025 N1, ADR 0028 N3)
-   ! ------------------------------------------------------------------
-   type :: wofost_nutrient_t
-      logical      :: flcropnut = .false.
-      real(real64) :: lrnr      = 0.0_real64
-      real(real64) :: lsnr      = 0.0_real64
-      real(real64) :: nlai      = 0.0_real64
-      real(real64) :: nlue      = 0.0_real64
-      real(real64) :: nmaxso    = 0.0_real64
-      real(real64) :: npart     = 0.0_real64
-      real(real64) :: nfixf     = 0.0_real64
-      real(real64) :: nsla      = 0.0_real64
-      real(real64) :: rnflv     = 0.0_real64
-      real(real64) :: rnfrt     = 0.0_real64
-      real(real64) :: rnfst     = 0.0_real64
-      real(real64) :: tcnt      = 0.0_real64
-      real(real64) :: dvsnlt    = 0.0_real64
-      real(real64) :: dvsnt     = 0.0_real64
-      real(real64) :: rdrns     = 0.0_real64
-      real(real64) :: fntrt     = 0.0_real64
-      real(real64) :: frnx      = 0.0_real64
-      real(real64), allocatable :: nmxlv(:)        ! max N concentration in leaves (flat NMXLV(30) slice)
-      real(real64) :: frahar_los_orm_lv = 0.0_real64
-      real(real64) :: frahar_los_orm_st = 0.0_real64
-      real(real64) :: frahar_los_orm_so = 0.0_real64
-   contains
-      procedure :: validate => wofost_nutrient_validate
-      procedure :: finalize => wofost_nutrient_finalize
-   end type wofost_nutrient_t
 
    ! ------------------------------------------------------------------
    ! Top-level
@@ -441,7 +410,6 @@ module cropwofost_config_mod
       type(irrigation_schedule_t)    :: schedule
       type(wofost_soybean_t)         :: soybean
       type(wofost_bulb_t)            :: bulb
-      type(wofost_nutrient_t)        :: nutrient
    contains
       procedure :: validate => cropwofost_config_validate
       procedure :: finalize => cropwofost_config_finalize
@@ -824,7 +792,6 @@ contains
       call self%management%validate(errors)
       call self%soybean%validate(errors)
       call self%bulb%validate(errors)
-      call self%nutrient%validate(errors)
       call self%schedule%validate(errors)
    end subroutine cropwofost_config_validate
 
@@ -990,41 +957,6 @@ contains
       return
    end subroutine wofost_bulb_finalize
 
-   subroutine wofost_nutrient_validate(self, errors)
-      class(wofost_nutrient_t), intent(in)    :: self
-      type(error_collection_t), intent(inout) :: errors
-
-      if (.not. self%flcropnut) return
-
-      ! nmxlv must be allocated and non-empty when flcropnut=true.
-      if (.not. allocated(self%nmxlv) .or. size(self%nmxlv) == 0) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropwofost.nutrient.nmxlv: must be a non-empty array when flcropnut=true', &
-            'cropwofost.nutrient.nmxlv')
-      else if (size(self%nmxlv) > 30) then
-         call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-            'cropwofost.nutrient.nmxlv: at most 30 entries (legacy NMXLV(30) cap)', &
-            'cropwofost.nutrient.nmxlv')
-      end if
-
-      ! Harvest-loss fractions must be in [0, 1].
-      call check_real_range(self%frahar_los_orm_lv, 0.0_real64, 1.0_real64, &
-                            'cropwofost.nutrient.frahar_los_orm_lv', errors)
-      call check_real_range(self%frahar_los_orm_st, 0.0_real64, 1.0_real64, &
-                            'cropwofost.nutrient.frahar_los_orm_st', errors)
-      call check_real_range(self%frahar_los_orm_so, 0.0_real64, 1.0_real64, &
-                            'cropwofost.nutrient.frahar_los_orm_so', errors)
-
-      ! N1 leaves the 17 numeric scalars (lrnr, lsnr, nlai, ...) unranged.
-      ! The legacy reader (rdsdou) didn't enforce ranges either; future
-      ! tightening can land when nutrient regression fixtures exist (post-N3).
-   end subroutine wofost_nutrient_validate
-
-   subroutine wofost_nutrient_finalize(self, errors)
-      class(wofost_nutrient_t), intent(inout) :: self
-      type(error_collection_t), intent(inout) :: errors
-      return
-   end subroutine wofost_nutrient_finalize
 
    subroutine cropwofost_config_finalize(self, errors)
       class(cropwofost_config_t), intent(inout) :: self
@@ -1054,7 +986,6 @@ contains
       call self%schedule%finalize(errors)
       call self%soybean%finalize(errors)
       call self%bulb%finalize(errors)
-      call self%nutrient%finalize(errors)
    end subroutine cropwofost_config_finalize
 
 end module cropwofost_config_mod

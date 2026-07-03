@@ -34,54 +34,17 @@ module cropwofost_init_mod
    private
 
    public :: cropwofost_init_from_config
-   public :: apply_cropwofost_nutrient
 
    ! [GR-CROP 2026-05-25] cropwofost shared per-rotation config snapshots.
-   ! Written here by apply_cropwofost_nutrient / cropwofost_init_from_config;
    ! read by cropwofost_runtime_mod%wofost (which `use`s this module).
-   ! Migrated out of the legacy `variables` module — single-file scope across
-   ! the cropwofost init+runtime pair.
-   ! Nutrient cluster:
-   real(real64), public, save :: cw_rdrns   = 0.0_real64
-   real(real64), public, save :: cw_dvsnlt  = 0.0_real64
-   real(real64), public, save :: cw_dvsnt   = 0.0_real64
-   real(real64), public, save :: cw_fntrt   = 0.0_real64
-   real(real64), public, save :: cw_tcnt    = 0.0_real64
-   ! Harvest losses cluster:
-   real(real64), public, save :: cw_fraharlosorm_lv = 0.0_real64
-   real(real64), public, save :: cw_fraharlosorm_so = 0.0_real64
-   real(real64), public, save :: cw_fraharlosorm_st = 0.0_real64
+   ! [ADR 0052] The nutrient + harvest-loss cw_* clusters were removed with the
+   ! WOFOST-N detachment; only the vernalisation cluster (non-nutrient phenology)
+   ! remains.
    ! Vernalisation cluster:
    real(real64), public, save :: cw_vernbase = 0.0_real64
    real(real64), public, save :: cw_verndvs  = 0.0_real64
    real(real64), public, save :: cw_vernsat  = 0.0_real64
    real(real64), public, save :: cw_vernrtb(30) = 0.0_real64  ! 2-col table flat slice (size 30 to match legacy)
-   ! [GR-CROP 2026-05-25] Nutrient cluster (config snapshots + runtime SAVE).
-   ! Owned by the cropwofost init+runtime pair. Written by
-   ! apply_cropwofost_nutrient (from cfg) and by wofost() (runtime updates);
-   ! read by wofost() and wofost_apply_nstress (which lives in the runtime).
-   real(real64), public, save :: cw_nlue   = 0.0_real64
-   real(real64), public, save :: cw_lrnr   = 0.0_real64
-   real(real64), public, save :: cw_lsnr   = 0.0_real64
-   real(real64), public, save :: cw_rnflv  = 0.0_real64
-   real(real64), public, save :: cw_rnfst  = 0.0_real64
-   real(real64), public, save :: cw_rnfrt  = 0.0_real64
-   real(real64), public, save :: cw_frnx   = 0.0_real64
-   real(real64), public, save :: cw_nlai   = 0.0_real64
-   real(real64), public, save :: cw_nmaxso = 0.0_real64
-   real(real64), public, save :: cw_npart  = 0.0_real64
-   real(real64), public, save :: cw_nfixf  = 0.0_real64
-   real(real64), public, save :: cw_nsla   = 0.0_real64
-   real(real64), public, save :: cw_nmxlv(30) = 0.0_real64
-   integer,      public, save :: cw_ilnmxl  = 0
-   ! Runtime nutrient state (computed inside wofost; persists across task=1/2/3/4):
-   real(real64), public, save :: cw_anlv   = 0.0_real64
-   real(real64), public, save :: cw_anst   = 0.0_real64
-   real(real64), public, save :: cw_nni    = 0.0_real64
-   real(real64), public, save :: cw_fstr   = 0.0_real64
-   real(real64), public, save :: cw_nmaxlv = 0.0_real64
-   real(real64), public, save :: cw_nmaxst = 0.0_real64
-   real(real64), public, save :: cw_nmaxrt = 0.0_real64
 
 contains
 
@@ -553,66 +516,9 @@ contains
       state%crop%common%daycrop = 0
       state%atmosphere%nofd     = 0  ! [GR-CROP 2026-05-25] nofd retired → state%atmosphere
 
-      ! [nutrients] N3: drive the legacy global flCropNut from the
-      ! per-rotation typed config. cropwofost_init_from_config runs at
-      ! every rotation start, so a sequence of rotations with mixed
-      ! flcropnut values toggles the gate correctly.
-      state%crop%common%flCropNut = cfg%nutrient%flcropnut
-      if (state%crop%common%flCropNut) call apply_cropwofost_nutrient(cfg%nutrient)
+      ! [ADR 0052] flCropNut / apply_cropwofost_nutrient removed (WOFOST-N detached).
 
    end subroutine cropwofost_init_from_config
 
-
-   !> Apply the per-rotation [wofost.nutrient] config to the legacy
-   !! `variables` globals. Called from cropwofost_init_from_config (or
-   !! directly from an alternative entry point) when
-   !! cfg%nutrient%flcropnut = .true..
-   !!
-   !! Replaces the deleted rdinit/rdsdou block in cropgrowth.f90's wofost
-   !! subroutine (legacy readers physical deletion arc, SS-C step 2).
-   !!
-   !! See ADR 0025 ([nutrients] N1).
-   subroutine apply_cropwofost_nutrient(cfg)
-      use cropwofost_config_mod, only: wofost_nutrient_t
-      ! [GR-CROP 2026-05-25] tcnt/dvsnlt/dvsnt/rdrns/fntrt/fraharlosorm_*/
-      ! lrnr/lsnr/nlue/rnflv/rnfst/frnx/nlai/nmaxso/npart/nfixf/nsla/rnfrt/
-      ! nmxlv/ilnmxl all live as module-level cw_* SAVE in this module.
-      type(wofost_nutrient_t), intent(in) :: cfg
-
-      integer :: n
-
-      ! Config-derived nutrient snapshots — module storage:
-      cw_lrnr   = cfg%lrnr
-      cw_lsnr   = cfg%lsnr
-      cw_nlue   = cfg%nlue
-      cw_rnflv  = cfg%rnflv
-      cw_rnfst  = cfg%rnfst
-      cw_frnx   = cfg%frnx
-
-      cw_nlai   = cfg%nlai
-      cw_nmaxso = cfg%nmaxso
-      cw_npart  = cfg%npart
-      cw_nfixf  = cfg%nfixf
-      cw_nsla   = cfg%nsla
-      cw_rnfrt  = cfg%rnfrt
-
-      cw_tcnt   = cfg%tcnt
-      cw_dvsnlt = cfg%dvsnlt
-      cw_dvsnt  = cfg%dvsnt
-      cw_rdrns  = cfg%rdrns
-      cw_fntrt  = cfg%fntrt
-
-      ! NMXLV array — copy entries; cw_ilnmxl records the active length
-      n = 0
-      if (allocated(cfg%nmxlv)) n = size(cfg%nmxlv)
-      cw_ilnmxl = n
-      cw_nmxlv  = 0.0_real64
-      if (n > 0) cw_nmxlv(1:n) = cfg%nmxlv(1:n)
-
-      ! Harvest fractions
-      cw_fraharlosorm_lv = cfg%frahar_los_orm_lv
-      cw_fraharlosorm_st = cfg%frahar_los_orm_st
-      cw_fraharlosorm_so = cfg%frahar_los_orm_so
-   end subroutine apply_cropwofost_nutrient
 
 end module cropwofost_init_mod

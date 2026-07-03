@@ -622,26 +622,7 @@ subroutine test_cropwofost_swbulb_one_rejected()
    @assertTrue(found)
 end subroutine
 
-@test
-subroutine test_cropwofost_flcropnut_true_rejected()
-   use funit
-   use cropwofost_config_mod, only: cropwofost_config_t
-   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
-   type(cropwofost_config_t) :: c
-   type(error_collection_t) :: errors
-   integer :: i
-   logical :: found
-   ! flcropnut=.true. with nmxlv unallocated must produce at least one
-   ! ERR_VALIDATION_CROSS_FIELD error (nmxlv missing).
-   c%nutrient%flcropnut = .true.
-   call c%validate(errors)
-   found = .false.
-   do i = 1, errors%count()
-      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'nmxlv') > 0) found = .true.
-   end do
-   @assertTrue(found)
-end subroutine
+! [ADR 0052] test_cropwofost_flcropnut_true_rejected removed (WOFOST-N detached).
 
 @test
 subroutine test_cropwofost_swco2_one_rejected()
@@ -849,7 +830,6 @@ subroutine test_cropwofost_case5_supported_values_no_stub_errors()
    ! Set switches to case-5 active values — none should trigger stub-errors.
    c%soybean%swsoybean        = 0
    c%bulb%swbulb              = 0
-   c%nutrient%flcropnut       = .false.
    c%harvest%swharv           = 0
    c%harvest%dvsend           = 3.0_real64
    c%crop_factor%swcf         = 2

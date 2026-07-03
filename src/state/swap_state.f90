@@ -18,7 +18,6 @@ module swap_state_mod
    use timecontrol_state_mod,   only: timecontrol_state_t
    use mesh_state_mod,          only: mesh_state_t
    use crop_state_mod,          only: crop_state_t
-   use nutrients_state_mod,     only: nutrients_state_t
    use results_state_mod,       only: results_state_t
    use diagnostics_mod,         only: diagnostics_t
    implicit none
@@ -36,7 +35,6 @@ module swap_state_mod
       type(timecontrol_state_t)  :: timecontrol
       type(mesh_state_t)         :: mesh
       type(crop_state_t)         :: crop
-      type(nutrients_state_t)    :: nutrients
       type(results_state_t)      :: results
       type(diagnostics_t)        :: diag
    end type swap_state_t

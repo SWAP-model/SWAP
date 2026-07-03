@@ -15,7 +15,6 @@ module swap_config_mod
    use surface_water_config_mod, only: surface_water_config_t
    use crop_config_mod,         only: crop_config_t
    use output_csv_config_mod,   only: output_csv_config_t
-   use nutrients_config_mod,    only: nutrients_config_t
    implicit none
    private
 
@@ -34,7 +33,6 @@ module swap_config_mod
       type(surface_water_config_t) :: surface_water
       type(crop_config_t)        :: crop
       type(output_csv_config_t)  :: output_csv
-      type(nutrients_config_t)   :: nutrients
    contains
       procedure :: validate => swap_config_validate
       procedure :: finalize => swap_config_finalize
