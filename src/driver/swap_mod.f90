@@ -255,6 +255,8 @@ contains
             call ReadMeteoDay(state, config)
             call CropGrowth(1, state%heat%tsoil, state)
             if (time%flIrrigate) call irrigation_step(state)
+            ! [T2-A / ADR 0053] soil->atmosphere: ponding for the peva adjustment.
+            state%exchange%atmos_soil%pond = state%soilwater%pond
             call ProcessMeteoDay(state, config)
             if (config%soil%swtill == 1) call tillage_step(state)
          end if
@@ -308,6 +310,13 @@ contains
             ! temperature to the Richards solve through the exchange record.
             state%exchange%heat_soil%rfcp  = state%heat%rfcp
             state%exchange%heat_soil%tsoil = state%heat%tsoil
+            ! [T2-A / ADR 0053] atmosphere->soil-water: top-boundary net flux.
+            state%exchange%atmos_soil%net_rain           = state%atmosphere%nraidt
+            state%exchange%atmos_soil%irrig              = state%atmosphere%nird
+            state%exchange%atmos_soil%snowmelt           = state%atmosphere%melt
+            state%exchange%atmos_soil%pot_evap           = state%atmosphere%peva
+            state%exchange%atmos_soil%emp_evap           = state%atmosphere%empreva
+            state%exchange%atmos_soil%evap_reduce_method = state%atmosphere%swredu
             if (.not.time%fldecdt) call soilwater_step(state)
 
             if (.not.time%fldecdt .and. time%flSurfaceWater) call surfacewater_balance(state, request_smaller_dt)

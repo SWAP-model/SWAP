@@ -575,8 +575,8 @@ contains
       endif
     endif
 
-    ! Adapt peva in case of ponding — [SS-SWC S-2.12B] state%soilwater%pond
-    if (state%soilwater%pond .gt. 1.0d-10) then
+    ! Adapt peva in case of ponding — [SS-SWC S-2.12B] state%exchange%atmos_soil%pond
+    if (state%exchange%atmos_soil%pond .gt. 1.0d-10) then
       if (config%meteo%swetr.eq.0 .and. state%crop%es0.gt.1.0d-8) then
         atmo%peva = state%crop%ew0/state%crop%es0 * atmo%peva
       elseif (state%crop%es0.gt.1.0d-8) then
@@ -590,7 +590,7 @@ contains
 
     ! Potential soil evaporation [cm/d] according to PMdirect
     if (config%meteo%swdivide .eq. 1) then
-      if (state%soilwater%pond .gt. 1.0d-10) then
+      if (state%exchange%atmos_soil%pond .gt. 1.0d-10) then
         atmo%peva = Edirectpond*0.1d0
       else
         atmo%peva = Edirect*0.1d0

@@ -84,16 +84,16 @@ contains
          ! Reduced soil evaporation rate. Config validation enforces
          ! swredu ∈ {1, 2}; the legacy swredu==0 "no reduction" branch is
          ! unreachable in TOML-configured runs.
-         if (atmo%swredu .eq. 0) then
-            soil%reva = min(atmo%peva,    max(0.0d0, Emax))
+         if (exch%atmos_soil%evap_reduce_method .eq. 0) then
+            soil%reva = min(exch%atmos_soil%pot_evap,    max(0.0d0, Emax))
          else
-            soil%reva = min(atmo%empreva, max(0.0d0, Emax))
+            soil%reva = min(exch%atmos_soil%emp_evap, max(0.0d0, Emax))
          endif
 
          ! ---- High atmospheric demand ---------------------------------------
          ! Net surface flux: precipitation + runon - evaporation, plus
          ! the residual ponding from the previous timestep.
-         soil%q0 = (atmo%nraidt + atmo%nird + atmo%melt) + soil%runon - soil%reva
+         soil%q0 = (exch%atmos_soil%net_rain + exch%atmos_soil%irrig + exch%atmos_soil%snowmelt) + soil%runon - soil%reva
          q1 = -soil%q0 - soil%pondm1 / dt
 
          ! Atmospheric-demand condition (flux boundary at the atmosphere)

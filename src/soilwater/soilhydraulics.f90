@@ -115,7 +115,7 @@ contains
          soil%fllowgwl = .false.
          if(soil%gwlinp.ge.mesh%z(1)-1.0d-4)then
 
-            q0 = (atmo%nraidt+atmo%nird+atmo%melt)*(1.0d0-ArMpSs) + soil%runon - soil%reva
+            q0 = (exch%atmos_soil%net_rain+exch%atmos_soil%irrig+exch%atmos_soil%snowmelt)*(1.0d0-ArMpSs) + soil%runon - soil%reva
             call pondrunoff (state)
             q1 = - q0 + (soil%pond - soil%pondm1)/time%dt + soil%runots / time%dt
             soil%theta(1) = watcon(soil%gwlinp, &
@@ -474,7 +474,7 @@ contains
          if (soil%ftoph) then
             soil%qtop = -soil%kmean(1)*((soil%hsurf - soil%h(1))/mesh%disnod(1)+1.0d0)
             if(.not.flnonconv) then
-               deviat = soil%pond - soil%pondm1 + soil%reva*time%dt - (atmo%nraidt+atmo%nird+atmo%melt)*time%dt &
+               deviat = soil%pond - soil%pondm1 + soil%reva*time%dt - (exch%atmos_soil%net_rain+exch%atmos_soil%irrig+exch%atmos_soil%snowmelt)*time%dt &
      &                - soil%runon*time%dt  +  soil%runots  - soil%qtop * time%dt
                if( abs(deviat) .gt. soil%critdevponddt) then
                   flnonconv3 = .true. ; flnonconv   = .true.

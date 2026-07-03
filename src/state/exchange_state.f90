@@ -16,7 +16,7 @@ module exchange_state_mod
    private
 
    public :: crop_water_exchange_t, heat_soil_exchange_t, drain_soil_exchange_t
-   public :: swap_exchange_t
+   public :: atmos_soil_exchange_t, swap_exchange_t
 
    !> Crop <-> atmosphere + soil-water (the transpiration/water-relations
    !! surface). The full crop<->SWAP interface an external crop model must
@@ -61,11 +61,29 @@ module exchange_state_mod
       real(real64), allocatable :: qdra(:,:)    !! drainage flux per level/node
    end type drain_soil_exchange_t
 
+   !> Atmosphere <-> soil-water (top boundary). Atmosphere provides the net
+   !! surface flux (rain/irrigation/snowmelt + potential evaporation) that drives
+   !! the top-boundary condition; soil-water provides the ponding that feeds back
+   !! into the potential-evaporation adjustment. (The atmo%cumu/intr water-balance
+   !! accumulation is output accounting, NOT coupling — excluded.)
+   type :: atmos_soil_exchange_t
+      ! --- from atmosphere -> soil-water (top-boundary flux) ---
+      real(real64) :: net_rain = 0.0_real64   !! nraidt
+      real(real64) :: irrig    = 0.0_real64   !! nird
+      real(real64) :: snowmelt = 0.0_real64   !! melt
+      real(real64) :: pot_evap = 0.0_real64   !! peva
+      real(real64) :: emp_evap = 0.0_real64   !! empreva
+      integer      :: evap_reduce_method = 0  !! swredu
+      ! --- from soil-water -> atmosphere ---
+      real(real64) :: pond = 0.0_real64       !! ponding (peva adjustment)
+   end type atmos_soil_exchange_t
+
    !> Aggregate of the cross-compartment exchange records. One field per surface.
    type :: swap_exchange_t
       type(crop_water_exchange_t) :: crop_water
       type(heat_soil_exchange_t)  :: heat_soil
       type(drain_soil_exchange_t) :: drain_soil
+      type(atmos_soil_exchange_t) :: atmos_soil
    end type swap_exchange_t
 
 end module exchange_state_mod
