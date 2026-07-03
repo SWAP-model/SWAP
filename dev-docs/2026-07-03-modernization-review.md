@@ -309,10 +309,12 @@ Verified against `prototype/`, `tests/coupling/`, and the orchestration plan:
   pyswap integration (plan Phases A-tail, E).
 - **Coupling demo works but is qualitative.** `tests/coupling/run_coupled.py` drives
   a 2-channel MF6 model + 1 SWAP ensemble via XMI (MODFLOW leads the clock). The
-  **storage exchange is knowingly wrong** — it writes into MF6 `STO/SS` (specific
-  storage) instead of `SY` (specific yield, which governs unconfined water-table
-  storage), with a `0.15` placeholder (`swapmod.py:267`). Must be fixed before any
-  numeric validation.
+  **storage exchange is currently disabled with cause** (`EXCHANGE_STORAGE=False`,
+  `swapmod.py`): SWAP emits a constant `0.15` placeholder and MF6 `STO/SS` is
+  *specific storage* (~1e-5), so writing it there is ~1e4× too large and pins the
+  water table (observed). The correct fix is a physical phreatic Sy routed to
+  `STO/SY` — a physics-design task (T1-I′), not a bug-fix. Recharge (the load-
+  bearing exchange) is live and validated qualitatively.
 - **Three Python drivers duplicate library loading and result extraction** (BMI
   orchestrator, XMI runner, coupled `SwapMod`). No unified "run a column/ensemble"
   entry point.
@@ -352,39 +354,61 @@ Verified against `prototype/`, `tests/coupling/`, and the orchestration plan:
 
 ## 10. Proposed sprint map
 
-Two tiers, explicitly separated. Tier 1 is behavior-preserving and can proceed
-immediately, byte-identity-gated. Tier 2 is the structural direction Tier 1 sets up.
+Two tiers, explicitly separated. Tier 1 is behavior-preserving and byte-identity-
+gated. Tier 2 is the structural direction Tier 1 sets up.
+
+> **Rescoped 2026-07-03** after landing T1-A/B and T1-G′ (the binding-convergence
+> arc, ADR 0050). Key movements: **T1-G expanded into T1-G′** and delivered *one*
+> `libswap.so` over the ensemble backing store with a variable registry — which
+> **absorbs most of Tier-2's T2-D and half of T2-B**. **T1-I is re-scoped** (the
+> coupling storage exchange is not "actively wrong"; it is *disabled with cause* —
+> `EXCHANGE_STORAGE=False` in `swapmod.py` — so the work is a physics-design task,
+> not a bug-fix). **T2-E is promoted earlier** (gridded ensemble C-ABI is now a
+> natural extension of the unified ensemble surface). Two small infra items and a
+> process rule were added from execution experience.
+
+### Method rule (added from execution)
+
+**Verify load-bearing claims from source before writing a spec.** Both executed
+arcs caught material errors in agent/document claims only via code verification
+(T1-B: the "9 K dead lines" were a deliberate museum + 10/12 "dead" fields were
+live; T1-G′: the consumer map wrongly claimed the coupled driver calls
+`get_time_step` on SWAP and missed that `report_timing_totals` never enters the
+library). Every arc's discovery ends with this check.
 
 ### Tier 1 — incremental cleanup (within current architecture)
 
-| Arc | Scope | §  | Effort | Payoff | Order |
-|-----|-------|----|--------|--------|-------|
-| **T1-A CI gate** | `check-fast` + pFUnit on push/PR | 9 | XS | High | **first** |
-| **T1-B Dead-code sweep** | dormant dispositions, `stepnr`, dead state fields, macropore placeholders | 4 | S | Med | early |
-| **T1-C Scratch-array sizing** | `MACP` locals → `numnod` (solute, tridag, …), byte-identical | 3 | S | Med (parallel) | early |
+| Arc | Scope | §  | Effort | Payoff | Status / order |
+|-----|-------|----|--------|--------|----------------|
+| **T1-A CI gate** | `check-fast` + pFUnit on push/PR (`test.yaml`) | 9 | XS | High | **DONE** (unpushed) |
+| **T1-B Dead-code sweep** | `stepnr`, write-only `pegwl`/`npegwl`; dormant-museum policy (ADR 0049); README refresh | 4 | S | Med | **DONE** |
+| **T1-G′ Binding convergence** | one `libswap.so` (BMI+CAPI+XMI) over the ensemble; variable registry; C-string dedup (ADR 0050) | 7,2 | M–H | High | **DONE** |
+| **T0.5 Binding-gate infra** | a `check-bindings` pixi task (the 6-path gate); re-point meson `bmi`/`cffi-demo` suites off the un-checked-out `tests/swap-cases` onto `tests/regression/cases` | 9 | XS | High | **next** |
+| **T1-E Tier-3 de-global** | `crop_config_global`, crop `SAVE` locals (`cropgrowth.f90:595,672`, `cropgrass_runtime.f90:93`), `Wofost_Soil_Interface`/`Wofost_Soil_Declarations` module statics → per-instance state | 2 | M–H | High | **keystone next arc** |
 | **T1-D Uninit-read triage** | `-Wmaybe-uninitialized` audit; fix real reads behind `-finit-local-zero` | 3 | M | Med | mid |
-| **T1-E Tier-3 de-global** | `crop_config_global`, crop `SAVE` locals, WOFOST module statics → per-instance | 2 | M | High | mid |
+| **T1-C Scratch-array sizing** | `MACP` locals → `numnod` (solute `:37,:128`, tridag `:52`, …), byte-identical | 3 | S | Med (parallel) | filler |
 | **T1-F Init consolidation** | uniform `state%X%init`, explicit Phase-2 seed inputs | 6 | M | Med | mid |
-| **T1-G BMI/XMI registry** | data-driven variable table; dedup `c_to_f_string` | 7 | M | Med | mid |
-| **T1-H Orchestrator → package** | promote `prototype/` to package + CLI; unify the 3 drivers | 8 | M | High | mid |
-| **T1-I Coupling correctness** | fix `SS`→`SY` storage exchange; numeric validation | 8 | M | High | after T1-E |
-| **T1-J Small dedup** | crop `copy_table` helper; optional TOML field registry | 5 | S | Low | opportunistic |
+| **T1-H′ Orchestrator → package** | promote `prototype/` to package + CLI over the single `libswap.so`; unify the 3 drivers | 8 | M | High | independent |
+| **T1-I′ Phreatic Sy design** | derive a physical specific-yield from SWAP soil hydraulics, route to MF6 `STO/SY`, re-enable `EXCHANGE_STORAGE`; numeric validation case | 8 | M | High | with T2-E |
+| **T1-J Small dedup** | crop `copy_table` helper; optional TOML field registry; XMI `get_value_ptr` → `NS_XMI` registry | 5,7 | S | Low | opportunistic |
 
 ### Tier 2 — component isolation (longer horizon, MODFLOW 6-inspired)
 
-| Arc | Scope | §  | Effort | Payoff |
-|-----|-------|----|--------|--------|
-| **T2-A Exchange records** | typed exchange objects for soilwater↔atmosphere (start with the 5-field write, `soilhydraulics.f90:800-805`), soilwater↔heat, crop↔heat, crop↔soil-N — compute returns/consumes them instead of reaching into siblings | 1 | H | High |
-| **T2-B Handle-based C-ABI** | opaque instance handle replacing `capi_state` singleton → true multi-instance in one process | 2 | M–H | High |
-| **T2-C Threaded ensemble** | `!$omp parallel do` over columns in `swap_ensemble_mod` (needs T1-E + T2-B) | 2,8 | M | High |
-| **T2-D Variable registry** | single memory-manager-style table naming every exchanged field; feeds BMI/XMI (T1-G) and exchanges (T2-A) | 1,7 | M | Med |
-| **T2-E Gridded ensemble C-ABI** | first-class bind(C) for heterogeneous per-column config/meteo (plan Phase D) | 8 | M | High |
-| **T2-F Kernel unit tests** | algorithmic tests for now-isolated components | 9 | M | Med |
+| Arc | Scope | §  | Effort | Payoff | Status |
+|-----|-------|----|--------|--------|--------|
+| **T2-A Exchange records** | typed exchange objects for soilwater↔atmosphere (start with the 5-field write, `soilhydraulics.f90:800-805`), soilwater↔heat, crop↔heat, crop↔soil-N | 1 | H | High | structural keystone |
+| **T2-B Handle-based multi-instance** | per-instance ensemble + error state (opaque handle). Backing-store half **already done** by T1-G′ (`capi_state` is a pointer into `columns(1)`); needs T1-E first | 2 | M | High | after T1-E |
+| **T2-C Threaded ensemble** | `!$omp parallel do` over columns in `swap_ensemble_mod` (needs T1-E + T2-B) | 2,8 | M | High | after T1-E/T2-B |
+| **T2-D Variable registry** | **DONE via T1-G′** (`swap_var_registry_mod`); only the `NS_XMI` rider remains (folded into T1-J) | 1,7 | — | — | **DONE** |
+| **T2-E Gridded ensemble C-ABI** | `bind(C)` for heterogeneous per-column config/meteo — now a natural extension of the unified `libswap.so` ensemble surface | 8 | M | High | **promoted** (after T1-E) |
+| **T2-F Kernel unit tests** | algorithmic tests for now-isolated components | 9 | M | Med | after T2-A |
 
-**Suggested first three arcs:** T1-A (CI, hours), T1-B/T1-C (mechanical, safe,
-immediate clarity + parallel-readiness), then T1-E (de-global) as the gateway to
-both the threaded-ensemble objective and Tier 2. T2-A is the structural keystone
-and should be scoped as its own spec once T1-E lands.
+**Next arcs, in order:** **T0.5** (binding-gate infra, hours) → **T1-E** (Tier-3
+de-global — the keystone that unblocks T2-B, T2-C, and real gridded coupling) →
+**T2-E + T1-I′** (gridded ensemble surface + phreatic Sy) on the ensemble. T1-H′ is
+independent and can interleave. **T2-A** (exchange records) is specced once T1-E
+lands. (Push the 8 local commits and watch the first `test.yaml` run before
+continuing — tests-only on push.)
 
 ---
 

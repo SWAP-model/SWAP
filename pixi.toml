@@ -80,6 +80,11 @@ test-bmi       = { cmd = "meson test -C builddir --suite bmi --verbose", depends
 test-cffi-demo = { cmd = "meson test -C builddir --suite cffi-demo --verbose", depends-on = ["build-linux"] }
 test-xmi       = { cmd = "python tests/coupling/test_swap_xmi_smoke.py", depends-on = ["build-linux"] }
 test-coupling  = { cmd = "python tests/coupling/test_coupled_smoke.py", depends-on = ["build-linux"] }
+# check-bindings: the C-ABI six-path gate over the one libswap.so (ADR 0050).
+# Drives BMI + CAPI + XMI + coupled smoke; stages the self-contained regression
+# case (the meson bmi/cffi suites still point at the un-checked-out swap-cases
+# submodule). Run alongside `check-fast` before any binding/driver commit.
+check-bindings = { cmd = "bash scripts/check_bindings.sh", depends-on = ["build-linux"] }
 test-all       = { cmd = "python tests/regression/test_output_regression.py hupselbrook soilhysteresis snow swcf3", depends-on = ["build-linux", "test-pfunit", "test-bmi", "test-cffi-demo", "test-xmi", "test-coupling"] }
 
 [feature.test.target.linux-64.dependencies]
