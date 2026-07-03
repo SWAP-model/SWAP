@@ -384,7 +384,7 @@ library). Every arc's discovery ends with this check.
 | **T1-B Dead-code sweep** | `stepnr`, write-only `pegwl`/`npegwl`; dormant-museum policy (ADR 0049); README refresh | 4 | S | Med | **DONE** |
 | **T1-G′ Binding convergence** | one `libswap.so` (BMI+CAPI+XMI) over the ensemble; variable registry; C-string dedup (ADR 0050) | 7,2 | M–H | High | **DONE** |
 | **T0.5 Binding-gate infra** | a `check-bindings` pixi task (the 6-path gate); re-point meson `bmi`/`cffi-demo` suites off the un-checked-out `tests/swap-cases` onto `tests/regression/cases` | 9 | XS | High | **next** |
-| **T1-E Tier-3 de-global** | `crop_config_global`, crop `SAVE` locals (`cropgrowth.f90:595,672`, `cropgrass_runtime.f90:93`), `Wofost_Soil_Interface`/`Wofost_Soil_Declarations` module statics → per-instance state | 2 | M–H | High | **keystone next arc** |
+| **T1-E Crop reentrancy** *(program, not one arc — see [arc doc](2026-07-03-arc-t1e-crop-reentrancy.md))* | `crop_config_global` already retired. **E1 (DONE):** TOTASS/ASSIM de-save. **E2:** `wofost()` ≥10 carries-state → `crop%wofost`. **E3:** `grass()` carries-state → `crop%grass`. **E4:** `cropfixed()`. **E5:** `O2_pars` state-pointer. **E-b (blocked):** WOFOST nutrient globals (~85 vars) — dark in regression, needs a fixture first | 2 | E1 S; E2–E5 M each | High | **E1 done; E2 next** |
 | **T1-D Uninit-read triage** | `-Wmaybe-uninitialized` audit; fix real reads behind `-finit-local-zero` | 3 | M | Med | mid |
 | **T1-C Scratch-array sizing** | `MACP` locals → `numnod` (solute `:37,:128`, tridag `:52`, …), byte-identical | 3 | S | Med (parallel) | filler |
 | **T1-F Init consolidation** | uniform `state%X%init`, explicit Phase-2 seed inputs | 6 | M | Med | mid |
