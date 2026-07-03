@@ -69,13 +69,51 @@ discovery agent misclassifying `grass` as safe** — see the byte-identity note.
   module-level `state` pointer bound during `OxygenStress` for a ZBRENT callback.
   Thread-unsafe; thread the state through the callback instead. Verifiable
   (oxygenstress case active).
-- **T1-E-b (blocked): WOFOST nutrient de-globaling.** `Wofost_Soil_Interface`
-  (7) + `Wofost_Soil_Declarations` (~70, blanket `save`) + `cropwofost_init_mod`
-  carries-state subset (`cw_anlv`/`cw_anst`/`cw_nni`/`cw_fstr`/`cw_nmaxlv`/
-  `cw_nmaxst`/`cw_nmaxrt`) → `state%nutrients`. **Gated on nutrient test
-  coverage**, itself blocked (no oracle `.crp`; gated behind `flCropNut`, false in
-  every regression case). Do NOT attempt this ~85-var migration with no oracle;
-  the precursor is a physics-validated nutrient fixture (likely an ADR).
+- **T1-E-b (UNBLOCKED via a constructed case): WOFOST nutrient de-globaling.**
+  `Wofost_Soil_Interface` (7) + `Wofost_Soil_Declarations` (~70, blanket `save`) +
+  `cropwofost_init_mod` carries-state subset (`cw_anlv`/`cw_anst`/`cw_nni`/
+  `cw_fstr`/`cw_nmaxlv`/`cw_nmaxst`/`cw_nmaxrt`) → `state%nutrients`.
+
+  **The "no coverage" blocker is resolvable — verified by construction
+  (2026-07-03).** A nutrient-enabled case *can* be built from hupselbrook and it
+  genuinely exercises the whole WSN cluster. Recipe + findings:
+
+  - **Enable on a WOFOST rotation, not a fixed one.** The nutrient path is
+    WOFOST-only: `flCropNut` is set solely at `cropwofost_init.f90:560` from
+    `cfg%nutrient%flcropnut`. Crop `type` (`crop_config.f90`): 1 = fixed, 2 =
+    WOFOST, 3 = grass. Hupselbrook's **maize is type 1 (fixed) — its `[nutrient]`
+    block is ignored**; **potato is type 2 (WOFOST)** — put the block there. (First
+    attempt on maize gave *zero* WSN activations; on potato, **579** — confirmed by
+    instrumenting the `SoilManagement` dispatch at `swap_mod.f90:320`.)
+  - **Inputs:** add `[nutrient] flcropnut=true` + the standard WOFOST-N params to
+    `potatod.crp.toml` (`nmxlv` is an AFGEN table → DVS/value **pairs**, e.g.
+    `[0.0,0.06,1.0,0.04,2.0,0.02]`, not bare values), and a top-level
+    `[nutrients]` block with `sorp_coef` + initial pools (`fom(8)`, `bio`, `hum`,
+    `cnh4`, `cno3`). Values from `tests/unit/io/toml/test_*nutrient*.pf`. Runs to
+    completion, no NaN.
+  - **Observability — the real subtlety.** The nutrient state does **not** change
+    the water-balance output (transpiration follows the prescribed LAI/crop-factor
+    tables, not N-limited biomass), and the output registry has **no soil-N
+    variables at all**. But adding the crop-N residue columns `dwlvcrop`,
+    `dwlvsoil` to the `[output.csv] inlist` **does** make it observable: nutrient-on
+    vs -off differ in exactly the potato year in those columns (e.g. `293.09 /
+    125.61` vs `0`). Those columns depend on N-uptake from the soil WSN, so they
+    give an *indirect* characterization guard over the coupled crop↔soil-N state.
+
+  **Two fixture routes, both now open:**
+  1. **Characterization (modern golden-master) — unblocks E-b now.** Snapshot this
+     case's output (default cols + `dwlvcrop`/`dwlvsoil`) as the reference; the
+     de-globaling must reproduce it bit-for-bit. Sufficient for a *behavior-
+     preserving* refactor. Needs harness support for a modern-vs-modern fixture
+     (the suite currently only compares vs `swap420gf`), plus ideally dedicated
+     soil-N output columns for a *direct* (not just indirect) guard.
+  2. **`swap420gf` physics oracle — stronger, bigger.** Additionally build a
+     matching legacy nutrient-enabled `.crp`/`.swp` so `swap420gf` produces a
+     reference; validates the physics port, not just the refactor.
+
+  **Recommendation:** do E-b as a characterization-guarded refactor (route 1),
+  preceded by a small sub-task adding soil-N output variables to the registry so
+  the ~70 `Wofost_Soil_Declarations` fields are *directly* observable.
 
 The ~26 `cropwofost_init_mod` CONFIG-CONSTANT snapshot vars (`cw_rdrns`, …) are
 read-only after init — safe to share across threads, no migration needed.
