@@ -257,6 +257,14 @@ contains
             if (time%flIrrigate) call irrigation_step(state)
             ! [T2-A / ADR 0053] soil->atmosphere: ponding for the peva adjustment.
             state%exchange%atmos_soil%pond = state%soilwater%pond
+            ! [T2-A / ADR 0053] crop->atmosphere: the day's canopy state drives the
+            ! ET/interception step. Copied after CropGrowth(1) + irrigation set it
+            ! and before ProcessMeteoDay reads it, so the ET step sees the crop
+            ! through the record — not state%crop directly. Stable across the day.
+            state%exchange%crop_water%lai            = state%crop%lai
+            state%exchange%crop_water%crop_height    = state%crop%common%ch
+            state%exchange%crop_water%interc_demand  = state%crop%gird
+            state%exchange%crop_water%co2_transp_fac = state%crop%wofost%fco2tra
             call ProcessMeteoDay(state, config)
             if (config%soil%swtill == 1) call tillage_step(state)
          end if

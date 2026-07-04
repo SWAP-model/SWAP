@@ -143,7 +143,8 @@ contains
   !> @note
   !> Last modified: February 2014
   !>
-  !> Input via state: state%atmosphere%isua/grai/gsnow/snrai, state%crop%gird
+  !> Input via state: state%atmosphere%isua/grai/gsnow/snrai,
+  !> state%exchange%crop_water%interc_demand (gird)
   !> Writes: state%atmosphere%nraida, state%atmosphere%nird
   !> @endnote
   pure subroutine DivIntercep (aintc, state)
@@ -152,20 +153,20 @@ contains
     real(8),            intent(in)    :: aintc   ! Total interception [cm/d]
     type(swap_state_t), intent(inout) :: state
 
-    associate (atmo => state%atmosphere, crop => state%crop)
+    associate (atmo => state%atmosphere, gird => state%exchange%crop_water%interc_demand)
 
       ! Divide interception into rain and irrigation parts;
       ! compute net rain (nraida) and net sprinkling irrigation (nird).
       if (aintc .lt. 0.001d0) then
         atmo%nraida = atmo%grai - atmo%gsnow - atmo%snrai
-        atmo%nird   = crop%gird
+        atmo%nird   = gird
       else
         if (atmo%isua .eq. 0) then
-          atmo%nraida = atmo%grai - aintc*(atmo%grai/(atmo%grai+crop%gird))
-          atmo%nird   = crop%gird - aintc*(crop%gird/(atmo%grai+crop%gird))
+          atmo%nraida = atmo%grai - aintc*(atmo%grai/(atmo%grai+gird))
+          atmo%nird   = gird - aintc*(gird/(atmo%grai+gird))
         else
           atmo%nraida = atmo%grai - aintc
-          atmo%nird   = crop%gird
+          atmo%nird   = gird
         endif
       endif
 

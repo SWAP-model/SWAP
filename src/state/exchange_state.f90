@@ -27,6 +27,11 @@ module exchange_state_mod
    integer, parameter :: ROOTDENS_LEN = 202   !! matches crop%common%cumdens
 
    type :: crop_water_exchange_t
+      ! --- from crop: canopy state for the ET step (set at day start; stable per day) ---
+      real(real64) :: lai            = 0.0_real64          !! leaf area index (-)
+      real(real64) :: crop_height    = 0.0_real64          !! ch (cm)
+      real(real64) :: interc_demand  = 0.0_real64          !! gird — gross irrigation depth (cm)
+      real(real64) :: co2_transp_fac = 1.0_real64          !! fco2tra — CO2 transpiration factor (-)
       ! --- from crop: root distribution (set before the sink; stable per day) ---
       real(real64) :: rooting_depth = 0.0_real64          !! rd (cm)
       integer      :: root_nodes    = 0                   !! noddrz

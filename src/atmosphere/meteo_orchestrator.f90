@@ -118,7 +118,7 @@ contains
       if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
         gctp = state%crop%common%gc
       else
-        gctp = 1.0d0 - exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
+        gctp = 1.0d0 - exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%exchange%crop_water%lai)
         if (gctp .lt. 1.0d-5) atmo%siccapact = 0.0d0
       endif
 
@@ -308,7 +308,7 @@ contains
     real(8), intent(out) :: aintc
 
     ! Calculation of interception and net rain & net irrigation depth [cm]
-    if ((state%crop%lai .lt. 1.d-3) .or. (state%atmosphere%grai+state%crop%gird .lt. 1.d-5) .or. &
+    if ((state%exchange%crop_water%lai .lt. 1.d-3) .or. (state%atmosphere%grai+state%exchange%crop_water%interc_demand .lt. 1.d-5) .or. &
         (state%crop%common%swinter.eq.0) .or. (state%atmosphere%gsnow.gt.0.0d0) .or.(state%atmosphere%ssnow.gt.0.0d0)) then
 
       ! No vegetation, rainfall/irrigation or interception calculation
@@ -316,9 +316,9 @@ contains
 
     else if (state%crop%common%swinter .eq. 1) then
       ! Calculate interception, method Von Hoyningen-Hune and Braden
-      aintc = VonHHBraden(state%atmosphere%grai, state%crop%gird, &
+      aintc = VonHHBraden(state%atmosphere%grai, state%exchange%crop_water%interc_demand, &
                           state%atmosphere%isua, state%crop%kdif, &
-                          state%crop%kdir, state%crop%lai, state%crop%cofab)
+                          state%crop%kdir, state%exchange%crop_water%lai, state%crop%cofab)
     else if (state%crop%common%swinter .eq. 2) then
       ! Calculate interception, method Gash (1995). Evaluate the 5 AFGEN
       ! tables at the current time and pass the raw scalars to the pure
@@ -332,7 +332,7 @@ contains
         scanopy_raw = afgen(state%atmosphere%scanopytb, (2*magrs), state%timecontrol%t)
         avprec_raw  = afgen(state%atmosphere%avprectb,  (2*magrs), state%timecontrol%t)
         avevap_raw  = afgen(state%atmosphere%avevaptb,  (2*magrs), state%timecontrol%t)
-        aintc = Gash(state%atmosphere%grai, state%crop%gird, state%atmosphere%isua, &
+        aintc = Gash(state%atmosphere%grai, state%exchange%crop_water%interc_demand, state%atmosphere%isua, &
                      pfree, pstem, scanopy_raw, avprec_raw, avevap_raw)
       end block
     end if
@@ -427,11 +427,11 @@ contains
 
       pmi%rsc    = state%crop%common%rsc
       pmi%rsw    = state%crop%common%rsw
-      pmi%ch     = state%crop%common%ch
+      pmi%ch     = state%exchange%crop_water%crop_height
       pmi%albedo = state%crop%common%albedo
       pmi%kdif   = state%crop%kdif
       pmi%kdir   = state%crop%kdir
-      pmi%lai    = state%crop%lai
+      pmi%lai    = state%exchange%crop_water%lai
 
       pmi%rsoil  = state%atmosphere%rsoil
 
@@ -560,7 +560,7 @@ contains
     associate (atmo => state%atmosphere)
 
     ! Potential soil evaporation (peva) [cm/d]
-    atmo%peva = max(0.0d0, (state%atmosphere%es0*exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
+    atmo%peva = max(0.0d0, (state%atmosphere%es0*exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%exchange%crop_water%lai)*0.1d0))
     if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
       atmo%peva = max(0.0d0,(1.0d0-wfrac)*atmo%peva)
     end if
@@ -613,7 +613,7 @@ contains
 
     ! Correction of potential transpiration as a function of atmospheric CO2 concentration
     if (atmo%flco2 .and. state%crop%flCropEmergence) then
-      atmo%ptra = state%crop%wofost%fco2tra * atmo%ptra
+      atmo%ptra = state%exchange%crop_water%co2_transp_fac * atmo%ptra
     endif
 
     end associate
