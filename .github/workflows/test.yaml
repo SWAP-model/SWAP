@@ -2,7 +2,8 @@ name: test
 
 # Per-arc regression gate (arc T1-A). Runs the fast check on every push to the
 # working branches and on every PR: pFUnit unit suite + 4 byte-identical
-# regression cases (hupselbrook, soilhysteresis, snow, swcf3). This is the same
+# regression cases (hupselbrook, soilhysteresis, snow, swcf3) whose inputs come
+# from the pinned SWAP-model/swap-testcases checkout. This is the same
 # `pixi run -e test check-fast` that CLAUDE.md requires GREEN before every commit
 # — now enforced in CI, not only locally. The release pipeline stays in ci.yaml
 # (tag-triggered); this workflow does not build or release.
@@ -23,6 +24,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Regression case *inputs* live in the standalone public
+      # SWAP-model/swap-testcases repo (the expected-output fixtures stay here).
+      # Pin to the tag recorded in TESTCASES_REF — a release tag, never a bare
+      # commit: an earlier submodule broke when its pinned commit was GC'd
+      # upstream. Bumping the pin is an ordinary reviewed change to that file.
+      - name: Read swap-testcases pin
+        id: testcases
+        run: echo "ref=$(cat TESTCASES_REF)" >> "$GITHUB_OUTPUT"
+
+      - name: Check out swap-testcases (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: SWAP-model/swap-testcases
+          ref: ${{ steps.testcases.outputs.ref }}
+          path: swap-testcases
 
       # gfortran is the only supported compiler (ADR 0001); ubuntu-latest ships
       # it preinstalled. pixi provides meson + cmake + the Python test deps.
@@ -45,4 +62,8 @@ jobs:
       # and test-pfunit, so this one command bootstraps pFUnit, builds SWAP, runs
       # the unit suite, then the 4 regression cases. Byte-identical is the gate.
       - name: check-fast (pFUnit + byte-identical regression)
+        env:
+          # Point the runner at the pinned sibling checkout rather than the
+          # in-repo transition copy, so CI proves the swap-testcases wiring.
+          SWAP_TESTCASES_PATH: ${{ github.workspace }}/swap-testcases/cases
         run: pixi run -e test check-fast
