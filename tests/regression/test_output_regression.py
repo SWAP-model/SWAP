@@ -43,11 +43,6 @@ class CaseConfig(NamedTuple):
 
     input_files: dict[str, str] = {}
 
-    # local=True => case inputs live in the MAIN repo under
-    # tests/regression/cases/<case_dir>/{legacy,toml}/ (not the swap-cases
-    # submodule). Used for the generated crop-switch cases.
-    local: bool = False
-
     # Non-empty => the option is gated / its compute not yet restored, so the
     # MODERN build is expected to fatal-error on this case. The harness treats
     # that runtime error as xfail (a pending restoration target); the swap420gf
@@ -64,7 +59,6 @@ CASES = {
     "hupselbrook": CaseConfig(
         name="hupselbrook",
         case_dir="hupselbrook",
-        local=True,
         fixture="hupselbrook_reference_gf.json",
         flux_vars=["RAIN", "IRRIG", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
@@ -88,7 +82,6 @@ CASES = {
     "grassgrowth": CaseConfig(
         name="grassgrowth",
         case_dir="grassgrowth",
-        local=True,
         fixture="grassgrowth_reference_gf.json",
         flux_vars=[],
         state_vars=[],
@@ -114,7 +107,6 @@ CASES = {
     "salinitystress": CaseConfig(
         name="salinitystress",
         case_dir="salinitystress",
-        local=True,
         fixture="salinitystress_reference_gf.json",
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET", "TREDSOL", "CPWSO", "CWSO",
@@ -127,7 +119,6 @@ CASES = {
     "surfacewater": CaseConfig(
         name="surfacewater",
         case_dir="surfacewater",
-        local=True,
         fixture="surfacewater_reference_gf.json",
         flux_vars=[],
         state_vars=["GWL", "POND"],
@@ -139,7 +130,6 @@ CASES = {
     "oxygenstress": CaseConfig(
         name="oxygenstress",
         case_dir="oxygenstress",
-        local=True,
         fixture="oxygenstress_reference_gf.json",
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET"],
@@ -156,7 +146,6 @@ CASES = {
     "soilhysteresis": CaseConfig(
         name="soilhysteresis",
         case_dir="soilhysteresis",
-        local=True,
         fixture="soilhysteresis_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
@@ -172,7 +161,6 @@ CASES = {
     "snow": CaseConfig(
         name="snow",
         case_dir="snow",
-        local=True,
         fixture="snow_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "DRAINAGE", "QBOTTOM", "DSTOR", "EACT"],
         state_vars=["GWL"],
@@ -186,7 +174,6 @@ CASES = {
     "winterhysteresis": CaseConfig(
         name="winterhysteresis",
         case_dir="winterhysteresis",
-        local=True,
         fixture="winterhysteresis_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
@@ -203,7 +190,6 @@ CASES = {
     "winter": CaseConfig(
         name="winter",
         case_dir="winter",
-        local=True,
         fixture="winter_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
@@ -223,7 +209,7 @@ _SW_STATE = ["GWL"]
 
 def _switch_case(name, **kw):
     return CaseConfig(name=name, case_dir=name, fixture=f"{name}_reference_gf.json",
-                      flux_vars=_SW_FLUX, state_vars=_SW_STATE, local=True, **kw)
+                      flux_vars=_SW_FLUX, state_vars=_SW_STATE, **kw)
 
 
 CASES.update({
@@ -444,18 +430,36 @@ def load_case(case_name: str):
 
     return ml
 
+def cases_root() -> Path:
+    """Root directory holding the regression case inputs (``<name>/{legacy,toml}``).
+
+    The case *inputs* live in the standalone SWAP-model/swap-testcases repo; the
+    expected-output fixtures stay here in the SWAP repo. Resolution order:
+
+      1. ``SWAP_TESTCASES_PATH`` env var (set by ``--cases-path`` or by CI, which
+         checks out a pinned tag of swap-testcases into a sibling directory).
+      2. The in-repo ``tests/regression/cases`` tree, if present. This is the
+         transition default kept until CI is proven green against the sibling
+         checkout; it will be removed once the cut-over is complete.
+      3. A ``../swap-testcases/cases`` sibling checkout next to the SWAP repo.
+    """
+    env = os.environ.get("SWAP_TESTCASES_PATH")
+    if env:
+        return Path(env).expanduser()
+    in_repo = TESTS_DIR / "regression" / "cases"
+    if in_repo.exists():
+        return in_repo
+    return TESTS_DIR.parent.parent / "swap-testcases" / "cases"
+
+
 def case_legacy_dir(case: CaseConfig) -> Path:
     """Directory of legacy ASCII inputs for a case (swap420gf reads these)."""
-    if getattr(case, "local", False):
-        return TESTS_DIR / "regression" / "cases" / case.case_dir / "legacy"
-    return TESTS_DIR / "swap-cases" / case.case_dir
+    return cases_root() / case.case_dir / "legacy"
 
 
 def case_toml_dir(case: CaseConfig) -> Path:
     """Directory of TOML inputs for a case (the modern build reads these)."""
-    if getattr(case, "local", False):
-        return TESTS_DIR / "regression" / "cases" / case.case_dir / "toml"
-    return TESTS_DIR / "swap-cases" / "toml" / case.case_dir
+    return cases_root() / case.case_dir / "toml"
 
 
 def _run_and_aggregate(case: CaseConfig):
@@ -623,6 +627,15 @@ def main():
     if args and args[0] == "--regenerate-fixtures":
         regenerate = True
         args = args[1:]
+
+    # --cases-path <dir> overrides where case inputs are read from (see
+    # cases_root()). Exported to the environment so the worker subprocesses
+    # spawned below inherit it; equivalent to setting SWAP_TESTCASES_PATH.
+    if args and args[0] == "--cases-path":
+        if len(args) < 2:
+            raise SystemExit("--cases-path requires a directory argument")
+        os.environ["SWAP_TESTCASES_PATH"] = str(Path(args[1]).expanduser())
+        args = args[2:]
 
     if not SWAP_BIN.exists():
         raise SystemExit(f"swap binary not found at {SWAP_BIN}; build first (pixi run build-linux)")
