@@ -2,7 +2,9 @@
 
 The reference binary `tests/reference/swap420gf` is the *unmodified* 4.2.0 source
 compiled with the modern build's gfortran flags (see tests/reference/README.md). It
-reads the **legacy ASCII** inputs in `tests/swap-cases/<N>.<case>/`. This script runs
+reads the **legacy ASCII** inputs resolved by `case_legacy_dir()` / `cases_root()`
+(the in-repo cases mirror by default, or a swap-testcases checkout when
+`SWAP_TESTCASES_PATH` is set). This script runs
 it per case, aggregates `result_output.csv` with the same `aggregate()` and the same
 flux/state/cumul variable sets the regression harness uses, and writes
 `<case>_reference_gf.json` next to the other fixtures.
