@@ -222,8 +222,17 @@ end type
 **Done — all four clean surfaces routed through `state%exchange`, each
 byte-identical (`check-fast` 4/4, pFUnit 806, `check-bindings` OK):**
 - `crop_water` **soil-water coupling** — root distribution (crop→sink) +
-  transpiration feedback (water→crop). *(Atmosphere-ET sub-part deferred — see
-  the implementation finding above.)*
+  transpiration feedback (water→crop).
+- `crop_water` **atmosphere-ET sub-part (DONE 2026-07-04)** — two byte-identical
+  commits: (a) `et0/es0/ew0` relocated off crop state onto `state%atmosphere`
+  (they are ET-step intermediates, atmosphere-owned, never read by crop — the
+  "untangle"); (b) the day's canopy state (`lai`, `crop_height`, `interc_demand`,
+  `co2_transp_fac`) routed crop→atmosphere through `state%exchange%crop_water`,
+  populated at day start (after `CropGrowth(1)`+irrigation, before
+  `ProcessMeteoDay`) and read there + in `interception.f90` `DivIntercep`.
+  Remaining atmosphere→crop direct reads: config-constants (`kdif/kdir/cf/cfbs/
+  rsc/rsw/albedo`/switches — stay config-passed) plus the still-direct dynamic
+  crossings `gc`/`flCropEmergence`/phenology flags (follow-up).
 - `heat_soil` — `tsoil`/`rfcp` ↔ `theta`/`thetm1` (runtime NR-loop reads routed;
   only the init/reseat `compute_initial_node_hydraulics` read left as `heat%`).
 - `drain_soil` — `qdra`/`nrlevs`/`zbotdr` ↔ `gwl`/`h`/`pond`.
@@ -231,8 +240,9 @@ byte-identical (`check-fast` 4/4, pFUnit 806, `check-bindings` OK):**
   (`soil%pond` appears in both `drain_soil` and `atmos_soil` — two distinct
   surfaces both read ponding; intentional, not a conflict.)
 
-**Deferred:** `crop_water` atmosphere-ET sub-part (untangle the in-module ET
-computation); `solute` (driver-bundle); `surfacewater` (bidirectional loop).
+**Deferred:** `solute` (driver-bundle); `surfacewater` (bidirectional loop);
+`crop_water` remaining dynamic crop→atmosphere crossings (`gc`,
+`flCropEmergence`, phenology flags) + config-constant consolidation.
 
 ## Implementation sequencing (as executed)
 
