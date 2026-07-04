@@ -92,6 +92,12 @@ module atmosphere_state_mod
       ! -----------------------------------------------------------------------
       real(real64) :: peva     = 0.0_real64  !< potential soil evaporation (cm/d)
       real(real64) :: ptra     = 0.0_real64  !< potential transpiration (cm/d)
+      ! Reference-ET intermediates (mm/d): computed by the ET step from reference
+      ! ET x crop factor and consumed within the same step to form peva/ptra.
+      ! Atmosphere-owned (relocated off crop state, T2-A crop_water ET sub-part).
+      real(real64) :: et0      = 0.0_real64  !< potential ET (mm/d)
+      real(real64) :: ew0      = 0.0_real64  !< potential evaporation of wet crop (mm/d)
+      real(real64) :: es0      = 0.0_real64  !< potential evaporation of bare soil (mm/d)
       real(real64) :: empreva  = 0.0_real64  !< actual soil evaporation after reduction (cm/d)
       real(real64) :: melt     = 0.0_real64  !< snowmelt this timestep (cm)
       real(real64) :: subl     = 0.0_real64  !< sublimation this timestep (cm)
@@ -295,6 +301,9 @@ contains
       ! Instantaneous (11)
       self%peva     = 0.0_real64
       self%ptra     = 0.0_real64
+      self%et0      = 0.0_real64
+      self%ew0      = 0.0_real64
+      self%es0      = 0.0_real64
       self%empreva  = 0.0_real64
       self%melt     = 0.0_real64
       self%subl     = 0.0_real64

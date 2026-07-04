@@ -124,7 +124,7 @@ contains
 
       ! Calculate interception, adapted Rutter method
       call ruttervw(gctp, time%dt, atmo%siccapact, &
-                    atmo%fimin, state%crop%ew0, atmo%grai, &
+                    atmo%fimin, state%atmosphere%ew0, atmo%grai, &
                     atmo%sicact, aintc, eintc)
 
       ! Divide interception into rain and irrigation parts; compute net rain
@@ -174,7 +174,7 @@ contains
     atmo%pevaday = atmo%peva
 
     ! Calculate atmospheric demand [cm]
-    atmo%atmdem = state%crop%et0*0.1d0
+    atmo%atmdem = state%atmosphere%et0*0.1d0
 
     end associate
 
@@ -347,7 +347,7 @@ contains
   !> Private helper: Section 4 reference ET (etr-direct or PenMon + crop-factor adjustments).
   !! For swmetdetail==0 .and. swetr==1: uses supplied etr directly.
   !! Otherwise: PenMon pack/call/unpack + post-call swcf/swcfbs adjustments.
-  !! Writes state%crop%es0/et0/ew0 and returns pmo for caller to unpack
+  !! Writes state%atmosphere%es0/et0/ew0 and returns pmo for caller to unpack
   !! Edirect/Tdirect/Tdirectwet/Edirectpond.
   subroutine compute_reference_et(state, config, irecord, etr, hum_in, win_in, rcs, pmo)
     type(swap_state_t),  intent(inout) :: state
@@ -365,22 +365,22 @@ contains
     if (config%meteo%swmetdetail.eq.0 .and. config%meteo%swetr.eq.1) then
       if (.not. state%crop%flCropEmergence) then
         ! no crop
-        state%crop%et0 = 0.0d0
-        state%crop%ew0 = 0.0d0
-        state%crop%es0 = etr
-        if (state%crop%swcfbs.eq.1) state%crop%es0 = state%crop%cfbs*etr
+        state%atmosphere%et0 = 0.0d0
+        state%atmosphere%ew0 = 0.0d0
+        state%atmosphere%es0 = etr
+        if (state%crop%swcfbs.eq.1) state%atmosphere%es0 = state%crop%cfbs*etr
       else
         ! crop is present
         if (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3) then
-          state%crop%et0 = state%crop%common%cf*etr
+          state%atmosphere%et0 = state%crop%common%cf*etr
           if (state%crop%swcf .eq. 1) then
-            state%crop%ew0 = state%crop%common%cf*etr
+            state%atmosphere%ew0 = state%crop%common%cf*etr
           else
-            state%crop%ew0 = state%crop%fixed%cfeic*etr
+            state%atmosphere%ew0 = state%crop%fixed%cfeic*etr
           endif
         endif
-        state%crop%es0 = etr
-        if (state%crop%swcfbs.eq.1) state%crop%es0 = state%crop%cfbs*etr
+        state%atmosphere%es0 = etr
+        if (state%crop%swcfbs.eq.1) state%atmosphere%es0 = state%crop%cfbs*etr
       endif
 
     ! Reference evapotranspiration must be calculated
@@ -438,42 +438,42 @@ contains
       call PenMon(pmi, pmo)
 
       ! Unpack PM outputs to existing state.
-      state%crop%es0 = pmo%es0
-      state%crop%et0 = pmo%et0
-      state%crop%ew0 = pmo%ew0
+      state%atmosphere%es0 = pmo%es0
+      state%atmosphere%et0 = pmo%et0
+      state%atmosphere%ew0 = pmo%ew0
 
       if (.not. state%crop%flCropEmergence) then
         ! no crop
         if (state%crop%swcfbs .eq. 1) then
           if (state%crop%swcf .eq. 1) then
-            state%crop%es0 = state%crop%cfbs*state%crop%et0
+            state%atmosphere%es0 = state%crop%cfbs*state%atmosphere%et0
           else
-            state%crop%es0 = state%crop%cfbs*state%crop%es0
+            state%atmosphere%es0 = state%crop%cfbs*state%atmosphere%es0
           endif
         endif
-        state%crop%et0 = 0.0d0
+        state%atmosphere%et0 = 0.0d0
         if (config%meteo%swmetdetail.eq.1 .and. (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3)) then
           if (state%crop%swcf.eq.1) then
-            state%crop%ew0 = state%crop%common%cf*state%crop%ew0
+            state%atmosphere%ew0 = state%crop%common%cf*state%atmosphere%ew0
           else
-            state%crop%ew0 = state%crop%fixed%cfeic*state%crop%ew0
+            state%atmosphere%ew0 = state%crop%fixed%cfeic*state%atmosphere%ew0
           endif
         endif
       else
         ! crop is present
         if (state%crop%swcfbs .eq. 1) then
           if (state%crop%swcf .eq. 1) then
-            state%crop%es0 = state%crop%cfbs*state%crop%et0
+            state%atmosphere%es0 = state%crop%cfbs*state%atmosphere%et0
           else
-            state%crop%es0 = state%crop%cfbs*state%crop%es0
+            state%atmosphere%es0 = state%crop%cfbs*state%atmosphere%es0
           endif
         endif
         if (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3) then
-          state%crop%et0 = state%crop%common%cf*state%crop%et0
+          state%atmosphere%et0 = state%crop%common%cf*state%atmosphere%et0
           if (state%crop%swcf.eq.1) then
-            state%crop%ew0 = state%crop%common%cf*state%crop%ew0
+            state%atmosphere%ew0 = state%crop%common%cf*state%atmosphere%ew0
           else
-            state%crop%ew0 = state%crop%fixed%cfeic*state%crop%ew0
+            state%atmosphere%ew0 = state%crop%fixed%cfeic*state%atmosphere%ew0
           endif
         endif
       endif
@@ -502,15 +502,15 @@ contains
     ! Calculate fraction of the day or period the crop is wet
     if (config%meteo%swmetdetail.eq.0) then
       ! Fraction of the day the crop is wet
-      if (state%crop%ew0.lt.0.0001d0) then
+      if (state%atmosphere%ew0.lt.0.0001d0) then
         wfrac = 0.0d0
       else
-        if (state%crop%ew0.lt.0.0001d0) then
+        if (state%atmosphere%ew0.lt.0.0001d0) then
           wfrac = 0.0d0
         else
           if (state%crop%common%swinter .ne. 3) then
             if (config%meteo%swdivide .eq. 0) then
-              wfrac = max(min(aintc*10.0d0/state%crop%ew0,1.0d0),0.0d0)
+              wfrac = max(min(aintc*10.0d0/state%atmosphere%ew0,1.0d0),0.0d0)
             else
               if(tdirectwet.gt.nihil) then
                 wfrac = max(min(aintc*10.0d0/tdirectwet,1.0d0),0.0d0)
@@ -519,7 +519,7 @@ contains
               endif
             endif
           else
-            wfrac = max(min(eintc*10.0d0/state%crop%ew0,1.0d0),0.0d0)
+            wfrac = max(min(eintc*10.0d0/state%atmosphere%ew0,1.0d0),0.0d0)
           endif
         endif
       endif
@@ -530,18 +530,18 @@ contains
         wfrac  = 0.0d0
       else
         interc = state%atmosphere%restint + aintc * state%atmosphere%arain_subdaily(irecord) / state%atmosphere%grai
-        if (state%crop%ew0.lt.0.0001d0) then
+        if (state%atmosphere%ew0.lt.0.0001d0) then
           wfrac = 0.0d0
         else
           if (state%crop%swcf.ne.3) then
-            wfrac = max(min(interc*10.0d0/state%crop%ew0/time%metperiod,1.d0),0.d0)
+            wfrac = max(min(interc*10.0d0/state%atmosphere%ew0/time%metperiod,1.d0),0.d0)
           else
-            wfrac = max(min(eintc/state%crop%ew0,1.0d0),0.0d0)
+            wfrac = max(min(eintc/state%atmosphere%ew0,1.0d0),0.0d0)
           endif
         endif
       endif
       ! Remaining amount of interception for swmetdetail = 1
-      state%atmosphere%restint = max(interc - wfrac * time%metperiod * state%crop%ew0 * 0.1d0, 0.d0)
+      state%atmosphere%restint = max(interc - wfrac * time%metperiod * state%atmosphere%ew0 * 0.1d0, 0.d0)
     endif
 
     end associate
@@ -560,7 +560,7 @@ contains
     associate (atmo => state%atmosphere)
 
     ! Potential soil evaporation (peva) [cm/d]
-    atmo%peva = max(0.0d0, (state%crop%es0*exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
+    atmo%peva = max(0.0d0, (state%atmosphere%es0*exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
     if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
       atmo%peva = max(0.0d0,(1.0d0-wfrac)*atmo%peva)
     end if
@@ -568,7 +568,7 @@ contains
     ! Alternative for peva (simple model, soil cover fraction specified)
     if (state%crop%common%flCropCalendar .and. .not. state%crop%common%flCropHarvest) then
       if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
-        atmo%peva = (1.0d0 - state%crop%common%gc)*state%crop%es0*0.1d0
+        atmo%peva = (1.0d0 - state%crop%common%gc)*state%atmosphere%es0*0.1d0
         if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
           atmo%peva = (1.0d0-wfrac)*atmo%peva
         end if
@@ -577,9 +577,9 @@ contains
 
     ! Adapt peva in case of ponding — [SS-SWC S-2.12B] state%exchange%atmos_soil%pond
     if (state%exchange%atmos_soil%pond .gt. 1.0d-10) then
-      if (config%meteo%swetr.eq.0 .and. state%crop%es0.gt.1.0d-8) then
-        atmo%peva = state%crop%ew0/state%crop%es0 * atmo%peva
-      elseif (state%crop%es0.gt.1.0d-8) then
+      if (config%meteo%swetr.eq.0 .and. state%atmosphere%es0.gt.1.0d-8) then
+        atmo%peva = state%atmosphere%ew0/state%atmosphere%es0 * atmo%peva
+      elseif (state%atmosphere%es0.gt.1.0d-8) then
         if (state%crop%swcfbs .eq. 1 .and. state%crop%cfbs .gt. small) then
           atmo%peva = atmo%cfevappond * atmo%peva / state%crop%cfbs
         else
@@ -599,9 +599,9 @@ contains
 
     ! Potential transpiration (ptra) [cm/d]
     if (state%crop%swcf .ne. 3) then
-      atmo%ptra = ((1.0d0-wfrac)*state%crop%et0-atmo%peva*10.0d0)*0.1d0
+      atmo%ptra = ((1.0d0-wfrac)*state%atmosphere%et0-atmo%peva*10.0d0)*0.1d0
     else
-      atmo%ptra = (1.0d0-wfrac)*state%crop%et0*0.1d0
+      atmo%ptra = (1.0d0-wfrac)*state%atmosphere%et0*0.1d0
     endif
     atmo%ptra = max(atmo%ptra,(1.01d0*nihil))
 

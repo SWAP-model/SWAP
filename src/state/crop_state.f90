@@ -28,9 +28,9 @@ module crop_state_mod
       integer      :: swcfbs          = 0             !! bare-soil factor switch
       real(real64) :: gird            = 0.0_real64    !! gross irrigation depth (cm)
       logical      :: flCropEmergence = .false.       !! crop emerged flag
-      real(real64) :: et0             = 0.0_real64    !! potential ET (cm/d)
-      real(real64) :: ew0             = 0.0_real64    !! potential evap wet crop (cm/d)
-      real(real64) :: es0             = 0.0_real64    !! potential evap bare soil (cm/d)
+      ! et0/ew0/es0 relocated to state%atmosphere (T2-A crop_water ET sub-part):
+      ! they are ET-step intermediates (reference ET x crop factor), atmosphere-
+      ! owned, never read by the crop compartment.
       ! [SS-GR-CROP A2] sub-record for shared crop runtime fields
       type(crop_common_state_t) :: common
       ! [SS-GR-CROP A3] sub-record for fixed-crop runtime fields

@@ -349,9 +349,9 @@ contains
       soil%iqredsol_day = soil%iqredsol_day + soil%qredsolsum*time%dt
       soil%iqredfrs_day = soil%iqredfrs_day + soil%qredfrssum*time%dt
       soil%iptra_day = soil%iptra_day + atmo%ptra * time%dt
-      soil%ies0 = soil%ies0 + 0.1d0*crop%es0*time%dt
-      soil%iet0 = soil%iet0 + 0.1d0*crop%et0*time%dt
-      soil%iew0 = soil%iew0 + 0.1d0*crop%ew0*time%dt
+      soil%ies0 = soil%ies0 + 0.1d0*atmo%es0*time%dt
+      soil%iet0 = soil%iet0 + 0.1d0*atmo%et0*time%dt
+      soil%iew0 = soil%iew0 + 0.1d0*atmo%ew0*time%dt
 
       surf%iqdra = surf%iqdra + qdrats + drai%QRapDra*time%dt
       ! per-comp qdraincomp write dropped (no reader anywhere in src/).
