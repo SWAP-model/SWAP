@@ -212,6 +212,42 @@ CASES.update({
 })
 
 
+# --- Reference engines: the "expected" side of the live double-run. ---------
+# The reference is pluggable so a future released SWAP can serve as the
+# comparand too (reading TOML inputs), not only the 4.2.0 oracle. Adding one is
+# config, not code: drop a binary into the reference dir + one registry entry.
+class Reference(NamedTuple):
+    name: str            # registry key / SWAP_REGRESSION_REF value
+    binary: Path         # engine executable
+    input_variant: str   # "legacy" | "toml": which case subdir it reads
+    rc_ok: tuple         # accepted process exit codes (success)
+
+
+def _reference_binary(name: str) -> Path:
+    """Resolve a reference binary. SWAP_REFERENCE_BIN overrides; otherwise the
+    binary of that name in tests/reference (relocated to swap-testcases/oracle
+    in a later phase)."""
+    env = os.environ.get("SWAP_REFERENCE_BIN")
+    if env:
+        return Path(env).expanduser()
+    return TESTS_DIR / "reference" / name
+
+
+REFERENCES = {
+    # 4.2.0 gfortran oracle: reads legacy ASCII, exits 0 or 100 on success.
+    "swap420gf": Reference("swap420gf", _reference_binary("swap420gf"),
+                           "legacy", (0, 100)),
+}
+
+
+def active_reference() -> Reference:
+    """The reference selected by SWAP_REGRESSION_REF (default swap420gf)."""
+    name = os.environ.get("SWAP_REGRESSION_REF", "swap420gf")
+    if name not in REFERENCES:
+        raise SystemExit(f"unknown reference {name!r}; known: {', '.join(REFERENCES)}")
+    return REFERENCES[name]
+
+
 def load_fixture(path: Path):
     with path.open() as f:
         return json.load(f)
@@ -363,75 +399,97 @@ def case_toml_dir(case: CaseConfig) -> Path:
     return cases_root() / case.case_dir / "toml"
 
 
-def run_and_aggregate(case: CaseConfig):
-    """Run a single SWAP case in a temp dir and return aggregated stats.
+# Committed legacy ASCII inputs per case (everything else is generated output).
+LEGACY_INPUTS = ("*.swp.template", "*.crp", "*.dra", "*.met", "*.csv", "*.ini",
+                 "*.bbc", "*.dat", "*.irg")
 
-    Returns a tuple ``(annual, totals, means)``. Raises RuntimeError on any
-    runtime/output failure so callers can surface the message cleanly.
-    """
+
+def _stage_swap_swp(workdir: Path):
+    """Stage swap.swp from the in-dir template (legacy crop sub-readers still
+    call RDinit(swpfile))."""
+    swap_file = workdir / "swap.swp"
+    if not swap_file.exists():
+        template = workdir / "swap_linux.swp.template"
+        if template.exists():
+            shutil.copy(template, swap_file)
+
+
+def _stage_toml_inputs(case: CaseConfig, workdir: Path):
+    """Copy the self-contained TOML case dir into workdir (creates workdir)."""
     toml_dir = case_toml_dir(case)
     if not toml_dir.exists() or not (toml_dir / "swap.toml").exists():
         raise RuntimeError(
-            f"TOML case directory not found at {toml_dir} "
-            f"(missing dir or swap.toml). The TOML dir is the sole source of "
-            f"truth for regression."
+            f"TOML inputs not found at {toml_dir} (missing dir or swap.toml)."
         )
+    # swap.toml + swap.dra.toml + *.crp.toml + *.csv companions + legacy *.crp +
+    # swap_linux.swp.template (+ legacy ASCII companions where the scenario needs
+    # them). Ignore any generated output that lingered in the source dir.
+    shutil.copytree(
+        toml_dir, workdir,
+        ignore=shutil.ignore_patterns(
+            'result_output.csv', 'result_*.csv', '*.log', 'output.*', '*.out'),
+    )
 
+
+def _stage_legacy_inputs(case: CaseConfig, workdir: Path):
+    """Copy the committed legacy ASCII inputs into workdir (creates workdir)."""
+    legacy_dir = case_legacy_dir(case)
+    if not legacy_dir.exists():
+        raise RuntimeError(f"legacy inputs not found at {legacy_dir}")
+    workdir.mkdir(parents=True, exist_ok=True)
+    for pat in LEGACY_INPUTS:
+        for f in legacy_dir.glob(pat):
+            shutil.copy(f, workdir / f.name)
+
+
+def _run_binary_and_aggregate(case: CaseConfig, binary: Path,
+                              input_variant: str, rc_ok: tuple):
+    """Run ``binary`` on the case's ``input_variant`` inputs in a temp dir and
+    return aggregated stats ``(annual, totals, means)``. Raises RuntimeError on
+    any runtime/output failure so callers can surface it (and so pending_restore
+    xfails trip on it)."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp = Path(tmpdir)
+        workdir = Path(tmpdir) / "case"
+        if input_variant == "toml":
+            _stage_toml_inputs(case, workdir)
+        elif input_variant == "legacy":
+            _stage_legacy_inputs(case, workdir)
+        else:
+            raise RuntimeError(f"unknown input_variant: {input_variant!r}")
+        _stage_swap_swp(workdir)
 
-        # The TOML dir is the self-contained source. Per case it contains
-        # swap.toml, swap.dra.toml, *.crp.toml, *.csv companions, legacy *.crp
-        # crop files, swap_linux.swp.template, and (where the scenario requires
-        # it) legacy ASCII companions like swap.dra (swdra=2 -> rddre()) and
-        # swap.ini (swinco=3 -> rdinit()). Nothing is read from the legacy dirs.
-        shutil.copytree(
-            toml_dir,
-            tmp / "case",
-            ignore=shutil.ignore_patterns(
-                'result_output.csv',
-                'result_*.csv',
-                '*.log',
-                'output.*',
-                '*.out',
-            ),
-        )
-        workdir = tmp / "case"
-
-        # Stage swap.swp from the in-dir template (legacy crop sub-readers
-        # still call RDinit(swpfile)).
-        swap_file = workdir / "swap.swp"
-        if not swap_file.exists():
-            template = workdir / "swap_linux.swp.template"
-            if template.exists():
-                shutil.copy(template, swap_file)
-
-        # Record time before running to verify output is fresh
         before_run = time.time()
-
-        proc = subprocess.run([str(SWAP_BIN)], cwd=workdir, capture_output=True, text=True)
-
-        # swap_main exits with 100 on success
-        if proc.returncode != 100:
-            detail = f"exit code {proc.returncode} (expected 100)"
+        proc = subprocess.run([str(binary)], cwd=workdir,
+                              capture_output=True, text=True)
+        if proc.returncode not in rc_ok:
+            detail = f"exit code {proc.returncode} (expected one of {rc_ok})"
             if proc.stdout:
                 detail += f"\nstdout:\n{proc.stdout}"
             if proc.stderr:
                 detail += f"\nstderr:\n{proc.stderr}"
-            raise RuntimeError(f"swap failed: {detail}")
+            raise RuntimeError(f"{binary.name} failed: {detail}")
 
         csv_path = workdir / "result_output.csv"
         if not csv_path.exists():
-            raise RuntimeError("result_output.csv not produced")
-
-        # Verify the CSV was created by this run (not a pre-existing file)
+            raise RuntimeError(f"{binary.name} produced no result_output.csv")
+        # Guard against a stale result_output.csv that was copied in as an input.
         if csv_path.stat().st_mtime < before_run:
             raise RuntimeError(
-                f"result_output.csv exists but was not created by this run "
-                f"(file mtime {csv_path.stat().st_mtime} < run start {before_run})"
+                "result_output.csv exists but was not created by this run "
+                f"(mtime {csv_path.stat().st_mtime} < run start {before_run})"
             )
 
         return aggregate(csv_path, case.flux_vars, case.state_vars, case.cumul_vars)
+
+
+def run_and_aggregate(case: CaseConfig):
+    """Run the modern build on the case's TOML inputs; return aggregated stats."""
+    return _run_binary_and_aggregate(case, SWAP_BIN, "toml", (100,))
+
+
+def run_reference_and_aggregate(case: CaseConfig, ref: "Reference"):
+    """Run the selected reference engine on its input variant; aggregate."""
+    return _run_binary_and_aggregate(case, ref.binary, ref.input_variant, ref.rc_ok)
 
 
 def regen_one_expected(case: CaseConfig) -> Path:

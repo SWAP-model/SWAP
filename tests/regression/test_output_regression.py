@@ -1,29 +1,31 @@
-"""Byte-identical regression suite (pytest).
+"""Byte-identical regression suite (pytest, live double-run).
 
-Each registered case runs the modern SWAP build in an isolated temp dir,
-aggregates its ``result_output.csv`` into annual stats, and compares them
-against the stored ``*_reference_gf.json`` fixture (produced from the
-gfortran-compiled SWAP 4.2.0 oracle by ``regen_reference.py``). A case fails
-if any aggregated value differs beyond ``TOL``.
+Each registered case runs **two** engines in isolated temp dirs and compares
+their aggregated annual stats within ``TOL``:
 
-Run it with pytest — there is no standalone CLI:
+  - the modern SWAP build on the TOML inputs, and
+  - the selected *reference* engine on its input variant (default ``swap420gf``,
+    the gfortran-compiled SWAP 4.2.0 oracle, reading the legacy ASCII inputs).
+
+There are no stored expected fixtures — the reference side is regenerated every
+run. Pick the reference with ``SWAP_REGRESSION_REF`` (see the ``REFERENCES``
+registry in ``regression_harness.py``); the machinery is ready for a future
+released SWAP to serve as the reference too.
+
+Run it with pytest:
 
     pixi run -e test check-fast     # the `fast` subset, xdist-parallel
     pixi run -e test check-full     # every case
     pytest tests/regression -k hupselbrook        # one case
     pytest tests/regression -m fast               # the fast subset
 
-Two policies are expressed as xfail markers, driven by the case registry in
-``regression_harness.py``:
+Two policies are expressed as xfail markers from the case registry:
 
-  - ``known_divergence`` — the modern build is knowingly off from 4.2.0; the
-    case xfails (visible, non-fatal). If it starts matching, it xpasses — a
+  - ``known_divergence`` — the modern build is knowingly off from the reference;
+    the case xfails (visible, non-fatal). If it starts matching, it xpasses — a
     signal to remove the flag.
   - ``pending_restore`` — the option's compute is gated/deleted, so the modern
     build fatal-errors (RuntimeError); the case xfails until restored.
-
-The fixtures are the assertion of record; regenerate them only for a
-documented physics change (``regen_reference.py``), never from the modern build.
 """
 
 import pytest
@@ -32,11 +34,14 @@ from regression_harness import (
     CASES,
     FAST_CASES,
     SWAP_BIN,
-    TESTS_DIR,
+    active_reference,
     compare,
-    load_fixture,
     run_and_aggregate,
+    run_reference_and_aggregate,
 )
+
+# The reference is selected once (SWAP_REGRESSION_REF), shared across cases.
+REFERENCE = active_reference()
 
 
 def _case_param(case):
@@ -59,21 +64,25 @@ def _case_param(case):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _require_swap_binary():
-    """Fail loudly (once) if the modern build is missing, rather than per case."""
+def _require_binaries():
+    """Fail loudly (once) if either engine is missing, rather than per case."""
     if not SWAP_BIN.exists():
         pytest.fail(
-            f"swap binary not found at {SWAP_BIN}; build first "
+            f"modern swap binary not found at {SWAP_BIN}; build first "
             f"(pixi run build-linux)", pytrace=False)
+    if not REFERENCE.binary.exists():
+        pytest.fail(
+            f"reference '{REFERENCE.name}' binary not found at "
+            f"{REFERENCE.binary}", pytrace=False)
 
 
 @pytest.mark.parametrize("case", [_case_param(c) for c in CASES.values()])
 def test_regression(case):
-    """Modern output must match the 4.2.0 reference fixture within TOL."""
-    fixture_path = TESTS_DIR / "regression" / case.fixture
-    if not fixture_path.exists():
-        pytest.fail(f"fixture not found at {fixture_path}", pytrace=False)
-
-    expected = load_fixture(fixture_path)
-    annual, totals, means = run_and_aggregate(case)  # RuntimeError => pending_restore xfail
-    compare(expected, annual, totals, means)         # AssertionError => mismatch / known_divergence xfail
+    """Modern output must match the reference engine's output within TOL."""
+    # Modern first: a pending_restore case fatal-errors here (RuntimeError) and
+    # xfails before a reference run is spent.
+    m_annual, m_totals, m_means = run_and_aggregate(case)
+    # Live "expected" side.
+    r_annual, r_totals, r_means = run_reference_and_aggregate(case, REFERENCE)
+    expected = {"years": r_annual, "total": r_totals, "mean": r_means}
+    compare(expected, m_annual, m_totals, m_means)  # AssertionError => known_divergence xfail
