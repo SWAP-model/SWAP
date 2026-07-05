@@ -86,8 +86,11 @@ pixi run clean                # rm -rf builddir  (see clean-rebuild rule below)
   compares annual aggregates within `TOL`. Default reference is `swap420gf` (the
   gfortran 4.2.0 oracle) reading the legacy inputs; select another with
   `SWAP_REGRESSION_REF` (see `REFERENCES` in `regression_harness.py`). Case
-  inputs + the reference binary live in the `swap-testcases` sibling repo
-  (`SWAP_TESTCASES_PATH` / `TESTCASES_REF`).
+  *inputs* live in the `swap-testcases` sibling repo (`SWAP_TESTCASES_PATH` /
+  `TESTCASES_REF`); the reference *binary* is committed nowhere — it's
+  downloaded from the pinned `SWAP-model/swap-4.2.0` release (the archival 4.2.0
+  source + build) into a gitignored cache. `SWAP_REFERENCE_BIN` overrides with a
+  local path (offline/dev).
 - **No fixtures to regenerate.** A physics change either matches the reference
   or fails — you fix the code, you don't update a golden file. Accepted
   divergences (winter frost-path; macropore excluded since ADR 0011) are `xfail`

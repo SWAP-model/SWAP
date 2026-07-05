@@ -39,3 +39,6 @@ __pycache__/
 
 # pFUnit: built from source by scripts/setup_pfunit.sh (not on conda/PyPI)
 /tests/pFUnit/
+
+# Regression oracle downloaded from the swap-4.2.0 release (not committed)
+tests/regression/.oracle_cache/

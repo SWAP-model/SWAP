@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import urllib.request
 from pathlib import Path
 from typing import NamedTuple
 
@@ -197,30 +198,34 @@ CASES.update({
 
 
 # --- Reference engines: the "expected" side of the live double-run. ---------
-# The reference is pluggable so a future released SWAP can serve as the
-# comparand too (reading TOML inputs), not only the 4.2.0 oracle. Adding one is
-# config, not code: drop a binary into the reference dir + one registry entry.
+# The reference binary is not committed anywhere — it is downloaded from a
+# GitHub release (mirroring how the 4.2.0 build pulls libttutil from the ttutil
+# releases) into a gitignored cache, download-if-absent. The reference is
+# pluggable: adding one (e.g. a future released SWAP reading TOML inputs) is a
+# registry entry, not code. SWAP_REFERENCE_BIN overrides with a local path
+# (offline / dev / a freshly built candidate).
+ORACLE_CACHE = TESTS_DIR / "regression" / ".oracle_cache"
+
+
 class Reference(NamedTuple):
     name: str            # registry key / SWAP_REGRESSION_REF value
-    binary: Path         # engine executable
+    repo: str            # GitHub repo publishing the binary as a release asset
+    tag: str             # release tag — the reference pin
+    asset: str           # release asset filename
     input_variant: str   # "legacy" | "toml": which case subdir it reads
     rc_ok: tuple         # accepted process exit codes (success)
 
 
-def _reference_binary(name: str) -> Path:
-    """Resolve a reference binary. SWAP_REFERENCE_BIN overrides; otherwise the
-    binary of that name in tests/reference (relocated to swap-testcases/oracle
-    in a later phase)."""
-    env = os.environ.get("SWAP_REFERENCE_BIN")
-    if env:
-        return Path(env).expanduser()
-    return TESTS_DIR / "reference" / name
-
-
 REFERENCES = {
-    # 4.2.0 gfortran oracle: reads legacy ASCII, exits 0 or 100 on success.
-    "swap420gf": Reference("swap420gf", _reference_binary("swap420gf"),
-                           "legacy", (0, 100)),
+    # SWAP 4.2.0 gfortran oracle: reads legacy ASCII, exits 0 or 100 on success.
+    "swap420gf": Reference(
+        name="swap420gf",
+        repo="SWAP-model/swap-4.2.0",
+        tag="v4.2.0",
+        asset="swap420gf",
+        input_variant="legacy",
+        rc_ok=(0, 100),
+    ),
 }
 
 
@@ -230,6 +235,43 @@ def active_reference() -> Reference:
     if name not in REFERENCES:
         raise SystemExit(f"unknown reference {name!r}; known: {', '.join(REFERENCES)}")
     return REFERENCES[name]
+
+
+def reference_binary(ref: "Reference") -> Path:
+    """Resolve the reference binary, downloading it from its GitHub release into
+    the gitignored cache if absent. SWAP_REFERENCE_BIN overrides with a local
+    path. Concurrency-safe under xdist via an exclusive lock (other workers wait
+    for the cached file rather than each re-downloading)."""
+    env = os.environ.get("SWAP_REFERENCE_BIN")
+    if env:
+        return Path(env).expanduser()
+
+    dest = ORACLE_CACHE / ref.tag / ref.asset
+    if dest.exists():
+        return dest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    lock = dest.parent / f"{ref.asset}.lock"
+    try:
+        fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        # Another worker is downloading; wait for the cached file to appear.
+        for _ in range(600):
+            if dest.exists():
+                return dest
+            time.sleep(0.5)
+        raise RuntimeError(f"timed out waiting for reference download: {dest}")
+
+    try:
+        url = f"https://github.com/{ref.repo}/releases/download/{ref.tag}/{ref.asset}"
+        tmp = dest.parent / f".{ref.asset}.part"
+        urllib.request.urlretrieve(url, tmp)
+        os.chmod(tmp, 0o755)
+        os.replace(tmp, dest)  # atomic publish into the cache
+    finally:
+        os.close(fd)
+        os.unlink(lock)
+    return dest
 
 
 def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul_vars: list[str] = None):
@@ -468,4 +510,5 @@ def run_and_aggregate(case: CaseConfig):
 
 def run_reference_and_aggregate(case: CaseConfig, ref: "Reference"):
     """Run the selected reference engine on its input variant; aggregate."""
-    return _run_binary_and_aggregate(case, ref.binary, ref.input_variant, ref.rc_ok)
+    return _run_binary_and_aggregate(case, reference_binary(ref),
+                                     ref.input_variant, ref.rc_ok)

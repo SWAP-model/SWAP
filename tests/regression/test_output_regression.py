@@ -36,6 +36,7 @@ from regression_harness import (
     SWAP_BIN,
     active_reference,
     compare,
+    reference_binary,
     run_and_aggregate,
     run_reference_and_aggregate,
 )
@@ -65,15 +66,22 @@ def _case_param(case):
 
 @pytest.fixture(scope="session", autouse=True)
 def _require_binaries():
-    """Fail loudly (once) if either engine is missing, rather than per case."""
+    """Fail loudly (once) if either engine is unavailable, rather than per case.
+    Resolving the reference downloads it from its release into the cache."""
     if not SWAP_BIN.exists():
         pytest.fail(
             f"modern swap binary not found at {SWAP_BIN}; build first "
             f"(pixi run build-linux)", pytrace=False)
-    if not REFERENCE.binary.exists():
+    try:
+        binary = reference_binary(REFERENCE)
+    except Exception as exc:  # download / network failure
         pytest.fail(
-            f"reference '{REFERENCE.name}' binary not found at "
-            f"{REFERENCE.binary}", pytrace=False)
+            f"could not obtain reference '{REFERENCE.name}' "
+            f"({REFERENCE.repo}@{REFERENCE.tag}/{REFERENCE.asset}): {exc}",
+            pytrace=False)
+    if not binary.exists():
+        pytest.fail(f"reference '{REFERENCE.name}' binary missing at {binary}",
+                    pytrace=False)
 
 
 @pytest.mark.parametrize("case", [_case_param(c) for c in CASES.values()])

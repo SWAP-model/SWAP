@@ -51,21 +51,30 @@ Consequently:
 - The three fixture helper scripts (`regen_reference.py`, `regen_expected.py`,
   `_switch_validate.py`) are deleted — their logic is either absorbed into the
   harness or made redundant by live comparison.
-- The reference binary relocates from `tests/reference/` into
-  `swap-testcases/oracle/` (next to the inputs it consumes), resolved from the
-  pinned checkout. `tests/reference/` is retired.
+- The reference binary is **not committed anywhere**. It is published as a
+  release asset by a new archival repo, **`SWAP-model/swap-4.2.0`** (the pristine
+  4.2.0 source + a multi-compiler Meson build; the native-gfortran build
+  reproduces the previous `swap420gf` byte-for-byte), and downloaded on demand
+  into a gitignored cache — mirroring how the 4.2.0 build already pulls
+  `libttutil` from the `SWAP-model/ttutil` releases. The `Reference` descriptor
+  carries `{repo, tag, asset}`; the release tag is the pin. `tests/reference/`
+  is deleted.
 
 ## Consequences
 
-- **The fixture-location problem is gone** — there is nothing to store, locate,
-  version, or assign to a repo. `swap-testcases` owns the *data* (inputs +
-  reference engine); SWAP owns the *judgment* (the `CASES` registry: which vars
-  to compare, `known_divergence`, `pending_restore`).
+- **The fixture-location problem is gone** — nothing to store, locate, version,
+  or assign to a repo. The three repos separate cleanly: `swap-4.2.0` owns the
+  *reference engine* (source + released binaries), `swap-testcases` owns the
+  *data* (case inputs), and SWAP owns the *judgment* (the `CASES` registry:
+  which vars to compare, `known_divergence`, `pending_restore`).
 - **Cost:** each case runs two binaries. `check-fast` ~2.6s→~5s; `check-full`
-  ~47s→~58s (xdist absorbs most of the doubling). No committed cache.
-- **The reference is a hard test-time dependency** (checked out from
-  `swap-testcases` every run), as it is for MODFLOW. A missing reference fails
-  the session fast with a clear message.
+  ~47s→~60s (xdist absorbs most of the doubling). The oracle is a ~7 MB
+  download, cached after first use (CI can cache the dir).
+- **The reference is a hard test-time dependency** — downloaded from the pinned
+  `swap-4.2.0` release every fresh run (concurrency-safe under xdist via a
+  lock), as it is for MODFLOW. `SWAP_REFERENCE_BIN` overrides with a local path
+  for offline/dev work; a download failure fails the session fast with a clear
+  message.
 - **No "regenerate fixtures" workflow** — a physics change either matches the
   reference or fails; you fix code, never a golden file. Divergences are `xfail`
   markers on the registry.

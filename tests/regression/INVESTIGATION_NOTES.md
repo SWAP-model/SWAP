@@ -7,8 +7,8 @@
 
 ## 2026-05-27 — Reference basis switched to gfortran-4.2.0; hysteresis regression found
 
-**Reference basis change.** The regression now compares the modern build against
-`tests/reference/swap420gf` — the *unmodified* SWAP 4.2.0 source recompiled with the
+**Reference basis change.** The regression compares the modern build against
+`swap420gf` — the *unmodified* SWAP 4.2.0 source recompiled with the
 modern build's gfortran flags (`-O2 -ffree-line-length-none -std=legacy -finit-local-zero`,
 **no source edits**). Previously the harness compared the modern build against its own
 golden-master snapshot (`*_expected_gfortran.json`); it now compares against
@@ -104,7 +104,7 @@ None of these block the rescue. They are tracked here as open items to revisit d
 
 ## Reproducing the ifx reference (if needed for an investigation)
 
-The legacy SWAP 4.2.0 Intel-compiled Linux binary is preserved at `tests/reference/swap420`. Running it via `pixi run swap-ref` generates output comparable to the historical `*_expected.json` fixtures (modulo the MOWDM deviation the fixtures themselves encode).
+The legacy SWAP 4.2.0 Intel-compiled Linux binary (`swap420`) is published as a release asset of `SWAP-model/swap-4.2.0`. Running it on a case's legacy inputs generates output comparable to the historical `*_expected.json` fixtures (modulo the MOWDM deviation the fixtures themselves encode).
 
 ---
 

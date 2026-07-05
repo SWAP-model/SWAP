@@ -125,7 +125,8 @@ Known, accepted tolerances baked into the `_gfortran` fixtures:
 
 See `tests/regression/INVESTIGATION_NOTES.md` for the open
 compiler-versus-physics question and the reproduction procedure using the
-archived ifx reference at `tests/reference/swap420`.
+archived ifx reference (`swap420`), published as a release asset of
+`SWAP-model/swap-4.2.0`.
 
 Do not delete the `*_expected.json` files. Do not regenerate
 `*_expected_gfortran.json` casually — the commit that does must explain
