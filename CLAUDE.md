@@ -78,21 +78,22 @@ pixi run clean                # rm -rf builddir  (see clean-rebuild rule below)
   `src/config/*` schema change** — incremental Meson does not propagate `.mod`
   deps across the swap_modern↔swap_legacy boundary. Do `rm -rf builddir` (or
   `pixi run clean`) then rebuild, or you get stale-`.mod` SIGSEGVs.
-- **The regression suite is pytest** (ADR 0054). `check-fast`/`check-full`/
-  `regression` all invoke `pytest tests/regression` (xdist-parallel); a single
-  case is `pytest tests/regression -k <case>`, the fast subset is `-m fast`.
-  The case *inputs* live in the `swap-testcases` sibling repo (resolved via
-  `SWAP_TESTCASES_PATH` / `TESTCASES_REF`); the expected-output fixtures stay
-  in-repo.
-- **Fixtures:** the live comparison is against `*_reference_gf.json` — the
-  gfortran-compiled SWAP 4.2.0 oracle (`tests/reference/swap420gf`). Regenerate
-  only for a *legitimate* physics change, with
-  `python tests/regression/regen_reference.py [<case>]`, and document it in the
-  commit. (`*_expected_gfortran.json` is a *diagnostic* snapshot of the modern
-  build's own output via `regen_expected.py` — NOT the reference. Never delete
-  the historical `*_expected.json` ifx reference.) Accepted divergences
-  (winter frost-path; macropore case excluded since ADR 0011) are baked in as
-  xfails — don't re-derive them.
+- **The regression suite is pytest + a live double-run** (ADR 0054 / 0055).
+  `check-fast`/`check-full`/`regression` invoke `pytest tests/regression`
+  (xdist-parallel); a single case is `pytest tests/regression -k <case>`, the
+  fast subset is `-m fast`. **There are no stored expected fixtures.** Each case
+  runs the modern build (on the TOML inputs) *and* a reference engine live, and
+  compares annual aggregates within `TOL`. Default reference is `swap420gf` (the
+  gfortran 4.2.0 oracle) reading the legacy inputs; select another with
+  `SWAP_REGRESSION_REF` (see `REFERENCES` in `regression_harness.py`). Case
+  inputs + the reference binary live in the `swap-testcases` sibling repo
+  (`SWAP_TESTCASES_PATH` / `TESTCASES_REF`).
+- **No fixtures to regenerate.** A physics change either matches the reference
+  or fails — you fix the code, you don't update a golden file. Accepted
+  divergences (winter frost-path; macropore excluded since ADR 0011) are `xfail`
+  markers on the case registry, not stored data. (The historical ifx
+  `*_expected.json` snapshots are kept only as provenance — never deleted, never
+  compared against.)
 - **New pFUnit `.pf` files must be registered in BOTH `tests/unit/meson.build`
   (the `pf_files` list) and `tests/unit/testSuites.inc`** or they compile but
   never run. Confirm the `OK (N tests)` count rises.

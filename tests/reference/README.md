@@ -42,21 +42,16 @@ git worktree add /tmp/swap-legacy legacy/swap-4.2.0
 
 ## Usage
 
-`swap420gf` reads **legacy ASCII** inputs (`.swp/.crp/.dra`). The regression harness and
-`regen_reference.py` invoke it directly against the legacy case tree (case *inputs* live
-in the `swap-testcases` sibling repo; see `tests/regression/`), so there is normally no
-need to run it by hand.
+`swap420gf` reads **legacy ASCII** inputs (`.swp/.crp/.dra`). It is the default
+*reference engine* for the **live double-run** regression suite (ADR 0055): for each
+case the suite runs `swap420gf` on the legacy inputs and the modern build on the TOML
+inputs and compares annual aggregates within tolerance — **there are no stored fixtures
+to (re)generate**. See `regression_harness.py` (`REFERENCES` registry) and
+`tests/regression/`.
 
-To (re)generate the regression reference fixtures from `swap420gf` for every registered
-case:
-
-```bash
-python3 tests/regression/regen_reference.py            # all cases
-python3 tests/regression/regen_reference.py hupselbrook # one case
-```
-
-This writes `<case>_reference_gf.json` next to the other fixtures; the regression harness
-compares the modern build's output against these.
+`SWAP_REFERENCE_BIN` overrides the binary path; `SWAP_REGRESSION_REF` selects which
+reference. Case *inputs* and (going forward) the reference binary itself live in the
+`swap-testcases` sibling repo.
 
 ## Portability notes
 

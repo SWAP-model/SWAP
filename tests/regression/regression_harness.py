@@ -1,14 +1,9 @@
 """Shared machinery for the byte-identical regression suite.
 
-This module holds the case registry and the pure run/aggregate/compare logic
-used by three entry points:
-
-  - ``test_output_regression.py`` — the pytest suite (the gate; run via
-    ``pytest``, parametrized over ``CASES``).
-  - ``regen_reference.py`` — regenerates the ``*_reference_gf.json`` fixtures
-    from the gfortran-compiled SWAP 4.2.0 oracle (``tests/reference/swap420gf``).
-  - ``regen_expected.py`` — diagnostic snapshot of the *modern* build's own
-    output (``*_expected_gfortran.json``); NOT the reference.
+The case registry (``CASES``), the reference registry (``REFERENCES``), and the
+pure run/aggregate/compare logic used by the pytest suite
+(``test_output_regression.py``). There are no stored fixtures: each case runs
+the modern build and a selected reference engine live and compares them.
 
 It defines no ``test_*`` functions, so pytest does not collect it directly.
 The comparison semantics (TOL, annual aggregation, the xfail policy encoded by
@@ -17,7 +12,6 @@ must not change without a documented physics reason.
 """
 
 import csv
-import json
 import math
 import os
 import shutil
@@ -41,7 +35,6 @@ class CaseConfig(NamedTuple):
     """Configuration for a test case."""
     name: str
     case_dir: str  # relative path from the cases root
-    fixture: str   # fixture filename in tests/regression
     flux_vars: list[str]  # summed annually
     state_vars: list[str]  # averaged annually
     cumul_vars: list[str] = []  # last value per year (for cumulative outputs)
@@ -57,8 +50,8 @@ class CaseConfig(NamedTuple):
 
     # Non-empty => the option is gated / its compute not yet restored, so the
     # MODERN build is expected to fatal-error on this case. The suite marks it
-    # xfail (a pending restoration target); the swap420gf fixture is still
-    # generated. A successful modern run flips it to xpass.
+    # xfail (a pending restoration target). A successful modern run flips it to
+    # xpass.
     pending_restore: str = ""
 
 
@@ -70,7 +63,6 @@ CASES = {
     "hupselbrook": CaseConfig(
         name="hupselbrook",
         case_dir="hupselbrook",
-        fixture="hupselbrook_reference_gf.json",
         flux_vars=["RAIN", "IRRIG", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
@@ -82,7 +74,6 @@ CASES = {
     "grassgrowth": CaseConfig(
         name="grassgrowth",
         case_dir="grassgrowth",
-        fixture="grassgrowth_reference_gf.json",
         flux_vars=[],
         state_vars=[],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
@@ -96,7 +87,6 @@ CASES = {
     "salinitystress": CaseConfig(
         name="salinitystress",
         case_dir="salinitystress",
-        fixture="salinitystress_reference_gf.json",
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET", "TREDSOL", "CPWSO", "CWSO",
                     "CONC[-5.0]", "CONC[-25.0]", "CONC[-55.0]"],
@@ -108,7 +98,6 @@ CASES = {
     "surfacewater": CaseConfig(
         name="surfacewater",
         case_dir="surfacewater",
-        fixture="surfacewater_reference_gf.json",
         flux_vars=[],
         state_vars=["GWL", "POND"],
     ),
@@ -119,7 +108,6 @@ CASES = {
     "oxygenstress": CaseConfig(
         name="oxygenstress",
         case_dir="oxygenstress",
-        fixture="oxygenstress_reference_gf.json",
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET"],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
@@ -130,7 +118,6 @@ CASES = {
     "soilhysteresis": CaseConfig(
         name="soilhysteresis",
         case_dir="soilhysteresis",
-        fixture="soilhysteresis_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
@@ -141,7 +128,6 @@ CASES = {
     "snow": CaseConfig(
         name="snow",
         case_dir="snow",
-        fixture="snow_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "DRAINAGE", "QBOTTOM", "DSTOR", "EACT"],
         state_vars=["GWL"],
     ),
@@ -152,7 +138,6 @@ CASES = {
     "winterhysteresis": CaseConfig(
         name="winterhysteresis",
         case_dir="winterhysteresis",
-        fixture="winterhysteresis_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
@@ -164,7 +149,6 @@ CASES = {
     "winter": CaseConfig(
         name="winter",
         case_dir="winter",
-        fixture="winter_reference_gf.json",
         flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
@@ -182,7 +166,7 @@ _SW_STATE = ["GWL"]
 
 
 def _switch_case(name, **kw):
-    return CaseConfig(name=name, case_dir=name, fixture=f"{name}_reference_gf.json",
+    return CaseConfig(name=name, case_dir=name,
                       flux_vars=_SW_FLUX, state_vars=_SW_STATE, **kw)
 
 
@@ -246,11 +230,6 @@ def active_reference() -> Reference:
     if name not in REFERENCES:
         raise SystemExit(f"unknown reference {name!r}; known: {', '.join(REFERENCES)}")
     return REFERENCES[name]
-
-
-def load_fixture(path: Path):
-    with path.open() as f:
-        return json.load(f)
 
 
 def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul_vars: list[str] = None):
@@ -490,23 +469,3 @@ def run_and_aggregate(case: CaseConfig):
 def run_reference_and_aggregate(case: CaseConfig, ref: "Reference"):
     """Run the selected reference engine on its input variant; aggregate."""
     return _run_binary_and_aggregate(case, ref.binary, ref.input_variant, ref.rc_ok)
-
-
-def regen_one_expected(case: CaseConfig) -> Path:
-    """Snapshot the *modern* build's output as a golden-master baseline.
-
-    DIAGNOSTIC ONLY. Writes ``{case.name}_expected_gfortran.json`` (the modern
-    build's own output). This is NOT the regression reference — the suite
-    compares against ``{case.name}_reference_gf.json``, generated from the
-    gfortran-compiled SWAP 4.2.0 by ``regen_reference.py``. Regenerating the
-    reference from the modern build would make the fidelity check trivially
-    pass, so the two are kept distinct.
-    """
-    annual, totals, means = run_and_aggregate(case)
-    payload = {"years": annual, "total": totals, "mean": means}
-    out_path = TESTS_DIR / "regression" / f"{case.name}_expected_gfortran.json"
-    with out_path.open("w") as f:
-        json.dump(payload, f, indent=2, sort_keys=True)
-        f.write("\n")
-    print(f"✓ {case.name}: wrote {out_path.name}")
-    return out_path
