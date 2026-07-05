@@ -9,14 +9,16 @@
 #   4. SWAP<->MODFLOW6 coupled   (tests/coupling/test_coupled_smoke.py; skipped
 #                                 if libmf6.so is absent)
 # The exe byte-identical regression + pFUnit stay in `pixi run -e test check-fast`
-# (run that too before committing). The meson bmi/cffi-demo suites reference the
-# un-checked-out tests/swap-cases submodule; this script stages the self-contained
-# regression case instead, into a temp dir (never the committed tree).
+# (run that too before committing). This script is the sole home of the BMI/CAPI
+# smokes (the former meson bmi/cffi-demo suites were deleted). It stages the
+# self-contained runnable_model unit fixture — an in-repo, trimmed one-year model
+# that needs no swap-testcases sibling checkout — into a temp dir (never the
+# committed tree). Override with SWAP_BINDINGS_CASE to smoke a different case.
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 lib="$repo/builddir/libswap.so"
-case_src="$repo/tests/regression/cases/hupselbrook/toml"
+case_src="${SWAP_BINDINGS_CASE:-$repo/tests/unit/fixtures/runnable_model}"
 py="python"
 
 [ -f "$lib" ] || { echo "ERROR: $lib not built (run: pixi run build-linux)"; exit 1; }

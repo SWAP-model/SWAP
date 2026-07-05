@@ -302,6 +302,4 @@ if get_option('enable_pfunit')
     subdir('tests/unit')
 endif
 
-subdir('tests/bmi')
-subdir('tests/cffi-demo')
 subdir('tests/coupling')

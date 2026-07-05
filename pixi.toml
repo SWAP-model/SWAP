@@ -61,31 +61,28 @@ check-fast = { cmd = "python tests/regression/test_output_regression.py hupselbr
 check-full = { cmd = "python tests/regression/test_output_regression.py", depends-on = ["build-linux", "test-pfunit"] }
 
 #============================================================================
-# CFFI / BMI TEST TASKS — exercise the Python-callable C ABI.
+# C-ABI TEST TASKS — exercise the Python-callable C ABI over libswap.so.
 #
-# test-bmi      : SS-DRV Phase 1 hello-world — initialize / update / finalize
-#                  via cffi + a couple of get_value_double calls.
-# test-cffi-demo: SS-BMI2 Phase 2 end-to-end demo — in-memory TOML config,
-#                  headless mode, swap_view_array zero-copy, water-balance
-#                  struct readout. Hupselbrook case, ~30k update steps.
+# The BMI hello-world and CAPI in-memory demos are driven by check-bindings
+# (scripts/check_bindings.sh), not by a meson suite — the former meson bmi/
+# cffi-demo suites were deleted (they pointed at the removed swap-cases dir and
+# duplicated check-bindings).
+#
 # test-xmi      : SWAP-only XMI contract smoke via xmipy (no MODFLOW) —
 #                  loads libswap.so, exercises get_value_ptr on the three
 #                  exchange arrays + a few coupled-style steps.
 # test-coupling : full SWAP<->MODFLOW6 coupled smoke (short run, ncol=10/nper=30)
 #                  via the vendored swapmod driver; needs libmf6.so (test env).
-# test-all      : convenience — pFUnit + bmi + cffi-demo + the two coupling
-#                  smokes + four-case regression.
+# test-all      : convenience — pFUnit + the binding smokes + four-case regression.
 #============================================================================
-test-bmi       = { cmd = "meson test -C builddir --suite bmi --verbose", depends-on = ["build-linux"] }
-test-cffi-demo = { cmd = "meson test -C builddir --suite cffi-demo --verbose", depends-on = ["build-linux"] }
 test-xmi       = { cmd = "python tests/coupling/test_swap_xmi_smoke.py", depends-on = ["build-linux"] }
 test-coupling  = { cmd = "python tests/coupling/test_coupled_smoke.py", depends-on = ["build-linux"] }
-# check-bindings: the C-ABI six-path gate over the one libswap.so (ADR 0050).
-# Drives BMI + CAPI + XMI + coupled smoke; stages the self-contained regression
-# case (the meson bmi/cffi suites still point at the un-checked-out swap-cases
-# submodule). Run alongside `check-fast` before any binding/driver commit.
+# check-bindings: the C-ABI binding gate over the one libswap.so (ADR 0050).
+# Drives BMI + CAPI + XMI + coupled smoke by running the demo scripts directly
+# (staging the self-contained regression case). This — not a meson suite — is the
+# home of the BMI/CAPI smokes. Run alongside `check-fast` before any binding/driver commit.
 check-bindings = { cmd = "bash scripts/check_bindings.sh", depends-on = ["build-linux"] }
-test-all       = { cmd = "python tests/regression/test_output_regression.py hupselbrook soilhysteresis snow swcf3", depends-on = ["build-linux", "test-pfunit", "test-bmi", "test-cffi-demo", "test-xmi", "test-coupling"] }
+test-all       = { cmd = "python tests/regression/test_output_regression.py hupselbrook soilhysteresis snow swcf3", depends-on = ["build-linux", "test-pfunit", "check-bindings", "test-xmi", "test-coupling"] }
 
 [feature.test.target.linux-64.dependencies]
 xarray = ">=2026.4.0,<2027"
@@ -163,14 +160,6 @@ build-linux = { cmd = "meson compile -C builddir", depends-on = ["_configure"] }
 
 build-windows-cross = "meson setup builddir_windows --cross-file cross_mingw.txt && meson compile -C builddir_windows"
 clean = "rm -rf builddir builddir_windows builddir_windows_native builddir_gfortran"
-
-#============================================================================
-# RUN TASKS
-#============================================================================
-swap     = { cmd = "cd tests/swap-cases && ./run_case.sh --exec ../../builddir/swap", depends-on = ["build-linux"] }
-swap-win = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../builddir_windows/swap.exe", depends-on = ["build-windows-cross"] }
-swap-ref     = { cmd = "cd tests/swap-cases && ./run_case.sh --exec ../../tests/reference/swap420" }
-swap-win-ref = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../tests/reference/swap.exe" }
 
 # Format Fortran sources in place per .fprettify.rc.
 lint = { cmd = "fprettify --config-file .fprettify.rc -r src tests/unit" }

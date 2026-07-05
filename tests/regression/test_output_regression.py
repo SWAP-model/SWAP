@@ -390,46 +390,6 @@ def compare(expected, actual_years, actual_totals, actual_means):
 
         raise AssertionError("\n".join(lines))
 
-def load_case(case_name: str):
-    """load case with pyswap
-    Currently in development. Problem with pyswap is now that it cannot auto-detect all config files and they have to by specified manually. Also, pyswap does not support
-    the detailed rain files and meteo files with .YYY extension.
-    """
-    import pyswap as psp
-    case_dir = TESTS_DIR / "swap-cases" / case_name
-    if not case_dir.exists():
-        raise FileNotFoundError(f"Case directory not found: {case_dir}")
-    
-    meta = psp.components.Metadata(
-        project="SWAP Regression Tests",
-        author="Test Author",
-        email="test@email.com",
-        institution="Test Institution",
-        description=f"Test case for {case_name}",
-        swap_ver="4.2.0"
-    )
-
-    files = {
-        
-    }
-
-    met = psp.load_met(case_dir / "met.csv")
-    grassd = psp.load_crp(case_dir / "grassd.crp")
-    maizes = psp.load_crp(case_dir / "maizes.crp")
-    potatod = psp.load_crp(case_dir / "potatod.crp")
-    drainage = psp.load_dra(case_dir / "drainage.dra")
-    ml: psp.Model = psp.load_swp(case_dir / "swap_linux.swp.template", meta)
-
-    ml.crop.cropfiles = {
-        "grassd": grassd,
-        "maizes": maizes,
-        "potatod": potatod
-    }
-    ml.lateraldrainage.drafile = drainage
-    ml.meteorology.metfile = met
-
-    return ml
-
 def cases_root() -> Path:
     """Root directory holding the regression case inputs (``<name>/{legacy,toml}``).
 

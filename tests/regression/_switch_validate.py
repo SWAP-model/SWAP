@@ -16,11 +16,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-from test_output_regression import aggregate
+from test_output_regression import aggregate, cases_root
 
 TESTS = Path(__file__).resolve().parent.parent
-CLASSIC = TESTS / "swap-cases" / "1.hupselbrook"
-TOMLDIR = TESTS / "swap-cases" / "toml" / "1.hupselbrook"
+# Case inputs now live in the swap-testcases sibling (resolved by cases_root(),
+# honoring SWAP_TESTCASES_PATH); the old in-repo tests/swap-cases tree is gone.
+CLASSIC = cases_root() / "hupselbrook" / "legacy"
+TOMLDIR = cases_root() / "hupselbrook" / "toml"
 REF_BIN = TESTS / "reference" / "swap420gf"
 MODERN_BIN = Path(__file__).resolve().parents[2] / "builddir" / "swap"
 

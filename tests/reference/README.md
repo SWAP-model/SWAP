@@ -1,25 +1,30 @@
 # Reference binaries — SWAP 4.2.0
 
-Pre-compiled binaries of the unmodified upstream SWAP 4.2.0 implementation. Used by regression tasks that compare the modernization's output against the reference.
+Pre-compiled binary of the unmodified upstream SWAP 4.2.0 implementation, used by
+the regression harness to compare the modernization's output against the oracle.
 
 ## Files
 
 | File | Target | Built | Notes |
 |---|---|---|---|
-| `swap420` | Linux x86-64, dynamically linked (glibc 2.6.32+) | 2021-10-06 | Intel Fortran compile from upstream. ELF 64-bit LSB, not stripped. |
-| `swap.exe` | Windows x86-64 | 2021-10-06 | Intel Fortran compile from upstream. |
-| `swap420gf` | Linux x86-64, **statically linked** | 2026-05-27 | **gfortran** compile of the *same* pristine 4.2.0 source, using the modern build's flags. Self-contained. **This is the regression reference.** |
+| `swap420gf` | Linux x86-64, **statically linked** | 2026-05-27 | **gfortran** compile of the pristine 4.2.0 source, using the modern build's flags. Self-contained. **This is the regression reference.** |
+
+The former Intel-compiled `swap420` (Linux) and `swap.exe` (Windows) binaries were
+removed 2026-07-05: the project is gfortran-only (ADR 0001), nothing in the build or
+tests consumed them, and their only references were four already-dead pixi run tasks.
+They remain recoverable from git history and rebuildable from the `legacy/swap-4.2.0`
+branch if ever needed.
 
 ### Why a gfortran build of 4.2.0?
 
-`swap420` is Intel-compiled; the modern build is gfortran. To make the regression a
-*physics* comparison rather than an *Intel-vs-gfortran* comparison, `swap420gf` rebuilds
-the **unmodified** 4.2.0 source with the modern build's exact flags
-(`-O2 -ffree-line-length-none -std=legacy -finit-local-zero`). On every existing case the
-Intel and gfortran 4.2.0 builds agree to the fixture's 2-decimal precision (verified
-2026-05-27), confirming the compiler is not a source of drift — so any modern-vs-`swap420gf`
-divergence is a genuine code difference. **No source edits were needed** to compile 4.2.0
-under gfortran.
+The modern build is gfortran, and the original 4.2.0 reference was Intel-compiled. To
+make the regression a *physics* comparison rather than an *Intel-vs-gfortran* one,
+`swap420gf` rebuilds the **unmodified** 4.2.0 source with the modern build's exact flags
+(`-O2 -ffree-line-length-none -std=legacy -finit-local-zero`). On every case the Intel
+and gfortran 4.2.0 builds agreed to the fixture's 2-decimal precision (verified
+2026-05-27), confirming the compiler is not a source of drift — so any
+modern-vs-`swap420gf` divergence is a genuine code difference. **No source edits were
+needed** to compile 4.2.0 under gfortran.
 
 Build recipe: `build_swap420gf.sh` (run after `git worktree add /tmp/swap-legacy legacy/swap-4.2.0`).
 
@@ -37,14 +42,10 @@ git worktree add /tmp/swap-legacy legacy/swap-4.2.0
 
 ## Usage
 
-A 4.2.0 binary reads **legacy ASCII** inputs (`.swp/.crp/.dra`), so it must be run with
-`run_case.sh --legacy-binary` (which `cd`s into the legacy `<N>.<case>/` dir), **not**
-`--exec` (which selects TOML mode — wrong for a 4.2.0 binary):
-
-```bash
-cd tests/swap-cases
-./run_case.sh -c hupselbrook --legacy-binary ../../tests/reference/swap420gf -k
-```
+`swap420gf` reads **legacy ASCII** inputs (`.swp/.crp/.dra`). The regression harness and
+`regen_reference.py` invoke it directly against the legacy case tree (case *inputs* live
+in the `swap-testcases` sibling repo; see `tests/regression/`), so there is normally no
+need to run it by hand.
 
 To (re)generate the regression reference fixtures from `swap420gf` for every registered
 case:
