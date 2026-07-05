@@ -266,18 +266,8 @@ if get_option('enable_pfunit')
         'io/toml/test_read_cropwofost_toml.pf',
         'io/toml/test_load_swap_config.pf',
         'io/toml/test_config_source.pf',
-        'io/toml/test_hupselbrook_loads.pf',
         'io/toml/test_hupselbrook_roundtrip.pf',
-        'io/toml/test_all_cases_smoke.pf',
         'io/toml/test_chdir_helper.pf',
-        'io/toml/test_hupselbrook_parity.pf',
-        'io/toml/test_grassgrowth_parity.pf',
-        'io/toml/test_oxygenstress_parity.pf',
-        'io/toml/test_salinitystress_parity.pf',
-        'io/toml/test_surfacewater_parity.pf',
-        # DEFERRED — paired with the test_macroporeflow_parity_suite
-        # entry in testSuites.inc; see ADR 0011 / 0018.
-        # 'io/toml/test_macroporeflow_parity.pf',
         'io/toml/test_apply_soil_tillage.pf',
         'io/toml/test_soil_tillage_validate.pf',
         'io/toml/test_read_soil_tillage_toml.pf',

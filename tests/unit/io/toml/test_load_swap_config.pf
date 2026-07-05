@@ -98,95 +98,29 @@ subroutine test_load_swap_config_dispatches_solute()
 end subroutine
 
 @test
-subroutine test_load_case6_dra_levels_populated()
+subroutine test_load_swap_config_loads_rotation_crp_files()
+   ! End-to-end rotation loading: load_swap_config must not only parse the
+   ! [[crop.rotation]] metadata but also load each referenced .crp file into
+   ! the matching slot and set its rotation_loaded flag. Exercised on the
+   ! runnable_model fixture (one type-1 maize rotation) so this is independent
+   ! of the regression cases; per-case value parity is covered by the
+   ! byte-identical regression suite, not here.
    use funit
    use error_mod, only: error_collection_t
    use swap_config_mod, only: swap_config_t
    use load_swap_config_mod, only: load_swap_config
    type(swap_config_t)      :: c
    type(error_collection_t) :: errors
-   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', c, errors)
-   @assertFalse(errors%has_errors())
-   @assertEqual(2, c%drain%nrlevs)
-   @assertEqual(2, size(c%drain%rdrain))
-   @assertEqual(461.0d0, c%drain%rdrain(1), 1.0d-12)
-   @assertEqual(296.0d0, c%drain%rdrain(2), 1.0d-12)
-   @assertEqual(3, size(c%drain%cofani))
-   @assertEqual(10.0d0, c%drain%cofani(1), 1.0d-12)
-end subroutine
-
-@test
-subroutine test_load_case6_grass_crp_toml_populated()
-   use funit
-   use error_mod, only: error_collection_t
-   use swap_config_mod, only: swap_config_t
-   use load_swap_config_mod, only: load_swap_config
-   type(swap_config_t)      :: c
-   type(error_collection_t) :: errors
-   integer :: i, n_loaded
-   call load_swap_config('tests/regression/cases/surfacewater/toml/swap.toml', c, errors)
-   @assertFalse(errors%has_errors())
-   ! Case 6 has 3 type-1 rotations all referencing grass.crp.toml.
-   @assertEqual(3, size(c%crop%rotation_loaded))
-   n_loaded = 0
-   do i = 1, 3
-      if (c%crop%rotation_loaded(i)) n_loaded = n_loaded + 1
-   end do
-   @assertEqual(3, n_loaded)
-   ! Verify all three slots got the same parsed content.
-   @assertEqual(1, c%crop%rotation_fixed(1)%idev)
-   @assertEqual(366, c%crop%rotation_fixed(1)%lcc)
-   @assertEqual(0.75d0, c%crop%rotation_fixed(2)%kdif, 1.0d-12)
-   @assertEqual(0.25d0, c%crop%rotation_fixed(3)%cofab, 1.0d-12)
+   call load_swap_config('tests/unit/fixtures/runnable_model/swap.toml', c, errors)
+   @assertFalse(errors%has_fatals())
+   ! One rotation entry, loaded, typed as fixed-crop (type 1).
+   @assertEqual(1, size(c%crop%rotation_loaded))
+   @assertTrue(c%crop%rotation_loaded(1))
+   @assertEqual(1, c%crop%rotation_type(1))
+   ! The .crp file's content actually landed in the fixed-crop slot.
+   @assertEqual(1,   c%crop%rotation_fixed(1)%idev)
+   @assertEqual(168, c%crop%rotation_fixed(1)%lcc)
    @assertTrue(allocated(c%crop%rotation_fixed(1)%gctb))
-   @assertEqual(4, size(c%crop%rotation_fixed(1)%gctb))
-   @assertEqual(3.0d0, c%crop%rotation_fixed(1)%gctb(2), 1.0d-12)
-   @assertTrue(allocated(c%crop%rotation_fixed(1)%rdctb))
-   @assertEqual(4, size(c%crop%rotation_fixed(1)%rdctb))
-end subroutine
-
-@test
-subroutine test_load_swap_config_case5_wofost_populated()
-   ! Case 5 has 4 rotation entries all pointing at potatod.crp.toml (type=2).
-   ! After load+validate+finalize, all 4 slots must be loaded.
-   use funit
-   use swap_config_mod
-   use load_swap_config_mod
-   use error_mod, only: error_collection_t
-   type(error_collection_t) :: errors
-   type(swap_config_t)      :: config
-   integer :: i
-
-   call load_swap_config('tests/regression/cases/salinitystress/toml/swap.toml', &
-                          config, errors)
-   @assertFalse(errors%has_fatals())
-
-   @assertEqual(4, size(config%crop%rotation_wofost))
-   @assertEqual(4, size(config%crop%rotation_loaded))
-
-   do i = 1, 4
-      @assertTrue(config%crop%rotation_loaded(i))
-      @assertEqual(2, config%crop%rotation_type(i))
-      @assertEqual(1, config%crop%rotation_wofost(i)%salinity%swsalinity)
-      @assertEqual(0.732d0, config%crop%rotation_wofost(i)%salinity%saltmax, 1.0d-12)
-   end do
-end subroutine
-
-@test
-subroutine test_load_case1_hupselbrook_rotations()
-   use funit
-   use swap_config_mod, only: swap_config_t
-   use load_swap_config_mod, only: load_swap_config
-   use error_mod, only: error_collection_t
-   type(error_collection_t) :: errors
-   type(swap_config_t)      :: config
-   integer :: i
-   call load_swap_config('tests/regression/cases/hupselbrook/toml/swap.toml', config, errors)
-   @assertFalse(errors%has_fatals())
-   @assertEqual(3, size(config%crop%rotation_loaded))
-   @assertTrue(config%crop%rotation_loaded(1))
-   @assertTrue(config%crop%rotation_loaded(2))
-   @assertTrue(config%crop%rotation_loaded(3))
 end subroutine
 
 @test

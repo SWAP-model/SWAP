@@ -65,7 +65,7 @@ subroutine test_inmemory_config_load_matches_disk()
                                           config_source_memory, config_source_disk
    use error_mod,                   only: error_collection_t
 
-   character(*), parameter       :: dir = 'tests/regression/cases/hupselbrook/toml/'
+   character(*), parameter       :: dir = 'tests/unit/fixtures/runnable_model/'
    type(swap_config_t)           :: cfg_disk, cfg_mem
    type(error_collection_t)      :: e_disk, e_mem
    type(config_source_t)         :: disk, mem
@@ -87,12 +87,6 @@ subroutine test_inmemory_config_load_matches_disk()
    call disk%get_text('maizes.crp.toml', t, ok)
    @assertTrue(ok)
    call mem%add_blob('maizes.crp.toml', t)
-   call disk%get_text('potatod.crp.toml', t, ok)
-   @assertTrue(ok)
-   call mem%add_blob('potatod.crp.toml', t)
-   call disk%get_text('grassd.crp.toml', t, ok)
-   @assertTrue(ok)
-   call mem%add_blob('grassd.crp.toml', t)
    call disk%get_text('283.csv', t, ok)
    @assertTrue(ok)
    call mem%add_blob('283.csv', t)
@@ -120,7 +114,7 @@ subroutine test_inmemory_meteo_table_matches_disk()
                                           config_source_memory, config_source_disk
    use error_mod,                   only: error_collection_t
 
-   character(*), parameter       :: dir = 'tests/regression/cases/hupselbrook/toml/'
+   character(*), parameter       :: dir = 'tests/unit/fixtures/runnable_model/'
    type(swap_config_t)           :: cfg_disk, cfg_mem
    type(error_collection_t)      :: e_disk, e_mem
    type(config_source_t)         :: disk, mem
@@ -141,10 +135,6 @@ subroutine test_inmemory_meteo_table_matches_disk()
    call mem%add_blob('swap.dra.toml', t)
    call disk%get_text('maizes.crp.toml', t, ok)
    call mem%add_blob('maizes.crp.toml', t)
-   call disk%get_text('potatod.crp.toml', t, ok)
-   call mem%add_blob('potatod.crp.toml', t)
-   call disk%get_text('grassd.crp.toml', t, ok)
-   call mem%add_blob('grassd.crp.toml', t)
    call disk%get_text('283.csv', t, ok)
    @assertTrue(ok)
    call mem%add_blob('283.csv', t)

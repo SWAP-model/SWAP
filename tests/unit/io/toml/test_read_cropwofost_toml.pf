@@ -186,9 +186,10 @@ subroutine test_read_cropwofost_gashtb_six_columns()
 end subroutine
 
 @test
-subroutine test_read_cropwofost_potatod_salinity()
-   ! Round-trip case 5's potatod.crp.toml — verify the salinity and drought
-   ! fields that are the headline feature of case 5.
+subroutine test_read_cropwofost_stress_blocks_enabled()
+   ! Reader plumbing for the ENABLED stress paths (swsalinity/swdrought/
+   ! swoxygen=1), which cropwofost_minimal leaves off. Confirms the salinity,
+   ! drought, oxygen, and root fields map name-for-name onto the config.
    use funit
    use iso_fortran_env, only: real64
    use tomlf, only: toml_table, toml_load, toml_error
@@ -202,7 +203,7 @@ subroutine test_read_cropwofost_potatod_salinity()
    type(toml_error), allocatable         :: terr
 
    call toml_load(doc, &
-      'tests/regression/cases/salinitystress/toml/potatod.crp.toml', error=terr)
+      'tests/unit/io/toml/fixtures/cropwofost_salinity_enabled.toml', error=terr)
    @assertFalse(allocated(terr))
    doc_ptr => doc
    call read_cropwofost_toml(doc_ptr, c, errors)
@@ -231,9 +232,4 @@ subroutine test_read_cropwofost_potatod_salinity()
    @assertEqual(1.2_real64,  c%root%rri, 1.0e-12_real64)
    @assertEqual(50.0_real64, c%root%rdc, 1.0e-12_real64)
    @assertEqual(1,           c%root%swdmi2rd)
-
-   ! Management
-   @assertEqual(2,          c%management%swpotrelmf)
-   @assertEqual(0.8_real64, c%management%relmf, 1.0e-12_real64)
-   @assertEqual(0.3_real64, c%management%fradeceasedlvtosoil, 1.0e-12_real64)
 end subroutine

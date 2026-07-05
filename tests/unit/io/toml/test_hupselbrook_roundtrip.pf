@@ -7,7 +7,7 @@ subroutine test_hupselbrook_roundtrip_scalars()
    use error_mod
    type(swap_config_t)      :: c1, c2
    type(error_collection_t) :: errors
-   character(len=*), parameter :: src = 'tests/regression/cases/hupselbrook/toml/swap.toml'
+   character(len=*), parameter :: src = 'tests/unit/fixtures/runnable_model/swap.toml'
    character(len=*), parameter :: tmp = 'builddir/hupselbrook_roundtrip.toml'
 
    call load_swap_config(src, c1, errors)

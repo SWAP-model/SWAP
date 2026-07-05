@@ -9,7 +9,7 @@ subroutine test_record_off_by_default()
    use swap_mod,        only: swap_init, swap_run_step, swap_close
    type(swap_state_t)  :: state
    type(swap_config_t) :: config
-   character(*), parameter :: cfg = 'tests/regression/cases/hupselbrook/toml/swap.toml'
+   character(*), parameter :: cfg = 'tests/unit/fixtures/runnable_model/swap.toml'
    integer :: guard
    state%timecontrol%headless = .true.
    call swap_init(cfg, state, config)
