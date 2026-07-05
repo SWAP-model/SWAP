@@ -241,6 +241,8 @@ if get_option('enable_pfunit')
         'io/csv/test_irrigation_csv.pf',
         'io/csv/test_boundary_csv.pf',
         'io/csv/test_soil_init_csv.pf',
+        'io/csv/test_csv_common.pf',
+        'io/test_meteo_buffer.pf',
         'io/test_csv_reader.pf',
         'io/test_csv_writer.pf',
         'io/test_output_registry.pf',

@@ -1,0 +1,81 @@
+! Unit tests for meteo_buffer_mod — the external-meteo-buffer glue (SS-BMI2).
+! In coupled/in-memory mode a host attaches a column-major (n_cols, n_days)
+! buffer and readmeteo reads from it instead of a CSV. These tests exercise the
+! mode switch and the zero-copy read-back without any file I/O.
+!
+! The module holds process-global SAVE state, so each test resets it via
+! set_meteo_mode_path() on exit to avoid leaking mode into later suites.
+
+@test
+subroutine test_meteo_buffer_default_mode_is_path()
+   use funit
+   use meteo_buffer_mod, only: get_meteo_mode, set_meteo_mode_path, METEO_MODE_PATH
+   call set_meteo_mode_path()
+   @assertEqual(METEO_MODE_PATH, get_meteo_mode())
+end subroutine
+
+@test
+subroutine test_attach_buffer_sets_mode_and_dims()
+   use funit
+   use iso_c_binding, only: c_double, c_loc, c_int
+   use meteo_buffer_mod, only: attach_external_meteo_buffer, get_meteo_mode, &
+      get_external_meteo_n_days, get_external_meteo_n_cols, &
+      set_meteo_mode_path, METEO_MODE_EXTERNAL_BUFFER
+   integer(c_int), parameter :: NCOLS = 8, NDAYS = 5
+   real(c_double), target :: buf(NCOLS, NDAYS)
+
+   buf = 0.0_c_double
+   call attach_external_meteo_buffer(c_loc(buf), NDAYS, NCOLS)
+
+   @assertEqual(METEO_MODE_EXTERNAL_BUFFER, get_meteo_mode())
+   @assertEqual(NDAYS, get_external_meteo_n_days())
+   @assertEqual(NCOLS, get_external_meteo_n_cols())
+
+   call set_meteo_mode_path()   ! reset global state
+end subroutine
+
+@test
+subroutine test_get_value_reads_attached_buffer()
+   use funit
+   use iso_c_binding, only: c_double, c_loc, c_int
+   use meteo_buffer_mod, only: attach_external_meteo_buffer, &
+      get_external_meteo_value, set_meteo_mode_path
+   integer(c_int), parameter :: NCOLS = 8, NDAYS = 3
+   real(c_double), target :: buf(NCOLS, NDAYS)
+   integer :: col, day
+
+   ! Fill with a recognisable pattern: value = 100*day + col.
+   do day = 1, NDAYS
+      do col = 1, NCOLS
+         buf(col, day) = real(100 * day + col, c_double)
+      end do
+   end do
+
+   call attach_external_meteo_buffer(c_loc(buf), NDAYS, NCOLS)
+
+   ! get_external_meteo_value(day, col) is a zero-copy view onto buf(col, day).
+   @assertEqual(101.0_c_double, get_external_meteo_value(1, 1), 1.0e-12_c_double)
+   @assertEqual(208.0_c_double, get_external_meteo_value(2, 8), 1.0e-12_c_double)
+   @assertEqual(304.0_c_double, get_external_meteo_value(3, 4), 1.0e-12_c_double)
+
+   call set_meteo_mode_path()   ! reset global state
+end subroutine
+
+@test
+subroutine test_set_mode_path_clears_dims()
+   use funit
+   use iso_c_binding, only: c_double, c_loc, c_int
+   use meteo_buffer_mod, only: attach_external_meteo_buffer, set_meteo_mode_path, &
+      get_external_meteo_n_days, get_external_meteo_n_cols, &
+      get_meteo_mode, METEO_MODE_PATH
+   integer(c_int), parameter :: NCOLS = 8, NDAYS = 4
+   real(c_double), target :: buf(NCOLS, NDAYS)
+
+   buf = 1.0_c_double
+   call attach_external_meteo_buffer(c_loc(buf), NDAYS, NCOLS)
+   call set_meteo_mode_path()
+
+   @assertEqual(METEO_MODE_PATH, get_meteo_mode())
+   @assertEqual(0, get_external_meteo_n_days())
+   @assertEqual(0, get_external_meteo_n_cols())
+end subroutine

@@ -1,0 +1,62 @@
+! Unit tests for csv_common_mod — the shared days-since-1900 date arithmetic
+! (ADR 0044) that underpins every CSV meteo/output loader. Pure, deterministic
+! functions, so exact-integer assertions are appropriate. The epoch is
+! JD 2415020 = 1899-12-31, so 1900-01-01 -> 1.
+
+@test
+subroutine test_days_since_1900_epoch_anchor()
+   use funit
+   use csv_common_mod, only: days_since_1900
+   @assertEqual(1, days_since_1900(1900, 1, 1))
+   @assertEqual(2, days_since_1900(1900, 1, 2))
+   @assertEqual(32, days_since_1900(1900, 2, 1))
+end subroutine
+
+@test
+subroutine test_days_since_1900_year_lengths()
+   use funit
+   use csv_common_mod, only: days_since_1900
+   ! 1900 is NOT a Gregorian leap year (divisible by 100, not 400) -> 365 days.
+   @assertEqual(365, days_since_1900(1901, 1, 1) - days_since_1900(1900, 1, 1))
+   ! 2000 IS a leap year (divisible by 400) -> 366 days.
+   @assertEqual(366, days_since_1900(2001, 1, 1) - days_since_1900(2000, 1, 1))
+   ! An ordinary year.
+   @assertEqual(365, days_since_1900(2011, 1, 1) - days_since_1900(2010, 1, 1))
+end subroutine
+
+@test
+subroutine test_days_since_1900_leap_day_rules()
+   use funit
+   use csv_common_mod, only: days_since_1900
+   ! 1900 has no 29 Feb: 28 Feb -> 1 Mar is one day.
+   @assertEqual(1, days_since_1900(1900, 3, 1) - days_since_1900(1900, 2, 28))
+   ! 2000 has 29 Feb: 29 Feb -> 1 Mar is one day (i.e. the 29th exists).
+   @assertEqual(1, days_since_1900(2000, 3, 1) - days_since_1900(2000, 2, 29))
+   @assertEqual(2, days_since_1900(2000, 3, 1) - days_since_1900(2000, 2, 28))
+end subroutine
+
+@test
+subroutine test_days1900_to_md_inverse_anchor()
+   use funit
+   use csv_common_mod, only: days1900_to_md
+   integer :: mm, dd
+   call days1900_to_md(1, mm, dd)   ! 1900-01-01
+   @assertEqual(1, mm)
+   @assertEqual(1, dd)
+end subroutine
+
+@test
+subroutine test_date_round_trip()
+   use funit
+   use csv_common_mod, only: days_since_1900, days1900_to_md
+   integer :: i, d1900, mm, dd
+   integer, parameter :: yrs(6) = [1900, 1950, 1984, 2000, 2012, 2023]
+   integer, parameter :: mos(6) = [   1,    7,    2,    2,   12,    9]
+   integer, parameter :: dys(6) = [   1,   15,   29,   29,   31,   30]
+   do i = 1, 6
+      d1900 = days_since_1900(yrs(i), mos(i), dys(i))
+      call days1900_to_md(d1900, mm, dd)
+      @assertEqual(mos(i), mm)
+      @assertEqual(dys(i), dd)
+   end do
+end subroutine
