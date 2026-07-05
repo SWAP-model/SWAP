@@ -28,9 +28,13 @@ subroutine test_load_malformed_toml_errors()
 end subroutine
 
 @test
-subroutine test_load_swap_config_dispatches_bottom_boundary()
-   ! Phase 4d Task 5: confirm load_swap_config calls read_bottom_boundary_toml
-   ! and populates config%bottom_boundary from a [bottom_boundary] section.
+subroutine test_load_swap_config_wires_optional_sections()
+   ! Consolidated dispatch check (was 5 separate Phase-4d/4f "dispatches_X"
+   ! tests). Confirms the top-level loader invokes each optional section reader
+   ! and stores the result into the matching config slot. The per-field parsing
+   ! is covered in depth by the dedicated test_read_*_toml suites, which call the
+   ! readers directly; this only proves load_swap_config wires them in for
+   ! sections that the runnable_model lifecycle fixture does not itself exercise.
    use funit
    use swap_config_mod
    use load_swap_config_mod
@@ -38,63 +42,34 @@ subroutine test_load_swap_config_dispatches_bottom_boundary()
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_bottom_boundary.toml', &
-                         config, errors)
-
+   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_bottom_boundary.toml', config, errors)
    @assertFalse(errors%has_errors())
    @assertEqual(4, config%bottom_boundary%swbotb)
-end subroutine
 
-@test
-subroutine test_load_swap_config_dispatches_heat()
-   ! Phase 4d Task 8: confirm load_swap_config calls read_heat_toml
-   ! and populates config%heat from a [heat] section.
-   use funit
-   use swap_config_mod
-   use load_swap_config_mod
-   use error_mod
-   type(swap_config_t)      :: config
-   type(error_collection_t) :: errors
-
-   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_heat.toml', &
-                         config, errors)
-
+   call errors%clear()
+   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_heat.toml', config, errors)
    @assertFalse(errors%has_errors())
    @assertEqual(1, config%heat%swhea)
-end subroutine
 
-@test
-subroutine test_load_swap_config_dispatches_irrigation()
-   ! Phase 4d Task 12: confirm load_swap_config calls read_irrigation_toml
-   ! and populates config%irrigation from an [irrigation] section.
-   use funit
-   use swap_config_mod
-   use load_swap_config_mod
-   use error_mod
-   type(swap_config_t)      :: config
-   type(error_collection_t) :: errors
-
-   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_irrigation.toml', &
-                         config, errors)
-
+   call errors%clear()
+   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_irrigation.toml', config, errors)
    @assertFalse(errors%has_errors())
    @assertEqual(1, config%irrigation%swirfix)
-end subroutine
 
-@test
-subroutine test_load_swap_config_dispatches_solute()
-   ! Phase 4d Task 14: confirm load_swap_config calls read_solute_toml
-   ! and populates config%solute from a [solute] section.
-   use funit
-   use swap_config_mod
-   use load_swap_config_mod
-   use error_mod
-   type(swap_config_t)      :: config
-   type(error_collection_t) :: errors
-
+   call errors%clear()
    call load_swap_config('tests/unit/io/toml/fixtures/swap_with_solute.toml', config, errors)
    @assertFalse(errors%has_errors())
    @assertEqual(1, config%solute%swsolu)
+
+   call errors%clear()
+   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_output_csv.toml', config, errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, config%output_csv%enabled)
+   @assertEqual(0, config%output_csv%enabled_tz)
+   @assertTrue(allocated(config%output_csv%inlist))
+   @assertEqual('gwl,pond', config%output_csv%inlist)
+   @assertTrue(allocated(config%output_csv%inlist_tz))
+   @assertEqual('wc,h,conc', config%output_csv%inlist_tz)
 end subroutine
 
 @test
@@ -123,25 +98,3 @@ subroutine test_load_swap_config_loads_rotation_crp_files()
    @assertTrue(allocated(c%crop%rotation_fixed(1)%gctb))
 end subroutine
 
-@test
-subroutine test_load_swap_config_dispatches_output_csv()
-   ! Phase 4f Bucket B slot 8: confirm load_swap_config calls
-   ! read_output_csv_toml and populates config%output_csv.
-   use funit
-   use swap_config_mod
-   use load_swap_config_mod
-   use error_mod
-   type(swap_config_t)      :: config
-   type(error_collection_t) :: errors
-
-   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_output_csv.toml', &
-                         config, errors)
-
-   @assertFalse(errors%has_errors())
-   @assertEqual(1, config%output_csv%enabled)
-   @assertEqual(0, config%output_csv%enabled_tz)
-   @assertTrue(allocated(config%output_csv%inlist))
-   @assertEqual('gwl,pond', config%output_csv%inlist)
-   @assertTrue(allocated(config%output_csv%inlist_tz))
-   @assertEqual('wc,h,conc', config%output_csv%inlist_tz)
-end subroutine

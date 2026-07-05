@@ -1,60 +1,8 @@
-! Tests for the 6 physics fields promoted into heat_config_t in
-! Phase 0 of the heat state-migration arc. Each scalar gets a
-! default-value test; the two allocatable 2D tables get
-! default-unallocated + allocation-shape tests.
-! See SS-HEAT Phase 0 / 2026-05-10 design spec.
-
-@test
-subroutine test_heat_config_ddamp_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use heat_config_mod, only: heat_config_t
-   type(heat_config_t) :: cfg
-   @assertEqual(0.0_real64, cfg%ddamp, 1.0e-12_real64)
-end subroutine
-
-@test
-subroutine test_heat_config_tmean_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use heat_config_mod, only: heat_config_t
-   type(heat_config_t) :: cfg
-   @assertEqual(0.0_real64, cfg%tmean, 1.0e-12_real64)
-end subroutine
-
-@test
-subroutine test_heat_config_tampli_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use heat_config_mod, only: heat_config_t
-   type(heat_config_t) :: cfg
-   @assertEqual(0.0_real64, cfg%tampli, 1.0e-12_real64)
-end subroutine
-
-@test
-subroutine test_heat_config_timref_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use heat_config_mod, only: heat_config_t
-   type(heat_config_t) :: cfg
-   @assertEqual(0.0_real64, cfg%timref, 1.0e-12_real64)
-end subroutine
-
-@test
-subroutine test_heat_config_temtoptab_default_unallocated()
-   use funit
-   use heat_config_mod, only: heat_config_t
-   type(heat_config_t) :: cfg
-   @assertFalse(allocated(cfg%temtoptab))
-end subroutine
-
-@test
-subroutine test_heat_config_tembtab_default_unallocated()
-   use funit
-   use heat_config_mod, only: heat_config_t
-   type(heat_config_t) :: cfg
-   @assertFalse(allocated(cfg%tembtab))
-end subroutine
+! Allocation-shape test for the 2D tables in heat_config_t (temtoptab,
+! tembtab). The per-scalar default-zero and default-unallocated tests that
+! once lived here were removed 2026-07-05: they only asserted compiler
+! default-initialisation, not SWAP behaviour. Field parsing and validation
+! are covered by test_read_heat_toml.pf and test_heat_config.pf.
 
 @test
 subroutine test_heat_config_table_2d_allocation()

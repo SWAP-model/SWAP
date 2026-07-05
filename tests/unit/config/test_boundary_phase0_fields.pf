@@ -1,45 +1,15 @@
-! Tests for Phase 0 B-0.1: sinmax / sinamp / sinave scalars promoted
-! into bottom_boundary_config_t.
+! Bottom-boundary config: TOML round-trip + validator tests for the sine
+! (swbotb=2), exponential q(h) (swbotb=4/swqhbot=1), and lysimeter-plate
+! (swbotb=8) parameter groups promoted into bottom_boundary_config_t.
 !
-! Covers: (a) default values, (b) TOML round-trip read, (c) validator
-! acceptance, (d) validator rejection on out-of-range sinmax.
+! The per-scalar default-zero tests that once accompanied each group were
+! removed 2026-07-05 (they asserted compiler default-initialisation only).
 !
 ! Spec: docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md
-! Plan: docs/superpowers/plans/2026-05-10-boundary-state-migration.md  B-0.1
 
 ! -----------------------------------------------------------------------
-! (a) Default-value tests — no TOML involved, just struct initialisation.
-! -----------------------------------------------------------------------
-
-@test
-subroutine test_sinmax_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use bottom_boundary_config_mod, only: bottom_boundary_config_t
-   type(bottom_boundary_config_t) :: c
-   @assertEqual(0.0_real64, c%sinmax, 1.0e-12_real64)
-end subroutine
-
-@test
-subroutine test_sinamp_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use bottom_boundary_config_mod, only: bottom_boundary_config_t
-   type(bottom_boundary_config_t) :: c
-   @assertEqual(0.0_real64, c%sinamp, 1.0e-12_real64)
-end subroutine
-
-@test
-subroutine test_sinave_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use bottom_boundary_config_mod, only: bottom_boundary_config_t
-   type(bottom_boundary_config_t) :: c
-   @assertEqual(0.0_real64, c%sinave, 1.0e-12_real64)
-end subroutine
-
-! -----------------------------------------------------------------------
-! (b) TOML round-trip — fixture bottom_boundary_swbotb2_sine.toml contains
+! sine group (swbotb=2): TOML round-trip — fixture
+!     bottom_boundary_swbotb2_sine.toml contains
 !     swbotb=2, sw2=1, sinmax=180.0, sinamp=-0.002, sinave=-0.001.
 ! -----------------------------------------------------------------------
 
@@ -114,51 +84,12 @@ subroutine test_swbotb2_sw2_1_sinmax_out_of_range_fails()
 end subroutine
 
 ! =======================================================================
-! Phase 0 B-0.2: cofqha / cofqhb / cofqhc / swcofqhc
-! swbotb=4 .and. swqhbot=1 exponential q(h) curve path
+! exponential q(h) group: cofqha / cofqhb / cofqhc / swcofqhc
+! swbotb=4 .and. swqhbot=1 path
 ! =======================================================================
 
 ! -----------------------------------------------------------------------
-! (a) Default-value tests — struct initialisation only, no TOML.
-! -----------------------------------------------------------------------
-
-@test
-subroutine test_cofqha_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use bottom_boundary_config_mod, only: bottom_boundary_config_t
-   type(bottom_boundary_config_t) :: c
-   @assertEqual(0.0_real64, c%cofqha, 1.0e-12_real64)
-end subroutine
-
-@test
-subroutine test_cofqhb_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use bottom_boundary_config_mod, only: bottom_boundary_config_t
-   type(bottom_boundary_config_t) :: c
-   @assertEqual(0.0_real64, c%cofqhb, 1.0e-12_real64)
-end subroutine
-
-@test
-subroutine test_cofqhc_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use bottom_boundary_config_mod, only: bottom_boundary_config_t
-   type(bottom_boundary_config_t) :: c
-   @assertEqual(0.0_real64, c%cofqhc, 1.0e-12_real64)
-end subroutine
-
-@test
-subroutine test_swcofqhc_default_zero()
-   use funit
-   use bottom_boundary_config_mod, only: bottom_boundary_config_t
-   type(bottom_boundary_config_t) :: c
-   @assertEqual(0, c%swcofqhc)
-end subroutine
-
-! -----------------------------------------------------------------------
-! (b) TOML round-trip — fixture bottom_boundary_swbotb4_cofqh.toml:
+! TOML round-trip — fixture bottom_boundary_swbotb4_cofqh.toml:
 !     swbotb=4, swqhbot=1, cofqha=0.005, cofqhb=-0.15, cofqhc=-0.0001,
 !     swcofqhc=1.
 ! -----------------------------------------------------------------------
@@ -237,26 +168,12 @@ subroutine test_swbotb4_swqhbot1_swcofqhc_invalid_fails()
 end subroutine
 
 ! =======================================================================
-! Phase 0 B-0.3: hplate — swbotb=8 lysimeter plate pressure head
-! Used in soilhydraulics.f90:229,271,515,557; variables.f90 line 813.
+! lysimeter-plate group: hplate — swbotb=8 plate pressure head.
 ! Negative values are physically valid (pressure head below atmospheric).
 ! =======================================================================
 
 ! -----------------------------------------------------------------------
-! (a) Default-value test — struct initialisation only, no TOML.
-! -----------------------------------------------------------------------
-
-@test
-subroutine test_hplate_default_zero()
-   use funit
-   use iso_fortran_env, only: real64
-   use bottom_boundary_config_mod, only: bottom_boundary_config_t
-   type(bottom_boundary_config_t) :: c
-   @assertEqual(0.0_real64, c%hplate, 1.0e-12_real64)
-end subroutine
-
-! -----------------------------------------------------------------------
-! (b) TOML round-trip — fixture bottom_boundary_swbotb8_lysimeter.toml:
+! TOML round-trip — fixture bottom_boundary_swbotb8_lysimeter.toml:
 !     swbotb=8, hplate=-100.0
 ! -----------------------------------------------------------------------
 
