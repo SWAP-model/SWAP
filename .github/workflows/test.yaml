@@ -41,19 +41,6 @@ jobs:
           ref: ${{ steps.testcases.outputs.ref }}
           path: swap-testcases
 
-      # The in-repo tests/regression/cases mirror (read by the pFUnit suite via
-      # hardcoded paths) must stay identical to the pinned canonical tag, or the
-      # two consumers silently diverge. Fail loudly on any input drift. observed/
-      # data lives only in the canonical repo; run artifacts are never committed.
-      - name: Assert in-repo cases mirror the pinned tag
-        run: |
-          diff -r \
-            --exclude=observed --exclude=__pycache__ \
-            --exclude=result_output.csv --exclude='result_*.csv' \
-            --exclude=Swap.ok --exclude='*.log' \
-            tests/regression/cases swap-testcases/cases
-          echo "in-repo cases match swap-testcases ${{ steps.testcases.outputs.ref }}"
-
       # gfortran is the only supported compiler (ADR 0001); ubuntu-latest ships
       # it preinstalled. pixi provides meson + cmake + the Python test deps.
       - name: Set up Pixi
@@ -76,9 +63,8 @@ jobs:
       # the unit suite, then the 4 regression cases. Byte-identical is the gate.
       - name: check-fast (pFUnit + byte-identical regression)
         env:
-          # Point the Python regression runner at the pinned swap-testcases
-          # checkout, so CI dogfoods the canonical case repo. (The pFUnit suite
-          # still reads the in-repo cases mirror via hardcoded paths; the two
-          # are kept identical — the mirror tracks the pinned tag.)
+          # The regression runner reads its case inputs from the pinned
+          # swap-testcases checkout (the pFUnit suite uses its own fixtures under
+          # tests/unit/fixtures and needs nothing here).
           SWAP_TESTCASES_PATH: ${{ github.workspace }}/swap-testcases/cases
         run: pixi run -e test check-fast

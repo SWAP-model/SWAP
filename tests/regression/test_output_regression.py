@@ -200,9 +200,8 @@ CASES = {
     ),
 }
 
-# --- Crop-switch coverage cases (hupselbrook + one setting). Inputs under
-#     tests/regression/cases/<name>/, mirrored to the public SWAP-model/swap-testcases
-#     repo (authored by its tools/gen_switch_cases.py).
+# --- Crop-switch coverage cases (hupselbrook + one setting). Inputs live in the
+#     public SWAP-model/swap-testcases repo (authored by its tools/gen_switch_cases.py).
 _SW_FLUX = ["RAIN", "IRRIG", "INTERC", "RUNOFF", "EPOT", "EACT",
             "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"]
 _SW_STATE = ["GWL"]
@@ -434,26 +433,17 @@ def load_case(case_name: str):
 def cases_root() -> Path:
     """Root directory holding the regression case inputs (``<name>/{legacy,toml}``).
 
-    The canonical case *inputs* live in the public SWAP-model/swap-testcases
-    repo; the expected-output fixtures stay here in the SWAP repo. A mirror of
-    the cases is still committed in-repo under ``tests/regression/cases`` because
-    the Fortran pFUnit suite reads them through hardcoded relative paths and
-    cannot honour the env var (see the follow-up to decouple that). Resolution
-    order for this Python runner:
+    The case *inputs* live in the public SWAP-model/swap-testcases repo; the
+    expected-output fixtures stay here in the SWAP repo. Resolution order:
 
       1. ``SWAP_TESTCASES_PATH`` env var (set by ``--cases-path`` or by CI, which
          checks out the pinned tag from ``TESTCASES_REF`` into a sibling dir).
-      2. The in-repo ``tests/regression/cases`` mirror — the default for local
-         runs, and the same tree the pFUnit suite reads.
-      3. A ``../swap-testcases/cases`` sibling checkout, if the in-repo mirror is
-         ever removed once pFUnit no longer depends on it.
+      2. A ``../swap-testcases/cases`` sibling checkout next to the SWAP repo —
+         the default when SWAP and swap-testcases are cloned side by side.
     """
     env = os.environ.get("SWAP_TESTCASES_PATH")
     if env:
         return Path(env).expanduser()
-    in_repo = TESTS_DIR / "regression" / "cases"
-    if in_repo.exists():
-        return in_repo
     return TESTS_DIR.parent.parent / "swap-testcases" / "cases"
 
 
