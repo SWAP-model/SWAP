@@ -45,20 +45,21 @@ tomlkit = ">=0.15.0, <0.16"
 [feature.test.tasks]
 # Main regression task with optional arguments
 # Usage: 
-#   pixi run -e test regression              # runs all cases
-#   pixi run -e test regression hupselbrook  # runs single case
-#   pixi run -e test regression --log-timing # runs all with timing
-regression = { cmd = "python tests/regression/test_output_regression.py", depends-on = ["build-linux"] }
+# The regression suite is pytest (parametrized over the case registry):
+#   pixi run -e test regression                       # all cases
+#   pytest tests/regression -k hupselbrook            # single case
+#   pytest tests/regression -m fast                   # the fast subset
+regression = { cmd = "pytest tests/regression -n auto", depends-on = ["build-linux"] }
 
 #============================================================================
 # VERIFICATION GATES — the canonical commands for iteration and phase-end.
-# check-fast: everyday iteration (build + pFUnit + four fast regression cases).
+# check-fast: everyday iteration (build + pFUnit + the `fast` regression subset).
 #             Budget: < 90s wall time.
-# check-full: phase-end gate (build + pFUnit + all six cases).
+# check-full: phase-end gate (build + pFUnit + every case).
 #             Budget: ~10 minutes.
 #============================================================================
-check-fast = { cmd = "python tests/regression/test_output_regression.py hupselbrook soilhysteresis snow swcf3", depends-on = ["build-linux", "test-pfunit"] }
-check-full = { cmd = "python tests/regression/test_output_regression.py", depends-on = ["build-linux", "test-pfunit"] }
+check-fast = { cmd = "pytest tests/regression -m fast -n auto", depends-on = ["build-linux", "test-pfunit"] }
+check-full = { cmd = "pytest tests/regression -n auto", depends-on = ["build-linux", "test-pfunit"] }
 
 #============================================================================
 # C-ABI TEST TASKS — exercise the Python-callable C ABI over libswap.so.
@@ -75,14 +76,14 @@ check-full = { cmd = "python tests/regression/test_output_regression.py", depend
 #                  via the vendored swapmod driver; needs libmf6.so (test env).
 # test-all      : convenience — pFUnit + the binding smokes + four-case regression.
 #============================================================================
-test-xmi       = { cmd = "python tests/coupling/test_swap_xmi_smoke.py", depends-on = ["build-linux"] }
-test-coupling  = { cmd = "python tests/coupling/test_coupled_smoke.py", depends-on = ["build-linux"] }
+test-xmi       = { cmd = "pytest tests/coupling/test_swap_xmi_smoke.py -v", depends-on = ["build-linux"] }
+test-coupling  = { cmd = "pytest tests/coupling/test_coupled_smoke.py -v", depends-on = ["build-linux"] }
 # check-bindings: the C-ABI binding gate over the one libswap.so (ADR 0050).
 # Drives BMI + CAPI + XMI + coupled smoke by running the demo scripts directly
 # (staging the self-contained regression case). This — not a meson suite — is the
 # home of the BMI/CAPI smokes. Run alongside `check-fast` before any binding/driver commit.
 check-bindings = { cmd = "bash scripts/check_bindings.sh", depends-on = ["build-linux"] }
-test-all       = { cmd = "python tests/regression/test_output_regression.py hupselbrook soilhysteresis snow swcf3", depends-on = ["build-linux", "test-pfunit", "check-bindings", "test-xmi", "test-coupling"] }
+test-all       = { cmd = "pytest tests/regression -m fast -n auto", depends-on = ["build-linux", "test-pfunit", "check-bindings", "test-xmi", "test-coupling"] }
 
 [feature.test.target.linux-64.dependencies]
 xarray = ">=2026.4.0,<2027"
@@ -125,7 +126,7 @@ pyswap = ">=0.3.9"
 _configure-coverage = { cmd = "FC=gfortran meson setup builddir --reconfigure -Denable_coverage=true" }
 build-coverage     = { cmd = "meson compile -C builddir", depends-on = ["_configure-coverage"] }
 test-pfunit-cov    = { cmd = "meson test -C builddir --suite unit-pfunit --verbose", depends-on = ["build-coverage"] }
-regression-cov     = { cmd = "python tests/regression/test_output_regression.py hupselbrook soilhysteresis snow swcf3", depends-on = ["build-coverage"] }
+regression-cov     = { cmd = "pytest tests/regression -m fast", depends-on = ["build-coverage"] }
 coverage-run       = { depends-on = ["test-pfunit-cov", "regression-cov"] }
 coverage-report    = { cmd = "mkdir -p builddir/coverage && gcovr --root . --filter 'src/' --gcov-ignore-errors=no_working_dir_found --gcov-ignore-parse-errors=suspicious_hits.warn_once_per_file --html-details builddir/coverage/index.html --txt --print-summary builddir", depends-on = ["coverage-run"] }
 

@@ -16,7 +16,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from test_output_regression import aggregate, cases_root
+from regression_harness import aggregate, cases_root
 
 TESTS = Path(__file__).resolve().parent.parent
 # Case inputs now live in the swap-testcases sibling (resolved by cases_root(),

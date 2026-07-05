@@ -25,7 +25,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from test_output_regression import CASES, aggregate, TESTS_DIR
+from regression_harness import CASES, aggregate, TESTS_DIR
 
 REF_BIN = TESTS_DIR / "reference" / "swap420gf"
 # Committed legacy inputs per case; everything else in the dir is generated output.
@@ -35,7 +35,7 @@ LEGACY_INPUTS = ("*.swp.template", "*.crp", "*.dra", "*.met", "*.csv", "*.ini",
 
 def _run_reference_and_aggregate(case):
     """Run swap420gf on a temp copy of the case's legacy ASCII dir, aggregate."""
-    from test_output_regression import case_legacy_dir
+    from regression_harness import case_legacy_dir
     legacy_dir = case_legacy_dir(case)
     if not legacy_dir.exists():
         raise RuntimeError(f"legacy dir not found: {legacy_dir}")
