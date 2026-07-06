@@ -91,12 +91,13 @@ pixi run clean                # rm -rf builddir  (see clean-rebuild rule below)
   downloaded from the pinned `SWAP-model/swap-4.2.0` release (the archival 4.2.0
   source + build) into a gitignored cache. `SWAP_REFERENCE_BIN` overrides with a
   local path (offline/dev).
-- **No fixtures to regenerate.** A physics change either matches the reference
-  or fails — you fix the code, you don't update a golden file. Accepted
-  divergences (winter frost-path; macropore excluded since ADR 0011) are `xfail`
-  markers on the case registry, not stored data. (The historical ifx
-  `*_expected.json` snapshots are kept only as provenance — never deleted, never
-  compared against.)
+- **No fixtures to regenerate, none stored.** A physics change either matches
+  the reference or fails — you fix the code, you don't update a golden file.
+  Accepted divergences (winter frost-path; macropore excluded since ADR 0011)
+  are `xfail` markers on the case registry, not stored data. (The old ifx
+  `*_expected.json` snapshots were removed 2026-07-06 — nothing read them, and
+  the ifx binary that produced them is archived as a `SWAP-model/swap-4.2.0`
+  release asset, so that output is regenerable if ever needed.)
 - **New pFUnit `.pf` files must be registered in BOTH `tests/unit/meson.build`
   (the `pf_files` list) and `tests/unit/testSuites.inc`** or they compile but
   never run. Confirm the `OK (N tests)` count rises.

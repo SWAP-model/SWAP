@@ -273,8 +273,7 @@ After Phase 4c-b (WOFOST type-2 `.crp.toml` reader + cases 1, 5 parity):
   - `read_crop_toml` dispatch on `type=2`
   - Full-config parity for hupselbrook potatod (case 1) and
     salinitystress (case 5) driven via `legacy_crop_helper`
-- Regression suite: **6/6 green** in 319.5s; per-case timings recorded in
-  `tests/regression/baselines/phase-4c-b-wofost.log`.
+- Regression suite: **6/6 green** in 319.5s (raw per-case baseline logs since pruned).
 
 ### Phase 4c-b delta (modules added, all unit-test only)
 
@@ -313,7 +312,7 @@ After Phase 4d:
   to ~150 entries (pre-existing listener-buffer truncation, not a
   failure).
 - **Regression suite**: **6/6 green** in ~319s; per-case timings
-  recorded in `tests/regression/baselines/phase-4d-remaining-configs.log`.
+  recorded at the time (raw baseline logs since pruned).
 
 ### Phase 4d source-side delta
 
@@ -382,7 +381,7 @@ After Phase 4e:
   - `test_warn_deprecated_key_appends_nonfatal`
   - `test_warn_deprecated_key_does_not_abort`
 - **Regression suite**: **6/6 green** in ~317s; per-case timings
-  recorded in `tests/regression/baselines/phase-4e-error-prep.log`.
+  recorded at the time (raw baseline logs since pruned).
 
 ### Phase 4e source-side delta
 
@@ -443,7 +442,7 @@ After Phase 4f-prep:
 - **pFUnit suite**: F count 0; ~75 new tests added across Tasks
   A1-A2, B1-B3, C1-C5, D2-D6.
 - **Regression suite**: **6/6 green** in ~243s; per-case timings
-  recorded in `tests/regression/baselines/phase-4f-prep-gap-closure.log`.
+  recorded at the time (raw baseline logs since pruned).
 
 ### Phase 4f-prep source-side delta
 
